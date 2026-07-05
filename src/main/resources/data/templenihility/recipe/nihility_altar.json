@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "S": "templenihility:temple_seal",
+    "C": "templenihility:nihility_core",
+    "P": "templenihility:chiseled_nihility_stone",
+    "A": "minecraft:amethyst_block"
+  },
+  "pattern": [
+    "SCS",
+    "PAP",
+    "PPP"
+  ],
+  "result": {
+    "id": "templenihility:nihility_altar",
+    "count": 1
+  }
+}

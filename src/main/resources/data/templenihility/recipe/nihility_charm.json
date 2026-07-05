@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "D": "templenihility:nihility_dust",
+    "R": "templenihility:nihility_rune",
+    "C": "templenihility:nihility_crystal",
+    "G": "minecraft:gold_ingot"
+  },
+  "pattern": [
+    " D ",
+    "RCR",
+    " G "
+  ],
+  "result": {
+    "id": "templenihility:nihility_charm"
+  }
+}

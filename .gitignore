@@ -1,0 +1,25 @@
+.gradle/
+build/
+run/
+bin/
+*.iml
+.idea/
+.vscode/
+out/
+src/generated/
+
+# Local backups and generated previews
+_backup*/
+_agnes_raw/
+_preview*.png
+_debug*.png
+
+# Local/experimental generation helpers may contain private provider config
+generate_textures.py
+generate_entity_textures.py
+
+# OS and editor noise
+*.log
+*.tmp
+.DS_Store
+Thumbs.db

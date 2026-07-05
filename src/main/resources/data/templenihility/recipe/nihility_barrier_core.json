@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "C": "templenihility:nihility_core",
+    "X": "templenihility:nihility_crystal",
+    "O": "minecraft:obsidian",
+    "S": "minecraft:shield"
+  },
+  "pattern": [
+    "OXO",
+    "XCS",
+    "OXO"
+  ],
+  "result": {
+    "id": "templenihility:nihility_barrier_core"
+  }
+}

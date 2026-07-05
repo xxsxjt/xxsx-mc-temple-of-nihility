@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "C": "templenihility:nihility_crystal",
+    "N": "templenihility:nihility_core",
+    "R": "templenihility:nihility_rune",
+    "E": "minecraft:ender_eye"
+  },
+  "pattern": [
+    "RCR",
+    "ENE",
+    "RCR"
+  ],
+  "result": {
+    "id": "templenihility:nihility_terminal"
+  }
+}

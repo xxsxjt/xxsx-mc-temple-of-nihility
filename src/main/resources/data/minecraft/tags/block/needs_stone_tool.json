@@ -1,0 +1,14 @@
+{
+  "replace": false,
+  "values": [
+    "templenihility:nihility_stone",
+    "templenihility:nihility_crystal_block",
+    "templenihility:nihility_bricks",
+    "templenihility:nihility_rune_bricks",
+    "templenihility:cracked_nihility_bricks",
+    "templenihility:chiseled_nihility_stone",
+    "templenihility:nihility_pillar",
+    "templenihility:nihility_tiles",
+    "templenihility:nihility_lamp"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    "templenihility:nihility_bricks",
+    "templenihility:nihility_dust"
+  ],
+  "result": {
+    "id": "templenihility:cracked_nihility_bricks",
+    "count": 1
+  }
+}

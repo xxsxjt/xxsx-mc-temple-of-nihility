@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "templenihility:block/cracked_nihility_bricks"
+  }
+}

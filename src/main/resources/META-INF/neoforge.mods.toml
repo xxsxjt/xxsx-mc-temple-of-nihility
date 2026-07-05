@@ -1,0 +1,34 @@
+modLoader="javafml"
+loaderVersion="[3,)"
+license="All Rights Reserved"
+
+[[mods]]
+modId="templenihility"
+version="1.0.0"
+displayName="Temple of Nihility"
+logoFile="logo.png"
+description='''
+虚无圣殿 - Temple of Nihility for NeoForge 26.2
+'''
+authors="xxsx"
+
+[[dependencies.templenihility]]
+modId="neoforge"
+type="required"
+versionRange="[26.2.0.7-beta,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.templenihility]]
+modId="minecraft"
+type="required"
+versionRange="[26.2]"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.templenihility]]
+modId="curios"
+type="optional"
+versionRange="[15.0.0-beta.1,)"
+ordering="AFTER"
+side="BOTH"

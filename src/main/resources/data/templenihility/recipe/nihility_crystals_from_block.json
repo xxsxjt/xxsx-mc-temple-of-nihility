@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "templenihility:nihility_crystal_block"
+  ],
+  "result": {
+    "id": "templenihility:nihility_crystal",
+    "count": 4
+  }
+}

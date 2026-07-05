@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "R": "templenihility:nihility_rune",
+    "C": "templenihility:nihility_crystal",
+    "N": "templenihility:nihility_core",
+    "S": "minecraft:shield",
+    "O": "minecraft:obsidian"
+  },
+  "pattern": [
+    "RCR",
+    "OSO",
+    " N "
+  ],
+  "result": {
+    "id": "templenihility:nihility_ward"
+  }
+}

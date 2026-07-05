@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "C": "templenihility:nihility_crystal",
+    "D": "templenihility:nihility_dust",
+    "E": "minecraft:echo_shard",
+    "S": "minecraft:spyglass"
+  },
+  "pattern": [
+    "DCD",
+    "ESE",
+    "DCD"
+  ],
+  "result": {
+    "id": "templenihility:nihility_echo_lens"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": "templenihility:nihility_bricks",
+  "result": {
+    "id": "templenihility:nihility_bricks",
+    "count": 1
+  }
+}

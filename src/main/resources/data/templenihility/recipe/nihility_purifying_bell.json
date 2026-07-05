@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "C": "templenihility:nihility_crystal",
+    "R": "templenihility:nihility_rune",
+    "M": "minecraft:milk_bucket",
+    "B": "minecraft:bell"
+  },
+  "pattern": [
+    "RCR",
+    "CBC",
+    "RMR"
+  ],
+  "result": {
+    "id": "templenihility:nihility_purifying_bell"
+  }
+}

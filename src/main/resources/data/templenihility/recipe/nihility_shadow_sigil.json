@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "D": "templenihility:nihility_dust",
+    "R": "templenihility:nihility_rune",
+    "P": "minecraft:phantom_membrane",
+    "E": "minecraft:ender_pearl"
+  },
+  "pattern": [
+    "DRD",
+    "PEP",
+    "DRD"
+  ],
+  "result": {
+    "id": "templenihility:nihility_shadow_sigil",
+    "count": 4
+  }
+}

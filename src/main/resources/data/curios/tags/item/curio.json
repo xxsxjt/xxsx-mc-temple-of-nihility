@@ -1,0 +1,15 @@
+{
+  "replace": false,
+  "values": [
+    "templenihility:nihility_ring",
+    "templenihility:nihility_amulet",
+    "templenihility:nihility_belt",
+    "templenihility:nihility_cloak",
+    "templenihility:nihility_charm",
+    "templenihility:nihility_magnet",
+    "templenihility:nihility_regenerator",
+    "templenihility:nihility_miner_charm",
+    "templenihility:nihility_ward",
+    "templenihility:nihility_terminal"
+  ]
+}

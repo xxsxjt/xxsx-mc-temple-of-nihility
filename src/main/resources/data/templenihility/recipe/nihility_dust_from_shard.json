@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "templenihility:nihility_shard"
+  ],
+  "result": {
+    "id": "templenihility:nihility_dust",
+    "count": 4
+  }
+}

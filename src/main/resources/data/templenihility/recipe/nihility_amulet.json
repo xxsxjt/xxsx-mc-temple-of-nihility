@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "R": "templenihility:nihility_rune",
+    "G": "minecraft:gold_ingot",
+    "C": "templenihility:nihility_crystal",
+    "S": "minecraft:string"
+  },
+  "pattern": [
+    " R ",
+    "GCG",
+    " S "
+  ],
+  "result": {
+    "id": "templenihility:nihility_amulet"
+  }
+}

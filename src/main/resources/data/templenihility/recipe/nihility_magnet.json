@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "C": "templenihility:nihility_crystal",
+    "D": "templenihility:nihility_dust",
+    "P": "minecraft:compass",
+    "E": "minecraft:ender_pearl",
+    "I": "minecraft:iron_ingot"
+  },
+  "pattern": [
+    "IDI",
+    "CPE",
+    "IDI"
+  ],
+  "result": {
+    "id": "templenihility:nihility_magnet"
+  }
+}

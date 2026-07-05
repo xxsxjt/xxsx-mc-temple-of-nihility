@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "R": "templenihility:nihility_ring",
+    "C": "templenihility:nihility_crystal",
+    "N": "templenihility:nihility_core",
+    "G": "minecraft:golden_apple"
+  },
+  "pattern": [
+    " C ",
+    "GRG",
+    " N "
+  ],
+  "result": {
+    "id": "templenihility:nihility_regenerator"
+  }
+}

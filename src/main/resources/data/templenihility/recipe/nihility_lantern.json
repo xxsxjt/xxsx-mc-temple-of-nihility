@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "D": "templenihility:nihility_dust",
+    "C": "templenihility:nihility_crystal",
+    "L": "minecraft:lantern",
+    "G": "minecraft:glowstone_dust"
+  },
+  "pattern": [
+    "DGD",
+    "CLC",
+    "DGD"
+  ],
+  "result": {
+    "id": "templenihility:nihility_lantern"
+  }
+}

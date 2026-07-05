@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "B": "templenihility:nihility_bricks",
+    "R": "templenihility:nihility_rune"
+  },
+  "pattern": [
+    "BRB",
+    "RBR",
+    "BRB"
+  ],
+  "result": {
+    "id": "templenihility:nihility_rune_bricks",
+    "count": 8
+  }
+}

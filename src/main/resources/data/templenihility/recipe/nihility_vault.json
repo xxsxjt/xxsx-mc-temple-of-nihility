@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "S": "templenihility:temple_seal",
+    "C": "templenihility:nihility_core",
+    "B": "templenihility:nihility_bag",
+    "E": "minecraft:ender_chest"
+  },
+  "pattern": [
+    "SCS",
+    "BEB",
+    "SCS"
+  ],
+  "result": {
+    "id": "templenihility:nihility_vault"
+  }
+}

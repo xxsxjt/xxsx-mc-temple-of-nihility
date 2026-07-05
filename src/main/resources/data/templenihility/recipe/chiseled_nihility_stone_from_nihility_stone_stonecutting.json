@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": "templenihility:nihility_stone",
+  "result": {
+    "id": "templenihility:chiseled_nihility_stone",
+    "count": 1
+  }
+}

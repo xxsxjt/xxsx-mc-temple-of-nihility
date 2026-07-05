@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "D": "templenihility:nihility_dust",
+    "A": "minecraft:amethyst_shard"
+  },
+  "pattern": [
+    " D ",
+    "DAD",
+    " D "
+  ],
+  "result": {
+    "id": "templenihility:nihility_rune",
+    "count": 2
+  }
+}

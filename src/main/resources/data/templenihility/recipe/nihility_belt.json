@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "L": "minecraft:leather",
+    "R": "templenihility:nihility_rune",
+    "C": "templenihility:nihility_crystal"
+  },
+  "pattern": [
+    "LLL",
+    "RCR",
+    "LLL"
+  ],
+  "result": {
+    "id": "templenihility:nihility_belt"
+  }
+}

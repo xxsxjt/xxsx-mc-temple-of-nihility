@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "templenihility:nihility_charm",
+    "templenihility:nihility_magnet",
+    "templenihility:nihility_miner_charm",
+    "templenihility:nihility_ward",
+    "templenihility:nihility_terminal"
+  ]
+}
