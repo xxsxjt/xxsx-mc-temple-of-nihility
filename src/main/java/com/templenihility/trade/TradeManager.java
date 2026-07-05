@@ -5,7 +5,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 
 public class TradeManager {
@@ -75,6 +77,27 @@ public class TradeManager {
         List<TradeOffer> offers = getOffersForTier(tier);
         if (offers.isEmpty()) return null;
         return offers.get(RANDOM.nextInt(offers.size()));
+    }
+
+    public static TradeOffer getAffordableOffer(int tier, ItemStack payment) {
+        List<TradeOffer> affordable = new ArrayList<>();
+        for (TradeOffer offer : getOffersForTier(tier)) {
+            if (offer.canAfford(payment)) {
+                affordable.add(offer);
+            }
+        }
+        if (affordable.isEmpty()) {
+            return null;
+        }
+        return affordable.get(RANDOM.nextInt(affordable.size()));
+    }
+
+    public static Optional<ItemStack> getCheapestMatchingCost(int tier, ItemStack payment) {
+        return getOffersForTier(tier).stream()
+            .map(TradeOffer::getCost)
+            .filter(cost -> ItemStack.isSameItemSameComponents(cost, payment))
+            .min(Comparator.comparingInt(ItemStack::getCount))
+            .map(ItemStack::copy);
     }
 
     private static List<TradeOffer> getOffersForTier(int tier) {

@@ -1,5 +1,6 @@
 package com.templenihility.trade;
 
+import com.templenihility.config.ModConfig;
 import net.minecraft.world.item.ItemStack;
 
 public class TradeOffer {
@@ -14,7 +15,9 @@ public class TradeOffer {
     }
 
     public ItemStack getCost() {
-        return cost.copy();
+        ItemStack adjusted = cost.copy();
+        adjusted.setCount(adjustedCostCount());
+        return adjusted;
     }
 
     public ItemStack getResult() {
@@ -26,6 +29,12 @@ public class TradeOffer {
     }
 
     public boolean canAfford(ItemStack playerStack) {
-        return ItemStack.isSameItemSameComponents(cost, playerStack) && playerStack.getCount() >= cost.getCount();
+        ItemStack adjusted = getCost();
+        return ItemStack.isSameItemSameComponents(adjusted, playerStack) && playerStack.getCount() >= adjusted.getCount();
+    }
+
+    private int adjustedCostCount() {
+        int count = (int) Math.ceil(cost.getCount() * ModConfig.TRADE_PRICE_MULTIPLIER.get());
+        return Math.max(1, Math.min(cost.getMaxStackSize(), count));
     }
 }

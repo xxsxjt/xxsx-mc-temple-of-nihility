@@ -34,6 +34,7 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
     private final List<SlotRef> allRefs = new ArrayList<>();
     private final List<SlotRef> viewRefs = new ArrayList<>();
     private String search = "";
+    private boolean rebuildingView;
 
     public NihilityTerminalMenu(int id, Inventory inventory, RegistryFriendlyByteBuf buffer) {
         this(id, inventory, List.of());
@@ -196,29 +197,41 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
     }
 
     private void rebuildView() {
-        rebuildAllRefs();
-        viewRefs.clear();
-        String needle = search.toLowerCase(Locale.ROOT);
-        for (SlotRef ref : allRefs) {
-            ItemStack stack = ref.get();
-            if (!needle.isEmpty() && (stack.isEmpty() || !matches(stack, needle))) {
-                continue;
+        rebuildingView = true;
+        try {
+            rebuildAllRefs();
+            viewRefs.clear();
+            String needle = search.toLowerCase(Locale.ROOT);
+            for (SlotRef ref : allRefs) {
+                ItemStack stack = ref.get();
+                if (!needle.isEmpty() && (stack.isEmpty() || !matches(stack, needle))) {
+                    continue;
+                }
+                viewRefs.add(ref);
             }
-            viewRefs.add(ref);
+
+            Comparator<SlotRef> comparator = switch (data[2]) {
+                case 1 -> Comparator.comparing(ref -> sortName(ref.get()));
+                case 2 -> Comparator.<SlotRef>comparingInt(ref -> ref.get().isEmpty() ? 0 : ref.get().getCount()).reversed();
+                case 3 -> Comparator.comparing(ref -> sortMod(ref.get()));
+                default -> Comparator.comparingInt(SlotRef::globalIndex);
+            };
+            viewRefs.sort(comparator.thenComparingInt(SlotRef::globalIndex));
+
+            data[1] = Math.max(0, (viewRefs.size() - 1) / VISIBLE_SLOTS);
+            data[0] = Math.max(0, Math.min(data[0], data[1]));
+            data[9] = viewRefs.size();
+        } finally {
+            rebuildingView = false;
         }
+    }
 
-        Comparator<SlotRef> comparator = switch (data[2]) {
-            case 1 -> Comparator.comparing(ref -> sortName(ref.get()));
-            case 2 -> Comparator.<SlotRef>comparingInt(ref -> ref.get().isEmpty() ? 0 : ref.get().getCount()).reversed();
-            case 3 -> Comparator.comparing(ref -> sortMod(ref.get()));
-            default -> Comparator.comparingInt(SlotRef::globalIndex);
-        };
-        viewRefs.sort(comparator.thenComparingInt(SlotRef::globalIndex));
-
-        data[1] = Math.max(0, (viewRefs.size() - 1) / VISIBLE_SLOTS);
-        data[0] = Math.max(0, Math.min(data[0], data[1]));
-        data[9] = viewRefs.size();
-        terminalContainer.setChanged();
+    private void markContentChanged() {
+        if (rebuildingView || vaults.isEmpty()) {
+            return;
+        }
+        rebuildView();
+        broadcastFullState();
     }
 
     private boolean matches(ItemStack stack, String needle) {
@@ -314,6 +327,7 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
             ItemStack removed = ContainerHelper.removeItem(ref.items, ref.slot, amount);
             if (!removed.isEmpty()) {
                 ref.vault.setChanged();
+                setChanged();
             }
             return removed;
         }
@@ -327,6 +341,7 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
             ItemStack removed = ref.get();
             ref.set(ItemStack.EMPTY);
             ref.vault.setChanged();
+            setChanged();
             return removed;
         }
 
@@ -339,10 +354,12 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
             }
             ref.set(stack);
             ref.vault.setChanged();
+            setChanged();
         }
 
         @Override
         public void setChanged() {
+            menu.markContentChanged();
         }
 
         @Override

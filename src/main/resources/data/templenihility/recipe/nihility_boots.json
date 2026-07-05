@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "C": "templenihility:nihility_crystal",
+    "R": "templenihility:nihility_rune"
+  },
+  "pattern": [
+    "C C",
+    "R R"
+  ],
+  "result": {
+    "id": "templenihility:nihility_boots"
+  }
+}

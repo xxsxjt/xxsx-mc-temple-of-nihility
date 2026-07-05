@@ -32,3 +32,10 @@ type="optional"
 versionRange="[15.0.0-beta.1,)"
 ordering="AFTER"
 side="BOTH"
+
+[[dependencies.templenihility]]
+modId="jei"
+type="optional"
+versionRange="[30.6.0.36,)"
+ordering="AFTER"
+side="CLIENT"

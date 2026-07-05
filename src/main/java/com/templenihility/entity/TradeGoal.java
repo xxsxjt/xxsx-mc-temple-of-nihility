@@ -1,7 +1,9 @@
 package com.templenihility.entity;
 
+import com.templenihility.config.ModConfig;
 import com.templenihility.trade.TradeManager;
 import com.templenihility.trade.TradeOffer;
+import java.util.Optional;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
@@ -10,6 +12,7 @@ import net.minecraft.world.item.ItemStack;
 public class TradeGoal extends Goal {
     private final NihilityCreature creature;
     private Player tradingPlayer;
+    private long nextTradeGameTime;
 
     public TradeGoal(NihilityCreature creature) {
         this.creature = creature;
@@ -49,23 +52,38 @@ public class TradeGoal extends Goal {
      * 处理交易请求
      */
     public boolean handleTrade(Player player, ItemStack payment) {
+        long gameTime = creature.level().getGameTime();
+        if (gameTime < nextTradeGameTime) {
+            long seconds = Math.max(1, (nextTradeGameTime - gameTime + 19) / 20);
+            player.sendSystemMessage(Component.translatable("message.templenihility.trade_cooldown", seconds));
+            return true;
+        }
+
         int tier = creature.getTier();
-        TradeOffer offer = TradeManager.getRandomOffer(tier);
-
-        if (offer != null && offer.canAfford(payment)) {
-            // 扣除支付物品
-            ItemStack cost = offer.getCost();
-            ItemStack result = offer.getResult();
-
-            payment.shrink(cost.getCount());
-            player.getInventory().add(result.copy());
-
-            // 发送消息
-            if (!creature.level().isClientSide()) {
-                player.sendSystemMessage(Component.literal("交易成功! 获得: " + result.getHoverName().getString()));
+        TradeOffer offer = TradeManager.getAffordableOffer(tier, payment);
+        if (offer == null) {
+            Optional<ItemStack> cheapest = TradeManager.getCheapestMatchingCost(tier, payment);
+            if (cheapest.isPresent()) {
+                ItemStack cost = cheapest.get();
+                player.sendSystemMessage(Component.translatable(
+                    "message.templenihility.trade_need_more",
+                    cost.getCount(), cost.getHoverName()));
+            } else {
+                player.sendSystemMessage(Component.translatable("message.templenihility.trade_wrong_item"));
             }
             return true;
         }
-        return false;
+
+        ItemStack cost = offer.getCost();
+        ItemStack result = offer.getResult();
+        payment.shrink(cost.getCount());
+        if (!player.getInventory().add(result.copy())) {
+            player.drop(result.copy(), false);
+        }
+        nextTradeGameTime = gameTime + ModConfig.TRADE_COOLDOWN.get();
+        player.sendSystemMessage(Component.translatable(
+            "message.templenihility.trade_success",
+            cost.getCount(), cost.getHoverName(), result.getCount(), result.getHoverName()));
+        return true;
     }
 }

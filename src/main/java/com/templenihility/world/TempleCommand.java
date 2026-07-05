@@ -34,8 +34,11 @@ public class TempleCommand {
         );
 
         dispatcher.register(Commands.literal("nihility")
+            .then(Commands.literal("help")
+                .executes(ctx -> help(ctx.getSource())))
             .then(Commands.literal("terminal")
                 .executes(ctx -> openTerminal(ctx.getSource())))
+            .executes(ctx -> help(ctx.getSource()))
         );
     }
 
@@ -66,6 +69,14 @@ public class TempleCommand {
         }
 
         return NihilityTerminalItem.openBoundVault(player, terminal.get()) ? 1 : 0;
+    }
+
+    private static int help(CommandSourceStack src) {
+        src.sendSuccess(() -> Component.translatable("message.templenihility.help_title"), false);
+        src.sendSuccess(() -> Component.translatable("message.templenihility.help_vault"), false);
+        src.sendSuccess(() -> Component.translatable("message.templenihility.help_terminal"), false);
+        src.sendSuccess(() -> Component.translatable("message.templenihility.help_chunkload"), false);
+        return 1;
     }
 
     private static Optional<ItemStack> findTerminal(ServerPlayer player) {
