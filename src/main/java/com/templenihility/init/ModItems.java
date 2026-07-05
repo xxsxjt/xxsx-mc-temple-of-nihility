@@ -62,20 +62,17 @@ public class ModItems {
     public static final DeferredItem<Item> NIHILITY_HOE = ITEMS.register("nihility_hoe",
         id -> new NihilityHoe(itemProperties(id).rarity(Rarity.UNCOMMON)));
 
-    // 小型虚无容器；大型仓储由虚无宝库网络承担
-    public static final DeferredItem<Item> NIHILITY_BAG = ITEMS.register("nihility_bag",
-        id -> new NihilityStorageItem(3, itemProperties(id).stacksTo(1).rarity(Rarity.UNCOMMON),
-            "tooltip.templenihility.nihility_bag"));
-
     // 功能道具
     public static final DeferredItem<Item> NIHILITY_LANTERN = ITEMS.register("nihility_lantern",
-        id -> new NihilityEffectItem(NihilityEffectItem.Kind.LANTERN,
+        id -> new NihilityTooltipItem(
             itemProperties(id).stacksTo(1).rarity(Rarity.UNCOMMON),
+            true,
             "tooltip.templenihility.nihility_lantern"));
 
     public static final DeferredItem<Item> NIHILITY_RECOVERY_ORB = ITEMS.register("nihility_recovery_orb",
-        id -> new NihilityEffectItem(NihilityEffectItem.Kind.RECOVERY_ORB,
+        id -> new NihilityTooltipItem(
             itemProperties(id).stacksTo(1).rarity(Rarity.RARE),
+            true,
             "tooltip.templenihility.nihility_recovery_orb"));
 
     public static final DeferredItem<Item> NIHILITY_SHADOW_SIGIL = ITEMS.register("nihility_shadow_sigil",
@@ -85,32 +82,32 @@ public class ModItems {
 
     public static final DeferredItem<Item> NIHILITY_PURIFYING_BELL = ITEMS.register("nihility_purifying_bell",
         id -> new NihilityEffectItem(NihilityEffectItem.Kind.PURIFYING_BELL,
-            itemProperties(id).stacksTo(1).rarity(Rarity.RARE),
+            itemProperties(id).stacksTo(1).durability(96).rarity(Rarity.RARE),
             "tooltip.templenihility.nihility_purifying_bell"));
 
     public static final DeferredItem<Item> NIHILITY_ECHO_LENS = ITEMS.register("nihility_echo_lens",
         id -> new NihilityEffectItem(NihilityEffectItem.Kind.ECHO_LENS,
-            itemProperties(id).stacksTo(1).rarity(Rarity.UNCOMMON),
+            itemProperties(id).stacksTo(1).durability(128).rarity(Rarity.UNCOMMON),
             "tooltip.templenihility.nihility_echo_lens"));
 
     public static final DeferredItem<Item> NIHILITY_BARRIER_CORE = ITEMS.register("nihility_barrier_core",
         id -> new NihilityEffectItem(NihilityEffectItem.Kind.BARRIER_CORE,
-            itemProperties(id).stacksTo(1).rarity(Rarity.RARE),
+            itemProperties(id).stacksTo(1).durability(80).rarity(Rarity.RARE),
             "tooltip.templenihility.nihility_barrier_core"));
 
     public static final DeferredItem<Item> NIHILITY_PHASE_FEATHER = ITEMS.register("nihility_phase_feather",
         id -> new NihilityEffectItem(NihilityEffectItem.Kind.PHASE_FEATHER,
-            itemProperties(id).stacksTo(1).rarity(Rarity.UNCOMMON),
+            itemProperties(id).stacksTo(1).durability(96).rarity(Rarity.UNCOMMON),
             "tooltip.templenihility.nihility_phase_feather"));
 
     public static final DeferredItem<Item> NIHILITY_GRAVITY_SIGIL = ITEMS.register("nihility_gravity_sigil",
         id -> new NihilityEffectItem(NihilityEffectItem.Kind.GRAVITY_SIGIL,
-            itemProperties(id).stacksTo(1).rarity(Rarity.RARE),
+            itemProperties(id).stacksTo(1).durability(80).rarity(Rarity.RARE),
             "tooltip.templenihility.nihility_gravity_sigil"));
 
     public static final DeferredItem<Item> NIHILITY_WAR_HORN = ITEMS.register("nihility_war_horn",
         id -> new NihilityEffectItem(NihilityEffectItem.Kind.WAR_HORN,
-            itemProperties(id).stacksTo(1).rarity(Rarity.RARE),
+            itemProperties(id).stacksTo(1).durability(64).rarity(Rarity.RARE),
             "tooltip.templenihility.nihility_war_horn"));
 
     // Curios 饰品；未安装 Curios 时仍作为普通物品存在

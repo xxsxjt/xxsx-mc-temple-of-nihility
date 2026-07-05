@@ -1,0 +1,101 @@
+package com.templenihility.client.screen;
+
+import com.templenihility.menu.NihilityTradeMenu;
+import com.templenihility.trade.TradeOffer;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+
+public class NihilityTradeScreen extends AbstractContainerScreen<NihilityTradeMenu> {
+    private Button tradeButton;
+
+    public NihilityTradeScreen(NihilityTradeMenu menu, Inventory inventory, Component title) {
+        super(menu, inventory, title, 204, 202);
+        this.titleLabelX = 10;
+        this.titleLabelY = 8;
+        this.inventoryLabelX = 25;
+        this.inventoryLabelY = 108;
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+        int rows = Math.min(5, menu.getOfferCount());
+        for (int i = 0; i < rows; i++) {
+            final int index = i;
+            addRenderableWidget(Button.builder(Component.literal(String.valueOf(i + 1)),
+                    button -> sendButton(NihilityTradeMenu.BUTTON_SELECT_BASE + index))
+                .bounds(leftPos + 10, topPos + 27 + i * 16, 18, 14)
+                .build());
+        }
+        tradeButton = addRenderableWidget(Button.builder(Component.translatable("screen.templenihility.trade_button"),
+                button -> sendButton(NihilityTradeMenu.BUTTON_TRADE))
+            .bounds(leftPos + 132, topPos + 94, 58, 18)
+            .build());
+    }
+
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        if (tradeButton != null) {
+            tradeButton.active = menu.canTradeSelected();
+        }
+    }
+
+    @Override
+    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        super.extractBackground(graphics, mouseX, mouseY, partialTick);
+        int x = leftPos;
+        int y = topPos;
+        graphics.fill(RenderPipelines.GUI, x, y, x + imageWidth, y + imageHeight, 0xFF100817);
+        graphics.fill(RenderPipelines.GUI, x + 6, y + 21, x + 112, y + 104, 0xFF21102F);
+        graphics.fill(RenderPipelines.GUI, x + 118, y + 21, x + 198, y + 104, 0xFF1A1126);
+        graphics.fill(RenderPipelines.GUI, x + 6, y + 116, x + 198, y + 198, 0xFF170D21);
+        graphics.outline(x, y, imageWidth, imageHeight, 0xFF7B3CC5);
+        graphics.outline(x + 6, y + 21, 106, 83, 0xFF42E6F5);
+        graphics.outline(x + 118, y + 21, 80, 83, 0xFF9D6BFF);
+    }
+
+    @Override
+    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        graphics.text(font, title, titleLabelX, titleLabelY, 0xFFE9D8FF, false);
+        graphics.text(font, Component.translatable("screen.templenihility.trade_tier", menu.getTier()),
+            122, 27, 0xFFB9A8D6, false);
+        graphics.text(font, Component.translatable("screen.templenihility.trade_payment"),
+            26, 60, 0xFFB9A8D6, false);
+        graphics.text(font, Component.literal("→"), 93, 76, 0xFF7EEBFF, false);
+        graphics.text(font, Component.translatable("screen.templenihility.trade_result"),
+            147, 60, 0xFFB9A8D6, false);
+        graphics.text(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0xFFE9D8FF, false);
+
+        for (int i = 0; i < Math.min(5, menu.getOfferCount()); i++) {
+            drawOffer(graphics, i, 31 + i * 16);
+        }
+    }
+
+    private void drawOffer(GuiGraphicsExtractor graphics, int index, int y) {
+        TradeOffer offer = menu.getOffer(index);
+        int color = index == menu.getSelectedIndex() ? 0xFF33204D : 0xFF170C24;
+        graphics.fill(30, y - 2, 108, y + 14, color);
+        graphics.outline(30, y - 2, 78, 16, index == menu.getSelectedIndex() ? 0xFF7EEBFF : 0xFF5A3778);
+        drawMiniItem(graphics, offer.getCost(), 33, y - 1);
+        graphics.text(font, ">", 53, y + 3, 0xFF7EEBFF, false);
+        drawMiniItem(graphics, offer.getResult(), 64, y - 1);
+        graphics.text(font, offer.getResult().getHoverName(), 83, y + 3, 0xFFE9D8FF, false);
+    }
+
+    private void drawMiniItem(GuiGraphicsExtractor graphics, ItemStack stack, int x, int y) {
+        graphics.item(stack, x, y);
+        graphics.itemDecorations(font, stack, x, y);
+    }
+
+    private void sendButton(int id) {
+        if (minecraft != null && minecraft.gameMode != null) {
+            minecraft.gameMode.handleInventoryButtonClick(menu.containerId, id);
+        }
+    }
+}

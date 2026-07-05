@@ -4,12 +4,12 @@
   "key": {
     "S": "templenihility:temple_seal",
     "C": "templenihility:nihility_core",
-    "B": "templenihility:nihility_bag",
+    "R": "templenihility:nihility_rune",
     "E": "minecraft:ender_chest"
   },
   "pattern": [
     "SCS",
-    "BEB",
+    "RER",
     "SCS"
   ],
   "result": {

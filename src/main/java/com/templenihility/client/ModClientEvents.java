@@ -4,6 +4,7 @@ import com.templenihility.TempleNihilityMod;
 import com.templenihility.client.model.NihilityCreatureModel;
 import com.templenihility.client.renderer.NihilityCreatureRenderer;
 import com.templenihility.client.screen.NihilityTerminalScreen;
+import com.templenihility.client.screen.NihilityTradeScreen;
 import com.templenihility.init.ModEntities;
 import com.templenihility.init.ModMenus;
 import com.mojang.blaze3d.platform.InputConstants;
@@ -43,6 +44,7 @@ public class ModClientEvents {
 
     private static void registerMenuScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenus.NIHILITY_TERMINAL.get(), NihilityTerminalScreen::new);
+        event.register(ModMenus.NIHILITY_TRADE.get(), NihilityTradeScreen::new);
     }
 
     private static void clientTick(ClientTickEvent.Post event) {

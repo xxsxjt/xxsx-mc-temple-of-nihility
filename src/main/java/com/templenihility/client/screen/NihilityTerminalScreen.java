@@ -51,6 +51,10 @@ public class NihilityTerminalScreen extends AbstractContainerScreen<NihilityTerm
             })
             .bounds(leftPos + 152, topPos + 20, 16, 18)
             .build());
+        addRenderableWidget(Button.builder(Component.translatable("screen.templenihility.chunkload_button"),
+                button -> sendButton(NihilityTerminalMenu.BUTTON_TOGGLE_CHUNKLOAD))
+            .bounds(leftPos + 122, topPos + 153, 46, 12)
+            .build());
     }
 
     @Override
@@ -70,7 +74,10 @@ public class NihilityTerminalScreen extends AbstractContainerScreen<NihilityTerm
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         graphics.text(font, title, titleLabelX, titleLabelY, 0xFFE9D8FF, false);
         graphics.text(font, Component.translatable("screen.templenihility.vault_status_line",
-            menu.getUsedSlots(), menu.getTotalSlots(), menu.getFilteredSlotCount(), menu.getChunkLoadedVaults()),
+            menu.getUsedSlots(), menu.getTotalSlots(), menu.getFilteredSlotCount(),
+            Component.translatable(menu.isNetworkChunkLoaded()
+                ? "screen.templenihility.chunkload_on"
+                : "screen.templenihility.chunkload_off")),
             8, 34, 0xFFB9A8D6, false);
         graphics.text(font, Component.literal((menu.getPage() + 1) + " / " + (menu.getMaxPage() + 1)), 140, 34, 0xFF7EEBFF, false);
         graphics.text(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0xFFE9D8FF, false);

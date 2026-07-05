@@ -100,14 +100,14 @@ public class TradeManager {
             .map(ItemStack::copy);
     }
 
-    private static List<TradeOffer> getOffersForTier(int tier) {
+    public static List<TradeOffer> getOffersForTier(int tier) {
         switch (tier) {
-            case 1: return TIER_1_OFFERS;
-            case 2: return TIER_2_OFFERS;
-            case 3: return TIER_3_OFFERS;
-            case 4: return TIER_4_OFFERS;
-            case 5: return TIER_5_OFFERS;
-            default: return new ArrayList<>();
+            case 1: return List.copyOf(TIER_1_OFFERS);
+            case 2: return List.copyOf(TIER_2_OFFERS);
+            case 3: return List.copyOf(TIER_3_OFFERS);
+            case 4: return List.copyOf(TIER_4_OFFERS);
+            case 5: return List.copyOf(TIER_5_OFFERS);
+            default: return List.of();
         }
     }
 }

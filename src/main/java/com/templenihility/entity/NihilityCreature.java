@@ -1,8 +1,11 @@
 package com.templenihility.entity;
 
+import com.templenihility.menu.NihilityTradeMenu;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -72,12 +75,13 @@ public abstract class NihilityCreature extends PathfinderMob {
     protected InteractionResult mobInteract(Player player, InteractionHand hand) {
         if (this.level().isClientSide()) return InteractionResult.CONSUME;
 
-        ItemStack heldItem = player.getItemInHand(hand);
-        if (heldItem.is(com.templenihility.init.ModItems.NIHILITY_SHARD.get()) ||
-            heldItem.is(com.templenihility.init.ModItems.NIHILITY_CRYSTAL.get())) {
-            if (tradeGoal.handleTrade(player, heldItem)) {
-                return InteractionResult.SUCCESS;
-            }
+        if (player instanceof ServerPlayer serverPlayer) {
+            int tier = getTier();
+            serverPlayer.openMenu(new SimpleMenuProvider(
+                (id, inventory, p) -> new NihilityTradeMenu(id, inventory, tier),
+                Component.translatable("container.templenihility.nihility_trade", getDisplayName())),
+                buffer -> buffer.writeVarInt(tier));
+            return InteractionResult.SUCCESS;
         }
         return super.mobInteract(player, hand);
     }

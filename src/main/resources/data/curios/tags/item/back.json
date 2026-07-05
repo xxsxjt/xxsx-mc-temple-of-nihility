@@ -2,6 +2,8 @@
   "replace": false,
   "values": [
     "templenihility:nihility_cloak",
+    "templenihility:nihility_lantern",
+    "templenihility:nihility_recovery_orb",
     "templenihility:nihility_terminal"
   ]
 }

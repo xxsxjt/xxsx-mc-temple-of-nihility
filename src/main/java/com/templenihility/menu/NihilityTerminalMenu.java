@@ -26,6 +26,7 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
     public static final int BUTTON_NEXT_PAGE = 1;
     public static final int BUTTON_CYCLE_SORT = 2;
     public static final int BUTTON_CLEAR_SEARCH = 3;
+    public static final int BUTTON_TOGGLE_CHUNKLOAD = 4;
     public static final int BUTTON_CHAR_BASE = 1000;
 
     private final List<NihilityVaultBlockEntity> vaults;
@@ -78,6 +79,10 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
         if (buttonId == BUTTON_CLEAR_SEARCH) {
             search = "";
             setPage(0);
+            return true;
+        }
+        if (buttonId == BUTTON_TOGGLE_CHUNKLOAD) {
+            toggleChunkLoading(player);
             return true;
         }
         if (buttonId >= BUTTON_CHAR_BASE) {
@@ -159,6 +164,10 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
         return data[8];
     }
 
+    public boolean isNetworkChunkLoaded() {
+        return getVaultCount() > 0 && getChunkLoadedVaults() >= getVaultCount();
+    }
+
     public int getFilteredSlotCount() {
         return data[9];
     }
@@ -174,6 +183,20 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
 
     private void setPage(int page) {
         data[0] = Math.max(0, Math.min(page, data[1]));
+        rebuildView();
+        broadcastFullState();
+    }
+
+    private void toggleChunkLoading(Player player) {
+        if (vaults.isEmpty() || !(vaults.getFirst().getLevel() instanceof ServerLevel level)) {
+            return;
+        }
+
+        boolean enabled = !isNetworkChunkLoaded();
+        NihilityVaultNetwork.setNetworkChunkLoaded(level, vaults.getFirst().getBlockPos(), enabled);
+        player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
+            enabled ? "message.templenihility.vault_chunkload_on" : "message.templenihility.vault_chunkload_off",
+            vaults.size()));
         rebuildView();
         broadcastFullState();
     }

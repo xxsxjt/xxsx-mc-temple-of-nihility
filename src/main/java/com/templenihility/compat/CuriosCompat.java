@@ -2,6 +2,7 @@ package com.templenihility.compat;
 
 import com.templenihility.TempleNihilityMod;
 import com.templenihility.init.ModItems;
+import com.templenihility.world.NihilityDynamicLight;
 import java.util.Optional;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -15,12 +16,17 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import top.theillusivec4.curios.api.CurioAttributeModifiers;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.SlotContext;
 import top.theillusivec4.curios.api.type.capability.ICurioItem;
 
 public final class CuriosCompat {
+    private static boolean eventsRegistered;
+
     public static void register() {
         register(ModItems.NIHILITY_RING.get(), ring());
         register(ModItems.NIHILITY_AMULET.get(), amulet());
@@ -34,7 +40,14 @@ public final class CuriosCompat {
         register(ModItems.NIHILITY_GAUNTLET.get(), gauntlet());
         register(ModItems.NIHILITY_HOURGLASS.get(), hourglass());
         register(ModItems.NIHILITY_SOUL_ANCHOR.get(), soulAnchor());
+        register(ModItems.NIHILITY_LANTERN.get(), lantern());
+        register(ModItems.NIHILITY_RECOVERY_ORB.get(), recoveryOrb());
         register(ModItems.NIHILITY_TERMINAL.get(), new ICurioItem() {});
+        if (!eventsRegistered) {
+            NeoForge.EVENT_BUS.addListener(CuriosCompat::playerTick);
+            NeoForge.EVENT_BUS.addListener(CuriosCompat::playerLoggedOut);
+            eventsRegistered = true;
+        }
         TempleNihilityMod.LOGGER.info("Temple of Nihility Curios integration loaded");
     }
 
@@ -46,6 +59,26 @@ public final class CuriosCompat {
         return CuriosApi.getCuriosInventory(player)
             .flatMap(handler -> handler.findFirstCurio(stack -> stack.is(ModItems.NIHILITY_TERMINAL.get())))
             .map(result -> result.stack());
+    }
+
+    private static void playerTick(PlayerTickEvent.Post event) {
+        Player player = event.getEntity();
+        if (player.level().isClientSide() || player.tickCount % 20 != 0) {
+            return;
+        }
+        if (!hasLantern(player)) {
+            NihilityDynamicLight.clear(player);
+        }
+    }
+
+    private static void playerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        NihilityDynamicLight.clear(event.getEntity());
+    }
+
+    private static boolean hasLantern(Player player) {
+        return CuriosApi.getCuriosInventory(player)
+            .flatMap(handler -> handler.findFirstCurio(stack -> stack.is(ModItems.NIHILITY_LANTERN.get())))
+            .isPresent();
     }
 
     private static ICurioItem ring() {
@@ -282,6 +315,48 @@ public final class CuriosCompat {
                     entity.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 20 * 8, 0, true, false, true));
                     entity.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 20 * 5, 0, true, false, true));
                 }
+            }
+        };
+    }
+
+    private static ICurioItem lantern() {
+        return new ICurioItem() {
+            @Override
+            public void curioTick(SlotContext slotContext, ItemStack stack) {
+                LivingEntity entity = slotContext.entity();
+                if (entity.level().isClientSide()) {
+                    return;
+                }
+                if (entity instanceof Player player && entity.tickCount % 5 == 0) {
+                    NihilityDynamicLight.update(player);
+                }
+                if (entity.tickCount % 80 == 0) {
+                    entity.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 220, 0, true, false, true));
+                }
+            }
+
+            @Override
+            public void onUnequip(SlotContext slotContext, ItemStack newStack, ItemStack stack) {
+                if (slotContext.entity() instanceof Player player) {
+                    NihilityDynamicLight.clear(player);
+                }
+            }
+        };
+    }
+
+    private static ICurioItem recoveryOrb() {
+        return new ICurioItem() {
+            @Override
+            public void curioTick(SlotContext slotContext, ItemStack stack) {
+                LivingEntity entity = slotContext.entity();
+                if (entity.level().isClientSide()
+                    || entity.tickCount % 160 != 0
+                    || entity.getHealth() > entity.getMaxHealth() * 0.55f) {
+                    return;
+                }
+
+                entity.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 20 * 6, 0, true, false, true));
+                entity.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 20 * 20, 0, true, false, true));
             }
         };
     }

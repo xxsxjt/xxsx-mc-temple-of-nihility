@@ -3,6 +3,8 @@
   "values": [
     "templenihility:nihility_amulet",
     "templenihility:nihility_soul_anchor",
+    "templenihility:nihility_lantern",
+    "templenihility:nihility_recovery_orb",
     "templenihility:nihility_terminal"
   ]
 }

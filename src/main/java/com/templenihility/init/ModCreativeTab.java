@@ -35,7 +35,6 @@ public class ModCreativeTab {
                 output.accept(ModItems.NIHILITY_CHESTPLATE.get());
                 output.accept(ModItems.NIHILITY_LEGGINGS.get());
                 output.accept(ModItems.NIHILITY_BOOTS.get());
-                output.accept(ModItems.NIHILITY_BAG.get());
                 output.accept(ModBlocks.NIHILITY_VAULT.get());
                 output.accept(ModItems.NIHILITY_LANTERN.get());
                 output.accept(ModItems.NIHILITY_RECOVERY_ORB.get());

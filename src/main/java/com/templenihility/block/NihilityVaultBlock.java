@@ -4,7 +4,6 @@ import com.mojang.serialization.MapCodec;
 import com.templenihility.blockentity.NihilityVaultBlockEntity;
 import com.templenihility.storage.NihilityVaultNetwork;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionResult;
@@ -42,17 +41,6 @@ public class NihilityVaultBlock extends BaseEntityBlock {
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (level.isClientSide()) {
-            return InteractionResult.SUCCESS;
-        }
-
-        if (player.isShiftKeyDown() && level.getBlockEntity(pos) instanceof NihilityVaultBlockEntity vault) {
-            ServerLevel serverLevel = (ServerLevel) level;
-            boolean enabled = !vault.isChunkLoaded();
-            java.util.List<NihilityVaultBlockEntity> vaults = NihilityVaultNetwork.collect(serverLevel, pos);
-            NihilityVaultNetwork.setNetworkChunkLoaded(serverLevel, pos, enabled);
-            player.sendSystemMessage(Component.translatable(
-                enabled ? "message.templenihility.vault_chunkload_on" : "message.templenihility.vault_chunkload_off",
-                vaults.size()));
             return InteractionResult.SUCCESS;
         }
 
