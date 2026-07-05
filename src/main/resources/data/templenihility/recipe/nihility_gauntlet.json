@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "L": "minecraft:leather",
+    "C": "templenihility:nihility_crystal",
+    "R": "templenihility:nihility_rune",
+    "N": "templenihility:nihility_core"
+  },
+  "pattern": [
+    "ICI",
+    "RNR",
+    " L "
+  ],
+  "result": {
+    "id": "templenihility:nihility_gauntlet"
+  }
+}

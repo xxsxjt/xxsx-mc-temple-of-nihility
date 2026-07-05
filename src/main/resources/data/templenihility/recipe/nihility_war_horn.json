@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "H": "minecraft:goat_horn",
+    "C": "templenihility:nihility_crystal",
+    "R": "templenihility:nihility_rune",
+    "N": "templenihility:nihility_core"
+  },
+  "pattern": [
+    "CRC",
+    "RHR",
+    " N "
+  ],
+  "result": {
+    "id": "templenihility:nihility_war_horn"
+  }
+}

@@ -31,6 +31,9 @@ public final class CuriosCompat {
         register(ModItems.NIHILITY_REGENERATOR.get(), regenerator());
         register(ModItems.NIHILITY_MINER_CHARM.get(), minerCharm());
         register(ModItems.NIHILITY_WARD.get(), ward());
+        register(ModItems.NIHILITY_GAUNTLET.get(), gauntlet());
+        register(ModItems.NIHILITY_HOURGLASS.get(), hourglass());
+        register(ModItems.NIHILITY_SOUL_ANCHOR.get(), soulAnchor());
         register(ModItems.NIHILITY_TERMINAL.get(), new ICurioItem() {});
         TempleNihilityMod.LOGGER.info("Temple of Nihility Curios integration loaded");
     }
@@ -231,6 +234,54 @@ public final class CuriosCompat {
                         new AttributeModifier(id("nihility_ward_knockback"), 0.15, AttributeModifier.Operation.ADD_VALUE),
                         "charm"
                     );
+            }
+        };
+    }
+
+    private static ICurioItem gauntlet() {
+        return new ICurioItem() {
+            @Override
+            public CurioAttributeModifiers getDefaultCurioAttributeModifiers(ItemStack stack) {
+                return CurioAttributeModifiers.EMPTY
+                    .withModifierAdded(
+                        Attributes.ATTACK_DAMAGE,
+                        new AttributeModifier(id("nihility_gauntlet_damage"), 2.0, AttributeModifier.Operation.ADD_VALUE),
+                        "curio"
+                    )
+                    .withModifierAdded(
+                        Attributes.ATTACK_SPEED,
+                        new AttributeModifier(id("nihility_gauntlet_speed"), 0.08, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL),
+                        "curio"
+                    );
+            }
+        };
+    }
+
+    private static ICurioItem hourglass() {
+        return new ICurioItem() {
+            @Override
+            public void curioTick(SlotContext slotContext, ItemStack stack) {
+                LivingEntity entity = slotContext.entity();
+                if (!entity.level().isClientSide() && entity.tickCount % 100 == 0) {
+                    entity.addEffect(new MobEffectInstance(MobEffects.HASTE, 140, 0, true, false, true));
+                    entity.addEffect(new MobEffectInstance(MobEffects.SPEED, 140, 0, true, false, true));
+                }
+            }
+        };
+    }
+
+    private static ICurioItem soulAnchor() {
+        return new ICurioItem() {
+            @Override
+            public void curioTick(SlotContext slotContext, ItemStack stack) {
+                LivingEntity entity = slotContext.entity();
+                if (!entity.level().isClientSide()
+                    && entity.tickCount % 160 == 0
+                    && entity.getHealth() <= entity.getMaxHealth() * 0.35f) {
+                    entity.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 20 * 12, 1, true, false, true));
+                    entity.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 20 * 8, 0, true, false, true));
+                    entity.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 20 * 5, 0, true, false, true));
+                }
             }
         };
     }

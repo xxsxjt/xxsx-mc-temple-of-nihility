@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "F": "minecraft:feather",
+    "M": "minecraft:phantom_membrane",
+    "R": "templenihility:nihility_rune",
+    "C": "templenihility:nihility_crystal"
+  },
+  "pattern": [
+    " R ",
+    "FCM",
+    " R "
+  ],
+  "result": {
+    "id": "templenihility:nihility_phase_feather"
+  }
+}

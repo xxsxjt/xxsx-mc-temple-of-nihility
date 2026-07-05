@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "O": "minecraft:obsidian",
+    "E": "minecraft:ender_pearl",
+    "R": "templenihility:nihility_rune",
+    "N": "templenihility:nihility_core"
+  },
+  "pattern": [
+    "OEO",
+    "RNR",
+    "OEO"
+  ],
+  "result": {
+    "id": "templenihility:nihility_gravity_sigil"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "G": "minecraft:glass",
+    "D": "templenihility:nihility_dust",
+    "C": "templenihility:nihility_crystal",
+    "K": "minecraft:clock",
+    "N": "templenihility:nihility_core"
+  },
+  "pattern": [
+    "GCG",
+    "DKD",
+    "GNG"
+  ],
+  "result": {
+    "id": "templenihility:nihility_hourglass"
+  }
+}

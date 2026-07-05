@@ -43,6 +43,9 @@ public class ModCreativeTab {
                 output.accept(ModItems.NIHILITY_PURIFYING_BELL.get());
                 output.accept(ModItems.NIHILITY_ECHO_LENS.get());
                 output.accept(ModItems.NIHILITY_BARRIER_CORE.get());
+                output.accept(ModItems.NIHILITY_PHASE_FEATHER.get());
+                output.accept(ModItems.NIHILITY_GRAVITY_SIGIL.get());
+                output.accept(ModItems.NIHILITY_WAR_HORN.get());
                 output.accept(ModItems.NIHILITY_TERMINAL.get());
                 output.accept(ModItems.NIHILITY_RING.get());
                 output.accept(ModItems.NIHILITY_AMULET.get());
@@ -53,6 +56,9 @@ public class ModCreativeTab {
                 output.accept(ModItems.NIHILITY_REGENERATOR.get());
                 output.accept(ModItems.NIHILITY_MINER_CHARM.get());
                 output.accept(ModItems.NIHILITY_WARD.get());
+                output.accept(ModItems.NIHILITY_GAUNTLET.get());
+                output.accept(ModItems.NIHILITY_HOURGLASS.get());
+                output.accept(ModItems.NIHILITY_SOUL_ANCHOR.get());
                 output.accept(ModBlocks.NIHILITY_STONE.get());
                 output.accept(ModBlocks.NIHILITY_CRYSTAL_BLOCK.get());
                 output.accept(ModBlocks.NIHILITY_BRICKS.get());

@@ -17,6 +17,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 
 public class NihilityEffectItem extends Item {
     private final Kind kind;
@@ -103,6 +104,46 @@ public class NihilityEffectItem extends Item {
                 player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 20 * 16, 1, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 20 * 20, 0, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 20 * 90, 2, true, false, true));
+            }
+        },
+        PHASE_FEATHER(20 * 55, "message.templenihility.nihility_phase_feather") {
+            @Override
+            void apply(Player player) {
+                player.addEffect(new MobEffectInstance(MobEffects.SPEED, 20 * 18, 2, true, false, true));
+                player.addEffect(new MobEffectInstance(MobEffects.JUMP_BOOST, 20 * 18, 1, true, false, true));
+                player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 20 * 24, 0, true, false, true));
+            }
+        },
+        GRAVITY_SIGIL(20 * 70, "message.templenihility.nihility_gravity_sigil") {
+            @Override
+            void apply(Player player) {
+                Vec3 center = player.position().add(0.0, 0.8, 0.0);
+                for (Entity entity : player.level().getEntities(player, player.getBoundingBox().inflate(10.0),
+                        entity -> entity instanceof LivingEntity && entity.isAlive())) {
+                    if (entity instanceof LivingEntity living && !(living instanceof Player)) {
+                        living.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 20 * 8, 2, true, false, true));
+                        living.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 20 * 8, 0, true, false, true));
+                        living.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 8, 0, true, false, true));
+                        Vec3 pull = center.subtract(living.position());
+                        if (pull.lengthSqr() > 1.0E-4) {
+                            living.setDeltaMovement(living.getDeltaMovement().scale(0.55).add(pull.normalize().scale(0.32)));
+                        }
+                    }
+                }
+            }
+        },
+        WAR_HORN(20 * 85, "message.templenihility.nihility_war_horn") {
+            @Override
+            void apply(Player player) {
+                player.addEffect(new MobEffectInstance(MobEffects.STRENGTH, 20 * 24, 1, true, false, true));
+                player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 20 * 16, 0, true, false, true));
+                player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 20 * 45, 1, true, false, true));
+                for (Entity entity : player.level().getEntities(player, player.getBoundingBox().inflate(8.0),
+                        entity -> entity instanceof LivingEntity && entity.isAlive())) {
+                    if (entity instanceof LivingEntity living && !(living instanceof Player)) {
+                        living.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 20 * 10, 1, true, false, true));
+                    }
+                }
             }
         };
 
