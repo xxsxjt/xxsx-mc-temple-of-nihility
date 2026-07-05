@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "W": "templenihility:nihility_ward",
+    "C": "templenihility:nihility_core",
+    "O": "minecraft:obsidian"
+  },
+  "pattern": [
+    "OCO",
+    "CWC",
+    "OCO"
+  ],
+  "result": {
+    "id": "templenihility:nihility_aegis_charm"
+  }
+}

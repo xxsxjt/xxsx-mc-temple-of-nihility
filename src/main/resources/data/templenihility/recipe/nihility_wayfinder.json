@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "C": "minecraft:compass",
+    "R": "templenihility:nihility_rune",
+    "D": "templenihility:nihility_dust"
+  },
+  "pattern": [
+    "DRD",
+    "RCR",
+    "DRD"
+  ],
+  "result": {
+    "id": "templenihility:nihility_wayfinder"
+  }
+}

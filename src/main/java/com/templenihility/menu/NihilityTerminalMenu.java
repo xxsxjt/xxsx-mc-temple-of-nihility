@@ -203,12 +203,14 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
 
     private void rebuildAllRefs() {
         allRefs.clear();
+        int slotOffset = 0;
         for (int vaultIndex = 0; vaultIndex < vaults.size(); vaultIndex++) {
             NihilityVaultBlockEntity vault = vaults.get(vaultIndex);
             NonNullList<ItemStack> items = vault.getItems();
             for (int slot = 0; slot < items.size(); slot++) {
-                allRefs.add(new SlotRef(vault, items, slot, vaultIndex * NihilityVaultBlockEntity.SLOTS_PER_VAULT + slot));
+                allRefs.add(new SlotRef(vault, items, slot, slotOffset + slot));
             }
+            slotOffset += items.size();
         }
         NihilityVaultNetwork.Stats stats = NihilityVaultNetwork.stats(vaults);
         data[3] = stats.vaultCount();

@@ -52,6 +52,12 @@ public class TradeManager {
         TIER_3_OFFERS.add(new TradeOffer(
             new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 3),
             new ItemStack(Items.NETHERITE_SCRAP, 1), 3));
+        TIER_3_OFFERS.add(new TradeOffer(
+            new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 3),
+            new ItemStack(ModItems.NIHILITY_VAULT_EXPANSION.get(), 1), 3));
+        TIER_3_OFFERS.add(new TradeOffer(
+            new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 2),
+            new ItemStack(ModItems.NIHILITY_WAYFINDER.get(), 1), 3));
 
         // 4级交易 - 顶级物资
         TIER_4_OFFERS.add(new TradeOffer(
@@ -63,6 +69,12 @@ public class TradeManager {
         TIER_4_OFFERS.add(new TradeOffer(
             new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 10),
             new ItemStack(Items.SHULKER_SHELL, 4), 4));
+        TIER_4_OFFERS.add(new TradeOffer(
+            new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 7),
+            new ItemStack(ModItems.NIHILITY_RIFT_RING.get(), 1), 4));
+        TIER_4_OFFERS.add(new TradeOffer(
+            new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 7),
+            new ItemStack(ModItems.NIHILITY_AEGIS_CHARM.get(), 1), 4));
 
         // 5级交易 - 传说物资
         TIER_5_OFFERS.add(new TradeOffer(
@@ -71,6 +83,12 @@ public class TradeManager {
         TIER_5_OFFERS.add(new TradeOffer(
             new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 15),
             new ItemStack(Items.TOTEM_OF_UNDYING, 1), 5));
+        TIER_5_OFFERS.add(new TradeOffer(
+            new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 12),
+            new ItemStack(ModItems.NIHILITY_ECLIPSE_AMULET.get(), 1), 5));
+        TIER_5_OFFERS.add(new TradeOffer(
+            new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 12),
+            new ItemStack(ModItems.NIHILITY_STAR_COMPASS.get(), 1), 5));
     }
 
     public static TradeOffer getRandomOffer(int tier) {

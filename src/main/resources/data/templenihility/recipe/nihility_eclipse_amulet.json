@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "A": "templenihility:nihility_amulet",
+    "C": "templenihility:nihility_crystal",
+    "D": "minecraft:amethyst_shard"
+  },
+  "pattern": [
+    "DCD",
+    "CAC",
+    " C "
+  ],
+  "result": {
+    "id": "templenihility:nihility_eclipse_amulet"
+  }
+}

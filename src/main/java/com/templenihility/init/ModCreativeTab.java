@@ -24,6 +24,7 @@ public class ModCreativeTab {
                 output.accept(ModItems.NIHILITY_RUNE.get());
                 output.accept(ModItems.TEMPLE_SEAL.get());
                 output.accept(ModItems.NIHILITY_CORE.get());
+                output.accept(ModItems.NIHILITY_VAULT_EXPANSION.get());
                 output.accept(ModItems.NIHILITY_SWORD.get());
                 output.accept(ModItems.NIHILITY_DAGGER.get());
                 output.accept(ModItems.NIHILITY_GREATSWORD.get());
@@ -58,6 +59,11 @@ public class ModCreativeTab {
                 output.accept(ModItems.NIHILITY_GAUNTLET.get());
                 output.accept(ModItems.NIHILITY_HOURGLASS.get());
                 output.accept(ModItems.NIHILITY_SOUL_ANCHOR.get());
+                output.accept(ModItems.NIHILITY_RIFT_RING.get());
+                output.accept(ModItems.NIHILITY_ECLIPSE_AMULET.get());
+                output.accept(ModItems.NIHILITY_AEGIS_CHARM.get());
+                output.accept(ModItems.NIHILITY_WAYFINDER.get());
+                output.accept(ModItems.NIHILITY_STAR_COMPASS.get());
                 output.accept(ModBlocks.NIHILITY_STONE.get());
                 output.accept(ModBlocks.NIHILITY_CRYSTAL_BLOCK.get());
                 output.accept(ModBlocks.NIHILITY_BRICKS.get());

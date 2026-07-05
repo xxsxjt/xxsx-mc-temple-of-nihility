@@ -39,6 +39,11 @@ public class ModItems {
     public static final DeferredItem<Item> NIHILITY_CORE = ITEMS.register("nihility_core",
         id -> new Item(itemProperties(id).stacksTo(16).rarity(Rarity.RARE)));
 
+    // 宝库升级件
+    public static final DeferredItem<Item> NIHILITY_VAULT_EXPANSION = ITEMS.register("nihility_vault_expansion",
+        id -> new NihilityTooltipItem(itemProperties(id).stacksTo(16).rarity(Rarity.RARE),
+            true, "tooltip.templenihility.nihility_vault_expansion"));
+
     // 武器
     public static final DeferredItem<Item> NIHILITY_SWORD = ITEMS.register("nihility_sword",
         id -> new NihilitySword(itemProperties(id).rarity(Rarity.UNCOMMON)));
@@ -158,6 +163,26 @@ public class ModItems {
     public static final DeferredItem<Item> NIHILITY_SOUL_ANCHOR = ITEMS.register("nihility_soul_anchor",
         id -> new NihilityTooltipItem(itemProperties(id).stacksTo(1).rarity(Rarity.RARE),
             true, "tooltip.templenihility.nihility_soul_anchor"));
+
+    public static final DeferredItem<Item> NIHILITY_RIFT_RING = ITEMS.register("nihility_rift_ring",
+        id -> new NihilityTooltipItem(itemProperties(id).stacksTo(1).rarity(Rarity.RARE),
+            true, "tooltip.templenihility.nihility_rift_ring"));
+
+    public static final DeferredItem<Item> NIHILITY_ECLIPSE_AMULET = ITEMS.register("nihility_eclipse_amulet",
+        id -> new NihilityTooltipItem(itemProperties(id).stacksTo(1).rarity(Rarity.RARE),
+            true, "tooltip.templenihility.nihility_eclipse_amulet"));
+
+    public static final DeferredItem<Item> NIHILITY_AEGIS_CHARM = ITEMS.register("nihility_aegis_charm",
+        id -> new NihilityTooltipItem(itemProperties(id).stacksTo(1).rarity(Rarity.RARE),
+            true, "tooltip.templenihility.nihility_aegis_charm"));
+
+    public static final DeferredItem<Item> NIHILITY_WAYFINDER = ITEMS.register("nihility_wayfinder",
+        id -> new NihilityTooltipItem(itemProperties(id).stacksTo(1).rarity(Rarity.UNCOMMON),
+            true, "tooltip.templenihility.nihility_wayfinder"));
+
+    public static final DeferredItem<Item> NIHILITY_STAR_COMPASS = ITEMS.register("nihility_star_compass",
+        id -> new NihilityTooltipItem(itemProperties(id).stacksTo(1).rarity(Rarity.RARE),
+            true, "tooltip.templenihility.nihility_star_compass"));
 
     public static final DeferredItem<Item> NIHILITY_TERMINAL = ITEMS.register("nihility_terminal",
         id -> new NihilityTerminalItem(itemProperties(id).stacksTo(1).rarity(Rarity.RARE)));

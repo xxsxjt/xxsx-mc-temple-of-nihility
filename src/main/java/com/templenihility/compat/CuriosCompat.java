@@ -42,6 +42,11 @@ public final class CuriosCompat {
         register(ModItems.NIHILITY_SOUL_ANCHOR.get(), soulAnchor());
         register(ModItems.NIHILITY_LANTERN.get(), lantern());
         register(ModItems.NIHILITY_RECOVERY_ORB.get(), recoveryOrb());
+        register(ModItems.NIHILITY_RIFT_RING.get(), riftRing());
+        register(ModItems.NIHILITY_ECLIPSE_AMULET.get(), eclipseAmulet());
+        register(ModItems.NIHILITY_AEGIS_CHARM.get(), aegisCharm());
+        register(ModItems.NIHILITY_WAYFINDER.get(), wayfinder());
+        register(ModItems.NIHILITY_STAR_COMPASS.get(), starCompass());
         register(ModItems.NIHILITY_TERMINAL.get(), new ICurioItem() {});
         if (!eventsRegistered) {
             NeoForge.EVENT_BUS.addListener(CuriosCompat::playerTick);
@@ -357,6 +362,110 @@ public final class CuriosCompat {
 
                 entity.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 20 * 6, 0, true, false, true));
                 entity.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 20 * 20, 0, true, false, true));
+            }
+        };
+    }
+
+    private static ICurioItem riftRing() {
+        return new ICurioItem() {
+            @Override
+            public CurioAttributeModifiers getDefaultCurioAttributeModifiers(ItemStack stack) {
+                return CurioAttributeModifiers.EMPTY
+                    .withModifierAdded(
+                        Attributes.ATTACK_DAMAGE,
+                        new AttributeModifier(id("nihility_rift_ring_damage"), 1.5, AttributeModifier.Operation.ADD_VALUE),
+                        "ring"
+                    )
+                    .withModifierAdded(
+                        Attributes.ATTACK_SPEED,
+                        new AttributeModifier(id("nihility_rift_ring_speed"), 0.08, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL),
+                        "ring"
+                    );
+            }
+        };
+    }
+
+    private static ICurioItem eclipseAmulet() {
+        return new ICurioItem() {
+            @Override
+            public void curioTick(SlotContext slotContext, ItemStack stack) {
+                LivingEntity entity = slotContext.entity();
+                if (entity.level().isClientSide() || entity.tickCount % 40 != 0) {
+                    return;
+                }
+                entity.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 120, 0, true, false, true));
+                if (entity.isShiftKeyDown()) {
+                    entity.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, 60, 0, true, false, true));
+                }
+            }
+        };
+    }
+
+    private static ICurioItem aegisCharm() {
+        return new ICurioItem() {
+            @Override
+            public void curioTick(SlotContext slotContext, ItemStack stack) {
+                LivingEntity entity = slotContext.entity();
+                if (!entity.level().isClientSide()
+                    && entity.tickCount % 100 == 0
+                    && entity.getHealth() <= entity.getMaxHealth() * 0.6f) {
+                    entity.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 120, 0, true, false, true));
+                }
+            }
+
+            @Override
+            public CurioAttributeModifiers getDefaultCurioAttributeModifiers(ItemStack stack) {
+                return CurioAttributeModifiers.EMPTY
+                    .withModifierAdded(
+                        Attributes.ARMOR,
+                        new AttributeModifier(id("nihility_aegis_armor"), 3.0, AttributeModifier.Operation.ADD_VALUE),
+                        "charm"
+                    )
+                    .withModifierAdded(
+                        Attributes.KNOCKBACK_RESISTANCE,
+                        new AttributeModifier(id("nihility_aegis_knockback"), 0.12, AttributeModifier.Operation.ADD_VALUE),
+                        "charm"
+                    );
+            }
+        };
+    }
+
+    private static ICurioItem wayfinder() {
+        return new ICurioItem() {
+            @Override
+            public void curioTick(SlotContext slotContext, ItemStack stack) {
+                LivingEntity entity = slotContext.entity();
+                if (!entity.level().isClientSide() && entity.tickCount % 100 == 0) {
+                    entity.addEffect(new MobEffectInstance(MobEffects.SPEED, 140, 0, true, false, true));
+                    entity.addEffect(new MobEffectInstance(MobEffects.LUCK, 140, 0, true, false, true));
+                }
+            }
+
+            @Override
+            public CurioAttributeModifiers getDefaultCurioAttributeModifiers(ItemStack stack) {
+                return CurioAttributeModifiers.EMPTY.withModifierAdded(
+                    Attributes.MOVEMENT_SPEED,
+                    new AttributeModifier(id("nihility_wayfinder_speed"), 0.04, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL),
+                    "charm"
+                );
+            }
+        };
+    }
+
+    private static ICurioItem starCompass() {
+        return new ICurioItem() {
+            @Override
+            public void curioTick(SlotContext slotContext, ItemStack stack) {
+                LivingEntity entity = slotContext.entity();
+                if (entity.level().isClientSide() || entity.tickCount % 80 != 0) {
+                    return;
+                }
+                for (Entity nearby : entity.level().getEntities(entity, entity.getBoundingBox().inflate(18.0),
+                        target -> target instanceof LivingEntity && target.isAlive())) {
+                    if (nearby instanceof LivingEntity living && !(living instanceof Player)) {
+                        living.addEffect(new MobEffectInstance(MobEffects.GLOWING, 120, 0, true, false, true));
+                    }
+                }
             }
         };
     }

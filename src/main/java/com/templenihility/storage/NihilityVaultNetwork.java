@@ -27,7 +27,7 @@ public final class NihilityVaultNetwork {
             return false;
         }
 
-        int totalSlots = vaults.size() * NihilityVaultBlockEntity.SLOTS_PER_VAULT;
+        int totalSlots = stats(vaults).totalSlots();
         MenuProvider provider = new SimpleMenuProvider((id, inventory, p) ->
             new NihilityTerminalMenu(id, inventory, vaults),
             Component.translatable("container.templenihility.nihility_terminal", vaults.size(), totalSlots));
@@ -69,11 +69,12 @@ public final class NihilityVaultNetwork {
     }
 
     public static Stats stats(List<NihilityVaultBlockEntity> vaults) {
-        int totalSlots = vaults.size() * NihilityVaultBlockEntity.SLOTS_PER_VAULT;
+        int totalSlots = 0;
         int usedSlots = 0;
         int itemCount = 0;
         int chunkLoaded = 0;
         for (NihilityVaultBlockEntity vault : vaults) {
+            totalSlots += vault.getItems().size();
             if (vault.isChunkLoaded()) {
                 chunkLoaded++;
             }

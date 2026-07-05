@@ -2,12 +2,16 @@ package com.templenihility.block;
 
 import com.mojang.serialization.MapCodec;
 import com.templenihility.blockentity.NihilityVaultBlockEntity;
+import com.templenihility.init.ModItems;
 import com.templenihility.storage.NihilityVaultNetwork;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Containers;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
@@ -36,6 +40,32 @@ public class NihilityVaultBlock extends BaseEntityBlock {
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
+    }
+
+    @Override
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                          Player player, InteractionHand hand, BlockHitResult hit) {
+        if (!stack.is(ModItems.NIHILITY_VAULT_EXPANSION.get())) {
+            return InteractionResult.PASS;
+        }
+
+        if (level.isClientSide()) {
+            return InteractionResult.SUCCESS;
+        }
+
+        if (level.getBlockEntity(pos) instanceof NihilityVaultBlockEntity vault && vault.addCapacityUpgrade()) {
+            if (!player.getAbilities().instabuild) {
+                stack.shrink(1);
+            }
+            player.sendSystemMessage(Component.translatable(
+                "message.templenihility.vault_upgrade_success",
+                vault.getCapacityUpgrades(), vault.getCapacitySlots()));
+        } else {
+            player.sendSystemMessage(Component.translatable(
+                "message.templenihility.vault_upgrade_max",
+                NihilityVaultBlockEntity.MAX_CAPACITY_UPGRADES));
+        }
+        return InteractionResult.SUCCESS;
     }
 
     @Override

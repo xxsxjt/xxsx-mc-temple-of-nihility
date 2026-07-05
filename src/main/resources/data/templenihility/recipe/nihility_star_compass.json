@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "W": "templenihility:nihility_wayfinder",
+    "C": "templenihility:nihility_crystal",
+    "E": "minecraft:ender_eye"
+  },
+  "pattern": [
+    "ECE",
+    "CWC",
+    "ECE"
+  ],
+  "result": {
+    "id": "templenihility:nihility_star_compass"
+  }
+}

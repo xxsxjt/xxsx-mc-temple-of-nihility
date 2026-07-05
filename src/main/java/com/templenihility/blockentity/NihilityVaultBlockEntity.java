@@ -14,9 +14,11 @@ import net.minecraft.world.level.storage.ValueOutput;
 
 public class NihilityVaultBlockEntity extends BlockEntity {
     public static final int SLOTS_PER_VAULT = 27 * 9;
+    public static final int MAX_CAPACITY_UPGRADES = 3;
 
     private NonNullList<ItemStack> items = NonNullList.withSize(SLOTS_PER_VAULT, ItemStack.EMPTY);
     private boolean chunkLoaded;
+    private int capacityUpgrades;
 
     public NihilityVaultBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.NIHILITY_VAULT.get(), pos, state);
@@ -24,6 +26,24 @@ public class NihilityVaultBlockEntity extends BlockEntity {
 
     public NonNullList<ItemStack> getItems() {
         return items;
+    }
+
+    public int getCapacityUpgrades() {
+        return capacityUpgrades;
+    }
+
+    public int getCapacitySlots() {
+        return SLOTS_PER_VAULT * (1 + capacityUpgrades);
+    }
+
+    public boolean addCapacityUpgrade() {
+        if (capacityUpgrades >= MAX_CAPACITY_UPGRADES) {
+            return false;
+        }
+        capacityUpgrades++;
+        resizeItems(getCapacitySlots());
+        setChanged();
+        return true;
     }
 
     public boolean isChunkLoaded() {
@@ -39,7 +59,8 @@ public class NihilityVaultBlockEntity extends BlockEntity {
     @Override
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
-        items = NonNullList.withSize(SLOTS_PER_VAULT, ItemStack.EMPTY);
+        capacityUpgrades = Math.max(0, Math.min(MAX_CAPACITY_UPGRADES, input.getIntOr("CapacityUpgrades", 0)));
+        items = NonNullList.withSize(getCapacitySlots(), ItemStack.EMPTY);
         ContainerHelper.loadAllItems(input, items);
         chunkLoaded = input.getBooleanOr("ChunkLoaded", false);
         syncForcedChunk();
@@ -50,6 +71,18 @@ public class NihilityVaultBlockEntity extends BlockEntity {
         super.saveAdditional(output);
         ContainerHelper.saveAllItems(output, items);
         output.putBoolean("ChunkLoaded", chunkLoaded);
+        output.putInt("CapacityUpgrades", capacityUpgrades);
+    }
+
+    private void resizeItems(int size) {
+        if (items.size() == size) {
+            return;
+        }
+        NonNullList<ItemStack> resized = NonNullList.withSize(size, ItemStack.EMPTY);
+        for (int i = 0; i < Math.min(items.size(), resized.size()); i++) {
+            resized.set(i, items.get(i));
+        }
+        items = resized;
     }
 
     private void syncForcedChunk() {

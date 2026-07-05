@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "R": "templenihility:nihility_ring",
+    "C": "templenihility:nihility_crystal",
+    "E": "minecraft:ender_pearl"
+  },
+  "pattern": [
+    " E ",
+    "CRC",
+    " E "
+  ],
+  "result": {
+    "id": "templenihility:nihility_rift_ring"
+  }
+}
