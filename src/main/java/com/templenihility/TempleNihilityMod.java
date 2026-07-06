@@ -12,6 +12,7 @@ import com.templenihility.init.ModMenus;
 import com.templenihility.init.ModStructures;
 import com.templenihility.item.NihilityArmorEvents;
 import com.templenihility.client.ModClientEvents;
+import com.templenihility.world.GravityFieldManager;
 import com.templenihility.world.TempleCommand;
 import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
@@ -53,6 +54,7 @@ public class TempleNihilityMod {
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.addListener(NihilityArmorEvents::playerTick);
         NeoForge.EVENT_BUS.addListener(NihilityArmorEvents::incomingDamage);
+        NeoForge.EVENT_BUS.addListener(GravityFieldManager::levelTick);
 
         LOGGER.info("Temple of Nihility loaded");
     }

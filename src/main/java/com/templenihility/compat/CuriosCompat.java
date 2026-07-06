@@ -2,6 +2,7 @@ package com.templenihility.compat;
 
 import com.templenihility.TempleNihilityMod;
 import com.templenihility.init.ModItems;
+import com.templenihility.world.MagnetManager;
 import com.templenihility.world.NihilityDynamicLight;
 import java.util.Optional;
 import net.minecraft.resources.Identifier;
@@ -11,11 +12,9 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
@@ -84,6 +83,7 @@ public final class CuriosCompat {
 
     private static void playerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         NihilityDynamicLight.clear(event.getEntity());
+        MagnetManager.clear(event.getEntity());
     }
 
     private static boolean hasLantern(Player player) {
@@ -192,24 +192,8 @@ public final class CuriosCompat {
             @Override
             public void curioTick(SlotContext slotContext, ItemStack stack) {
                 LivingEntity entity = slotContext.entity();
-                if (!(entity instanceof Player player) || entity.level().isClientSide() || entity.tickCount % 5 != 0) {
-                    return;
-                }
-
-                Vec3 target = player.position().add(0.0, 0.75, 0.0);
-                for (Entity nearby : player.level().getEntities(player, player.getBoundingBox().inflate(7.0),
-                        e -> e instanceof ItemEntity && e.isAlive())) {
-                    ItemEntity itemEntity = (ItemEntity) nearby;
-                    if (itemEntity.hasPickUpDelay()) {
-                        itemEntity.setNoPickUpDelay();
-                    }
-
-                    Vec3 pull = target.subtract(itemEntity.position());
-                    if (pull.lengthSqr() < 1.25) {
-                        itemEntity.playerTouch(player);
-                    } else {
-                        itemEntity.setDeltaMovement(itemEntity.getDeltaMovement().scale(0.65).add(pull.normalize().scale(0.18)));
-                    }
+                if (entity instanceof Player player) {
+                    MagnetManager.tick(player);
                 }
             }
         };

@@ -1,5 +1,6 @@
 package com.templenihility.item;
 
+import com.templenihility.world.GravityFieldManager;
 import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
@@ -148,28 +149,8 @@ public class NihilityEffectItem extends Item {
         GRAVITY_SIGIL(20 * 30, "message.templenihility.nihility_gravity_sigil", UseCost.DAMAGE_ONE) {
             @Override
             int apply(Player player) {
-                int affected = 0;
-                Vec3 center = player.position().add(0.0, 1.0, 0.0);
-                for (Entity entity : player.level().getEntities(player, player.getBoundingBox().inflate(13.0),
-                        entity -> entity instanceof LivingEntity && entity.isAlive())) {
-                    if (entity instanceof LivingEntity living && !(living instanceof Player)) {
-                        living.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 20 * 10, 3, true, false, true));
-                        living.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 20 * 10, 1, true, false, true));
-                        living.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 10, 0, true, false, true));
-                        affected++;
-                        Vec3 pull = center.subtract(living.position());
-                        if (pull.lengthSqr() > 1.0E-4) {
-                            double distance = Math.max(1.0, pull.length());
-                            double strength = Math.min(1.05, 0.52 + distance * 0.045);
-                            living.setDeltaMovement(living.getDeltaMovement().scale(0.18)
-                                .add(pull.normalize().scale(strength))
-                                .add(0.0, 0.14, 0.0));
-                            living.hurtMarked = true;
-                            living.resetFallDistance();
-                        }
-                    }
-                }
-                return affected;
+                GravityFieldManager.create(player);
+                return 1;
             }
         },
         WAR_HORN(20 * 35, "message.templenihility.nihility_war_horn", UseCost.DAMAGE_ONE) {
