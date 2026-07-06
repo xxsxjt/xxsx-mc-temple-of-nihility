@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "EFE",
+    "FCF",
+    "EFE"
+  ],
+  "key": {
+    "E": "minecraft:echo_shard",
+    "F": "templenihility:nihility_relic_fragment",
+    "C": "templenihility:nihility_core"
+  },
+  "result": {
+    "id": "templenihility:nihility_resonance_core"
+  }
+}

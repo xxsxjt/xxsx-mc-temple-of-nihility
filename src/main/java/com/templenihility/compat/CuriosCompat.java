@@ -47,6 +47,12 @@ public final class CuriosCompat {
         register(ModItems.NIHILITY_AEGIS_CHARM.get(), aegisCharm());
         register(ModItems.NIHILITY_WAYFINDER.get(), wayfinder());
         register(ModItems.NIHILITY_STAR_COMPASS.get(), starCompass());
+        register(ModItems.NIHILITY_CROWN.get(), crown());
+        register(ModItems.NIHILITY_ABYSS_MANTLE.get(), abyssMantle());
+        register(ModItems.NIHILITY_SIPHON_RING.get(), siphonRing());
+        register(ModItems.NIHILITY_PEARL_BELT.get(), pearlBelt());
+        register(ModItems.NIHILITY_SENTINEL_EYE.get(), sentinelEye());
+        register(ModItems.NIHILITY_TRADER_SEAL.get(), traderSeal());
         register(ModItems.NIHILITY_TERMINAL.get(), new ICurioItem() {});
         if (!eventsRegistered) {
             NeoForge.EVENT_BUS.addListener(CuriosCompat::playerTick);
@@ -466,6 +472,156 @@ public final class CuriosCompat {
                         living.addEffect(new MobEffectInstance(MobEffects.GLOWING, 120, 0, true, false, true));
                     }
                 }
+            }
+        };
+    }
+
+    private static ICurioItem crown() {
+        return new ICurioItem() {
+            @Override
+            public void curioTick(SlotContext slotContext, ItemStack stack) {
+                LivingEntity entity = slotContext.entity();
+                if (!entity.level().isClientSide() && entity.tickCount % 120 == 0 && entity.getHealth() <= entity.getMaxHealth() * 0.5f) {
+                    entity.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 120, 0, true, false, true));
+                    entity.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 80, 0, true, false, true));
+                }
+            }
+
+            @Override
+            public CurioAttributeModifiers getDefaultCurioAttributeModifiers(ItemStack stack) {
+                return CurioAttributeModifiers.EMPTY
+                    .withModifierAdded(
+                        Attributes.MAX_HEALTH,
+                        new AttributeModifier(id("nihility_crown_health"), 6.0, AttributeModifier.Operation.ADD_VALUE),
+                        "curio"
+                    )
+                    .withModifierAdded(
+                        Attributes.LUCK,
+                        new AttributeModifier(id("nihility_crown_luck"), 1.0, AttributeModifier.Operation.ADD_VALUE),
+                        "curio"
+                    );
+            }
+        };
+    }
+
+    private static ICurioItem abyssMantle() {
+        return new ICurioItem() {
+            @Override
+            public void curioTick(SlotContext slotContext, ItemStack stack) {
+                LivingEntity entity = slotContext.entity();
+                if (!entity.level().isClientSide() && entity.tickCount % 60 == 0) {
+                    entity.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 100, 0, true, false, true));
+                    entity.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 100, 0, true, false, true));
+                }
+            }
+
+            @Override
+            public CurioAttributeModifiers getDefaultCurioAttributeModifiers(ItemStack stack) {
+                return CurioAttributeModifiers.EMPTY
+                    .withModifierAdded(
+                        Attributes.FALL_DAMAGE_MULTIPLIER,
+                        new AttributeModifier(id("nihility_abyss_mantle_fall"), -0.6, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL),
+                        "back"
+                    )
+                    .withModifierAdded(
+                        Attributes.MOVEMENT_SPEED,
+                        new AttributeModifier(id("nihility_abyss_mantle_speed"), 0.03, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL),
+                        "back"
+                    );
+            }
+        };
+    }
+
+    private static ICurioItem siphonRing() {
+        return new ICurioItem() {
+            @Override
+            public void curioTick(SlotContext slotContext, ItemStack stack) {
+                LivingEntity entity = slotContext.entity();
+                if (!entity.level().isClientSide() && entity.tickCount % 160 == 0 && entity.getHealth() < entity.getMaxHealth()) {
+                    entity.heal(1.0f);
+                }
+            }
+
+            @Override
+            public CurioAttributeModifiers getDefaultCurioAttributeModifiers(ItemStack stack) {
+                return CurioAttributeModifiers.EMPTY
+                    .withModifierAdded(
+                        Attributes.ATTACK_DAMAGE,
+                        new AttributeModifier(id("nihility_siphon_ring_damage"), 1.0, AttributeModifier.Operation.ADD_VALUE),
+                        "ring"
+                    )
+                    .withModifierAdded(
+                        Attributes.MAX_ABSORPTION,
+                        new AttributeModifier(id("nihility_siphon_ring_absorption"), 2.0, AttributeModifier.Operation.ADD_VALUE),
+                        "ring"
+                    );
+            }
+        };
+    }
+
+    private static ICurioItem pearlBelt() {
+        return new ICurioItem() {
+            @Override
+            public void curioTick(SlotContext slotContext, ItemStack stack) {
+                LivingEntity entity = slotContext.entity();
+                if (!entity.level().isClientSide() && entity.tickCount % 80 == 0) {
+                    entity.addEffect(new MobEffectInstance(MobEffects.JUMP_BOOST, 120, 0, true, false, true));
+                }
+            }
+
+            @Override
+            public CurioAttributeModifiers getDefaultCurioAttributeModifiers(ItemStack stack) {
+                return CurioAttributeModifiers.EMPTY
+                    .withModifierAdded(
+                        Attributes.MOVEMENT_SPEED,
+                        new AttributeModifier(id("nihility_pearl_belt_speed"), 0.1, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL),
+                        "belt"
+                    )
+                    .withModifierAdded(
+                        Attributes.STEP_HEIGHT,
+                        new AttributeModifier(id("nihility_pearl_belt_step"), 0.75, AttributeModifier.Operation.ADD_VALUE),
+                        "belt"
+                    );
+            }
+        };
+    }
+
+    private static ICurioItem sentinelEye() {
+        return new ICurioItem() {
+            @Override
+            public void curioTick(SlotContext slotContext, ItemStack stack) {
+                LivingEntity entity = slotContext.entity();
+                if (entity.level().isClientSide() || entity.tickCount % 60 != 0) {
+                    return;
+                }
+                for (Entity nearby : entity.level().getEntities(entity, entity.getBoundingBox().inflate(24.0),
+                        target -> target instanceof LivingEntity && target.isAlive())) {
+                    if (nearby instanceof LivingEntity living && !(living instanceof Player)) {
+                        living.addEffect(new MobEffectInstance(MobEffects.GLOWING, 100, 0, true, false, true));
+                        living.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80, 0, true, false, true));
+                    }
+                }
+            }
+        };
+    }
+
+    private static ICurioItem traderSeal() {
+        return new ICurioItem() {
+            @Override
+            public void curioTick(SlotContext slotContext, ItemStack stack) {
+                LivingEntity entity = slotContext.entity();
+                if (!entity.level().isClientSide() && entity.tickCount % 120 == 0) {
+                    entity.addEffect(new MobEffectInstance(MobEffects.LUCK, 180, 1, true, false, true));
+                }
+            }
+
+            @Override
+            public CurioAttributeModifiers getDefaultCurioAttributeModifiers(ItemStack stack) {
+                return CurioAttributeModifiers.EMPTY.withModifierAdded(
+                    Attributes.LUCK,
+                    new AttributeModifier(id("nihility_trader_seal_luck"), 2.0, AttributeModifier.Operation.ADD_VALUE),
+                    "charm"
+                );
             }
         };
     }

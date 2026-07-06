@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    " T ",
+    "GRG",
+    " F "
+  ],
+  "key": {
+    "T": "minecraft:ghast_tear",
+    "G": "minecraft:gold_nugget",
+    "R": "templenihility:nihility_ring",
+    "F": "templenihility:nihility_relic_fragment"
+  },
+  "result": {
+    "id": "templenihility:nihility_siphon_ring"
+  }
+}

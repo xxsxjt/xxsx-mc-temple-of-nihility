@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "FRF",
+    "CWC",
+    "FRF"
+  ],
+  "key": {
+    "F": "templenihility:nihility_relic_fragment",
+    "R": "minecraft:redstone",
+    "C": "templenihility:nihility_crystal",
+    "W": "minecraft:clock"
+  },
+  "result": {
+    "id": "templenihility:nihility_stasis_watch"
+  }
+}

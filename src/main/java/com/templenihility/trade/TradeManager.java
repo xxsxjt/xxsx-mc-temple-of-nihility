@@ -30,6 +30,12 @@ public class TradeManager {
         TIER_1_OFFERS.add(new TradeOffer(
             new ItemStack(ModItems.NIHILITY_SHARD.get(), 10),
             new ItemStack(Items.IRON_INGOT, 3), 1));
+        TIER_1_OFFERS.add(new TradeOffer(
+            new ItemStack(ModItems.NIHILITY_SHARD.get(), 8),
+            new ItemStack(ModItems.NIHILITY_DUST.get(), 4), 1));
+        TIER_1_OFFERS.add(new TradeOffer(
+            new ItemStack(ModItems.NIHILITY_SHARD.get(), 12),
+            new ItemStack(ModItems.NIHILITY_SOUL_FLASK.get(), 2), 1));
 
         // 2级交易 - 中级物资
         TIER_2_OFFERS.add(new TradeOffer(
@@ -41,6 +47,12 @@ public class TradeManager {
         TIER_2_OFFERS.add(new TradeOffer(
             new ItemStack(ModItems.NIHILITY_SHARD.get(), 25),
             new ItemStack(Items.GOLDEN_APPLE, 2), 2));
+        TIER_2_OFFERS.add(new TradeOffer(
+            new ItemStack(ModItems.NIHILITY_SHARD.get(), 18),
+            new ItemStack(ModItems.NIHILITY_NULL_SCROLL.get(), 2), 2));
+        TIER_2_OFFERS.add(new TradeOffer(
+            new ItemStack(ModItems.NIHILITY_SHARD.get(), 24),
+            new ItemStack(ModItems.NIHILITY_RELIC_FRAGMENT.get(), 1), 2));
 
         // 3级交易 - 高级物资
         TIER_3_OFFERS.add(new TradeOffer(
@@ -58,6 +70,15 @@ public class TradeManager {
         TIER_3_OFFERS.add(new TradeOffer(
             new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 2),
             new ItemStack(ModItems.NIHILITY_WAYFINDER.get(), 1), 3));
+        TIER_3_OFFERS.add(new TradeOffer(
+            new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 3),
+            new ItemStack(ModItems.NIHILITY_STASIS_WATCH.get(), 1), 3));
+        TIER_3_OFFERS.add(new TradeOffer(
+            new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 3),
+            new ItemStack(ModItems.NIHILITY_RIFT_SNARE.get(), 1), 3));
+        TIER_3_OFFERS.add(new TradeOffer(
+            new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 4),
+            new ItemStack(ModItems.NIHILITY_SIPHON_RING.get(), 1), 3));
 
         // 4级交易 - 顶级物资
         TIER_4_OFFERS.add(new TradeOffer(
@@ -75,6 +96,18 @@ public class TradeManager {
         TIER_4_OFFERS.add(new TradeOffer(
             new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 7),
             new ItemStack(ModItems.NIHILITY_AEGIS_CHARM.get(), 1), 4));
+        TIER_4_OFFERS.add(new TradeOffer(
+            new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 6),
+            new ItemStack(ModItems.NIHILITY_ABYSSAL_DRUM.get(), 1), 4));
+        TIER_4_OFFERS.add(new TradeOffer(
+            new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 8),
+            new ItemStack(ModItems.NIHILITY_PEARL_BELT.get(), 1), 4));
+        TIER_4_OFFERS.add(new TradeOffer(
+            new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 8),
+            new ItemStack(ModItems.NIHILITY_SENTINEL_EYE.get(), 1), 4));
+        TIER_4_OFFERS.add(new TradeOffer(
+            new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 9),
+            new ItemStack(ModItems.NIHILITY_RESONANCE_CORE.get(), 1), 4));
 
         // 5级交易 - 传说物资
         TIER_5_OFFERS.add(new TradeOffer(
@@ -89,6 +122,18 @@ public class TradeManager {
         TIER_5_OFFERS.add(new TradeOffer(
             new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 12),
             new ItemStack(ModItems.NIHILITY_STAR_COMPASS.get(), 1), 5));
+        TIER_5_OFFERS.add(new TradeOffer(
+            new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 14),
+            new ItemStack(ModItems.NIHILITY_VOID_BEACON.get(), 1), 5));
+        TIER_5_OFFERS.add(new TradeOffer(
+            new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 16),
+            new ItemStack(ModItems.NIHILITY_CROWN.get(), 1), 5));
+        TIER_5_OFFERS.add(new TradeOffer(
+            new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 16),
+            new ItemStack(ModItems.NIHILITY_ABYSS_MANTLE.get(), 1), 5));
+        TIER_5_OFFERS.add(new TradeOffer(
+            new ItemStack(ModItems.NIHILITY_CRYSTAL.get(), 10),
+            new ItemStack(ModItems.NIHILITY_TRADER_SEAL.get(), 1), 5));
     }
 
     public static TradeOffer getRandomOffer(int tier) {

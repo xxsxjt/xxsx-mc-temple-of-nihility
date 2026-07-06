@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "RCR",
+    "DTD",
+    "RCR"
+  ],
+  "key": {
+    "R": "templenihility:nihility_rune",
+    "C": "templenihility:nihility_core",
+    "D": "minecraft:diamond",
+    "T": "templenihility:temple_seal"
+  },
+  "result": {
+    "id": "templenihility:nihility_relic_fragment",
+    "count": 2
+  }
+}

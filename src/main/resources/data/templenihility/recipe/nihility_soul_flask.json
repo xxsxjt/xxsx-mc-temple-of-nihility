@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " D ",
+    "GBG",
+    " R "
+  ],
+  "key": {
+    "D": "templenihility:nihility_dust",
+    "G": "minecraft:glowstone_dust",
+    "B": "minecraft:glass_bottle",
+    "R": "minecraft:redstone"
+  },
+  "result": {
+    "id": "templenihility:nihility_soul_flask",
+    "count": 3
+  }
+}

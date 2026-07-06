@@ -19,7 +19,10 @@ public class NihilityTradeMenu extends AbstractContainerMenu {
     public static final int PAYMENT_SLOT = 0;
     public static final int RESULT_SLOT = 1;
     public static final int PLAYER_INV_START = 2;
+    public static final int OFFERS_PER_PAGE = 5;
     public static final int BUTTON_TRADE = 0;
+    public static final int BUTTON_PREV_PAGE = 1;
+    public static final int BUTTON_NEXT_PAGE = 2;
     public static final int BUTTON_SELECT_BASE = 100;
 
     private final SimpleContainer payment = new SimpleContainer(1) {
@@ -31,7 +34,7 @@ public class NihilityTradeMenu extends AbstractContainerMenu {
     };
     private final SimpleContainer result = new SimpleContainer(1);
     private final List<TradeOffer> offers;
-    private final int[] data = new int[3];
+    private final int[] data = new int[4];
 
     public NihilityTradeMenu(int id, Inventory inventory, RegistryFriendlyByteBuf buffer) {
         this(id, inventory, buffer.readVarInt());
@@ -58,8 +61,16 @@ public class NihilityTradeMenu extends AbstractContainerMenu {
         if (buttonId == BUTTON_TRADE) {
             return trade(player);
         }
+        if (buttonId == BUTTON_PREV_PAGE) {
+            setPage(getPage() - 1);
+            return true;
+        }
+        if (buttonId == BUTTON_NEXT_PAGE) {
+            setPage(getPage() + 1);
+            return true;
+        }
         if (buttonId >= BUTTON_SELECT_BASE) {
-            int index = buttonId - BUTTON_SELECT_BASE;
+            int index = getPage() * OFFERS_PER_PAGE + buttonId - BUTTON_SELECT_BASE;
             if (index >= 0 && index < offers.size()) {
                 data[1] = index;
                 updatePreview();
@@ -125,6 +136,14 @@ public class NihilityTradeMenu extends AbstractContainerMenu {
         return data[1];
     }
 
+    public int getPage() {
+        return data[3];
+    }
+
+    public int getMaxPage() {
+        return Math.max(0, (offers.size() - 1) / OFFERS_PER_PAGE);
+    }
+
     public boolean canTradeSelected() {
         return data[2] == 1;
     }
@@ -135,6 +154,10 @@ public class NihilityTradeMenu extends AbstractContainerMenu {
 
     public TradeOffer getOffer(int index) {
         return offers.get(index);
+    }
+
+    public int getVisibleOfferIndex(int row) {
+        return getPage() * OFFERS_PER_PAGE + row;
     }
 
     public TradeOffer getSelectedOffer() {
@@ -182,6 +205,16 @@ public class NihilityTradeMenu extends AbstractContainerMenu {
     private boolean acceptsPayment(ItemStack stack) {
         TradeOffer offer = getSelectedOffer();
         return offer != null && ItemStack.isSameItemSameComponents(offer.getCost(), stack);
+    }
+
+    private void setPage(int page) {
+        data[3] = Math.max(0, Math.min(page, getMaxPage()));
+        int first = data[3] * OFFERS_PER_PAGE;
+        if (data[1] < first || data[1] >= first + OFFERS_PER_PAGE || data[1] >= offers.size()) {
+            data[1] = Math.min(first, Math.max(0, offers.size() - 1));
+        }
+        updatePreview();
+        broadcastFullState();
     }
 
     private void updatePreview() {

@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "templenihility:item/nihility_sentinel_eye"
+  }
+}

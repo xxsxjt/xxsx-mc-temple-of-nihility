@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "RPR",
+    "DGD",
+    "RPR"
+  ],
+  "key": {
+    "R": "templenihility:nihility_rune",
+    "P": "minecraft:paper",
+    "D": "templenihility:nihility_dust",
+    "G": "minecraft:gold_ingot"
+  },
+  "result": {
+    "id": "templenihility:nihility_null_scroll",
+    "count": 2
+  }
+}

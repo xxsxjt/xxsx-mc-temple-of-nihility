@@ -131,6 +131,79 @@ public class NihilityEffectItem extends Item {
                     }
                 }
             }
+        },
+        SOUL_FLASK(20 * 35, "message.templenihility.nihility_soul_flask", UseCost.CONSUME_ONE) {
+            @Override
+            void apply(Player player) {
+                player.heal(6.0f);
+                player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 20 * 8, 0, true, false, true));
+                player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 20 * 45, 0, true, false, true));
+            }
+        },
+        NULL_SCROLL(20 * 50, "message.templenihility.nihility_null_scroll", UseCost.CONSUME_ONE) {
+            @Override
+            void apply(Player player) {
+                removeBadEffects(player);
+                player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 20 * 12, 0, true, false, true));
+                player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 20 * 20, 0, true, false, true));
+            }
+        },
+        STASIS_WATCH(20 * 75, "message.templenihility.nihility_stasis_watch", UseCost.DAMAGE_ONE) {
+            @Override
+            void apply(Player player) {
+                player.addEffect(new MobEffectInstance(MobEffects.SPEED, 20 * 12, 0, true, false, true));
+                for (Entity entity : player.level().getEntities(player, player.getBoundingBox().inflate(12.0),
+                        entity -> entity instanceof LivingEntity && entity.isAlive())) {
+                    if (entity instanceof LivingEntity living && !(living instanceof Player)) {
+                        living.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 20 * 10, 4, true, false, true));
+                        living.addEffect(new MobEffectInstance(MobEffects.MINING_FATIGUE, 20 * 10, 1, true, false, true));
+                    }
+                }
+            }
+        },
+        RIFT_SNARE(20 * 65, "message.templenihility.nihility_rift_snare", UseCost.DAMAGE_ONE) {
+            @Override
+            void apply(Player player) {
+                Vec3 center = player.position().add(0.0, 1.0, 0.0);
+                for (Entity entity : player.level().getEntities(player, player.getBoundingBox().inflate(9.0),
+                        entity -> entity instanceof LivingEntity && entity.isAlive())) {
+                    if (entity instanceof LivingEntity living && !(living instanceof Player)) {
+                        living.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 10, 0, true, false, true));
+                        living.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 20 * 8, 2, true, false, true));
+                        Vec3 pull = center.subtract(living.position());
+                        if (pull.lengthSqr() > 1.0E-4) {
+                            living.setDeltaMovement(living.getDeltaMovement().scale(0.35).add(pull.normalize().scale(0.45)).add(0, 0.18, 0));
+                        }
+                    }
+                }
+            }
+        },
+        ABYSSAL_DRUM(20 * 95, "message.templenihility.nihility_abyssal_drum", UseCost.DAMAGE_ONE) {
+            @Override
+            void apply(Player player) {
+                player.addEffect(new MobEffectInstance(MobEffects.STRENGTH, 20 * 30, 1, true, false, true));
+                player.addEffect(new MobEffectInstance(MobEffects.SPEED, 20 * 18, 1, true, false, true));
+                for (Entity entity : player.level().getEntities(player, player.getBoundingBox().inflate(14.0),
+                        entity -> entity instanceof LivingEntity && entity.isAlive())) {
+                    if (entity instanceof LivingEntity living && !(living instanceof Player)) {
+                        living.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 20 * 12, 1, true, false, true));
+                        living.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 20 * 12, 1, true, false, true));
+                    }
+                }
+            }
+        },
+        VOID_BEACON(20 * 110, "message.templenihility.nihility_void_beacon", UseCost.DAMAGE_ONE) {
+            @Override
+            void apply(Player player) {
+                player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 20 * 90, 0, true, false, true));
+                player.addEffect(new MobEffectInstance(MobEffects.LUCK, 20 * 90, 1, true, false, true));
+                for (Entity entity : player.level().getEntities(player, player.getBoundingBox().inflate(28.0),
+                        entity -> entity instanceof LivingEntity && entity.isAlive())) {
+                    if (entity instanceof LivingEntity living && !(living instanceof Player)) {
+                        living.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 30, 0, true, false, true));
+                    }
+                }
+            }
         };
 
         private final int cooldownTicks;

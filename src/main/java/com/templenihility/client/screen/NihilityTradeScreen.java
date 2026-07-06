@@ -12,6 +12,8 @@ import net.minecraft.world.item.ItemStack;
 
 public class NihilityTradeScreen extends AbstractContainerScreen<NihilityTradeMenu> {
     private Button tradeButton;
+    private Button prevButton;
+    private Button nextButton;
 
     public NihilityTradeScreen(NihilityTradeMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title, 204, 202);
@@ -24,14 +26,22 @@ public class NihilityTradeScreen extends AbstractContainerScreen<NihilityTradeMe
     @Override
     protected void init() {
         super.init();
-        int rows = Math.min(5, menu.getOfferCount());
+        int rows = Math.min(NihilityTradeMenu.OFFERS_PER_PAGE, menu.getOfferCount());
         for (int i = 0; i < rows; i++) {
-            final int index = i;
+            final int row = i;
             addRenderableWidget(Button.builder(Component.literal(String.valueOf(i + 1)),
-                    button -> sendButton(NihilityTradeMenu.BUTTON_SELECT_BASE + index))
+                    button -> sendButton(NihilityTradeMenu.BUTTON_SELECT_BASE + row))
                 .bounds(leftPos + 10, topPos + 27 + i * 16, 18, 14)
                 .build());
         }
+        prevButton = addRenderableWidget(Button.builder(Component.literal("<"),
+                button -> sendButton(NihilityTradeMenu.BUTTON_PREV_PAGE))
+            .bounds(leftPos + 31, topPos + 94, 18, 14)
+            .build());
+        nextButton = addRenderableWidget(Button.builder(Component.literal(">"),
+                button -> sendButton(NihilityTradeMenu.BUTTON_NEXT_PAGE))
+            .bounds(leftPos + 90, topPos + 94, 18, 14)
+            .build());
         tradeButton = addRenderableWidget(Button.builder(Component.translatable("screen.templenihility.trade_button"),
                 button -> sendButton(NihilityTradeMenu.BUTTON_TRADE))
             .bounds(leftPos + 132, topPos + 94, 58, 18)
@@ -43,6 +53,12 @@ public class NihilityTradeScreen extends AbstractContainerScreen<NihilityTradeMe
         super.containerTick();
         if (tradeButton != null) {
             tradeButton.active = menu.canTradeSelected();
+        }
+        if (prevButton != null) {
+            prevButton.active = menu.getPage() > 0;
+        }
+        if (nextButton != null) {
+            nextButton.active = menu.getPage() < menu.getMaxPage();
         }
     }
 
@@ -70,10 +86,15 @@ public class NihilityTradeScreen extends AbstractContainerScreen<NihilityTradeMe
         graphics.text(font, Component.literal("→"), 93, 76, 0xFF7EEBFF, false);
         graphics.text(font, Component.translatable("screen.templenihility.trade_result"),
             147, 60, 0xFFB9A8D6, false);
+        graphics.text(font, Component.literal((menu.getPage() + 1) + "/" + (menu.getMaxPage() + 1)),
+            55, 97, 0xFF7EEBFF, false);
         graphics.text(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0xFFE9D8FF, false);
 
-        for (int i = 0; i < Math.min(5, menu.getOfferCount()); i++) {
-            drawOffer(graphics, i, 31 + i * 16);
+        for (int row = 0; row < NihilityTradeMenu.OFFERS_PER_PAGE; row++) {
+            int index = menu.getVisibleOfferIndex(row);
+            if (index < menu.getOfferCount()) {
+                drawOffer(graphics, index, 31 + row * 16);
+            }
         }
     }
 

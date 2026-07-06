@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "EEE",
+    "TFT",
+    "EEE"
+  ],
+  "key": {
+    "E": "minecraft:emerald",
+    "T": "templenihility:temple_seal",
+    "F": "templenihility:nihility_relic_fragment"
+  },
+  "result": {
+    "id": "templenihility:nihility_trader_seal"
+  }
+}

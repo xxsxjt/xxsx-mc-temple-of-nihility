@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "EPE",
+    "FBF",
+    "EPE"
+  ],
+  "key": {
+    "E": "minecraft:ender_pearl",
+    "P": "minecraft:phantom_membrane",
+    "F": "templenihility:nihility_relic_fragment",
+    "B": "templenihility:nihility_belt"
+  },
+  "result": {
+    "id": "templenihility:nihility_pearl_belt"
+  }
+}

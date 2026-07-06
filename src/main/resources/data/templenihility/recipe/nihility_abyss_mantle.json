@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "PFP",
+    "ECE",
+    "W W"
+  ],
+  "key": {
+    "P": "minecraft:phantom_membrane",
+    "F": "templenihility:nihility_relic_fragment",
+    "E": "minecraft:echo_shard",
+    "C": "templenihility:nihility_resonance_core",
+    "W": "minecraft:black_wool"
+  },
+  "result": {
+    "id": "templenihility:nihility_abyss_mantle"
+  }
+}
