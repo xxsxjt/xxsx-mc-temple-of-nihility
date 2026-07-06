@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "templenihility:block/nihility_crystal_block_2"
+  }
+}

@@ -13,6 +13,10 @@ _backup*/
 _agnes_raw/
 _preview*.png
 _debug*.png
+temp/
+_vanilla_gui_refs/
+output/
+release-assets/
 
 # Local/experimental generation helpers may contain private provider config
 generate_textures.py

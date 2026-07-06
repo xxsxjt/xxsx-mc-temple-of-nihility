@@ -1,6 +1,7 @@
 package com.templenihility.init;
 
 import com.templenihility.TempleNihilityMod;
+import com.templenihility.block.NihilityAltarBlock;
 import com.templenihility.block.NihilityVaultBlock;
 import java.util.function.Consumer;
 import net.minecraft.core.registries.Registries;
@@ -101,7 +102,7 @@ public class ModBlocks {
 
     // 虚无祭坛
     public static final DeferredBlock<Block> NIHILITY_ALTAR = registerBlock("nihility_altar",
-        id -> new Block(blockProperties(id)
+        id -> new NihilityAltarBlock(blockProperties(id)
             .strength(5.0f, 1200.0f)
             .sound(SoundType.STONE)
             .lightLevel(state -> 15)));
@@ -121,6 +122,18 @@ public class ModBlocks {
     }
 
     private static <T extends Block> void registerBlockItem(String name, DeferredBlock<T> block) {
+        if ("nihility_altar".equals(name)) {
+            ModItems.ITEMS.register(name, id -> new BlockItem(block.get(), ModItems.itemProperties(id).useBlockDescriptionPrefix()) {
+                @Override
+                public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
+                                            Consumer<Component> tooltip, TooltipFlag flag) {
+                    tooltip.accept(Component.translatable("tooltip.templenihility.nihility_altar_1").withStyle(ChatFormatting.DARK_AQUA));
+                    tooltip.accept(Component.translatable("tooltip.templenihility.nihility_altar_2").withStyle(ChatFormatting.AQUA));
+                    tooltip.accept(Component.translatable("tooltip.templenihility.nihility_altar_3").withStyle(ChatFormatting.GRAY));
+                }
+            });
+            return;
+        }
         if ("nihility_vault".equals(name)) {
             ModItems.ITEMS.register(name, id -> new BlockItem(block.get(), ModItems.itemProperties(id).useBlockDescriptionPrefix()) {
                 @Override

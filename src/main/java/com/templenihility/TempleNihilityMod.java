@@ -1,15 +1,18 @@
 package com.templenihility;
 
 import com.templenihility.config.ModConfig;
+import com.templenihility.blockentity.NihilityVaultBlockEntity;
 import com.templenihility.entity.NihilityCreature;
 import com.templenihility.compat.CuriosCompat;
 import com.templenihility.init.ModBlocks;
 import com.templenihility.init.ModBlockEntities;
 import com.templenihility.init.ModEntities;
 import com.templenihility.init.ModCreativeTab;
+import com.templenihility.init.ModEffects;
 import com.templenihility.init.ModItems;
 import com.templenihility.init.ModMenus;
 import com.templenihility.init.ModStructures;
+import com.templenihility.effect.VoidPhaseEvents;
 import com.templenihility.item.NihilityArmorEvents;
 import com.templenihility.client.ModClientEvents;
 import com.templenihility.world.GravityFieldManager;
@@ -26,7 +29,10 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.Level;
 
 @Mod(TempleNihilityMod.MOD_ID)
 public class TempleNihilityMod {
@@ -40,6 +46,7 @@ public class TempleNihilityMod {
         ModBlocks.register(modEventBus);
         ModBlockEntities.register(modEventBus);
         ModEntities.register(modEventBus);
+        ModEffects.register(modEventBus);
         ModMenus.register(modEventBus);
         // ModStructures.register(modEventBus);  // 结构系统暂时关闭，待修复
         ModCreativeTab.register(modEventBus);
@@ -55,6 +62,14 @@ public class TempleNihilityMod {
         NeoForge.EVENT_BUS.addListener(NihilityArmorEvents::playerTick);
         NeoForge.EVENT_BUS.addListener(NihilityArmorEvents::incomingDamage);
         NeoForge.EVENT_BUS.addListener(GravityFieldManager::levelTick);
+        NeoForge.EVENT_BUS.addListener(VoidPhaseEvents::playerTick);
+        NeoForge.EVENT_BUS.addListener(VoidPhaseEvents::incomingDamage);
+        NeoForge.EVENT_BUS.addListener(VoidPhaseEvents::invulnerabilityCheck);
+        NeoForge.EVENT_BUS.addListener(VoidPhaseEvents::targetChange);
+        NeoForge.EVENT_BUS.addListener(VoidPhaseEvents::attackEntity);
+        NeoForge.EVENT_BUS.addListener(VoidPhaseEvents::entityInteract);
+        NeoForge.EVENT_BUS.addListener(VoidPhaseEvents::entityInteractSpecific);
+        NeoForge.EVENT_BUS.addListener(VoidPhaseEvents::projectileImpact);
 
         LOGGER.info("Temple of Nihility loaded");
     }
@@ -68,6 +83,23 @@ public class TempleNihilityMod {
     @SubscribeEvent
     public void onServerStart(ServerStartingEvent event) {
         TempleCommand.register(event.getServer().getCommands().getDispatcher());
+    }
+
+    @SubscribeEvent
+    public void onBreakBlock(BreakBlockEvent event) {
+        if (!(event.getLevel() instanceof Level level)
+            || !event.getState().is(ModBlocks.NIHILITY_VAULT.get())
+            || !(level.getBlockEntity(event.getPos()) instanceof NihilityVaultBlockEntity vault)
+            || !vault.isBreakProtected()) {
+            return;
+        }
+
+        event.setCanceled(true);
+        if (!level.isClientSide()) {
+            event.setNotifyClient(true);
+            event.getPlayer().sendSystemMessage(
+                Component.translatable("message.templenihility.vault_break_protected"));
+        }
     }
 
     public void onAttributeCreate(EntityAttributeCreationEvent event) {

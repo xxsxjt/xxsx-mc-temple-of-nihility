@@ -18,6 +18,7 @@ public class NihilityVaultBlockEntity extends BlockEntity {
 
     private NonNullList<ItemStack> items = NonNullList.withSize(SLOTS_PER_VAULT, ItemStack.EMPTY);
     private boolean chunkLoaded;
+    private boolean breakProtected = true;
     private int capacityUpgrades;
 
     public NihilityVaultBlockEntity(BlockPos pos, BlockState state) {
@@ -56,6 +57,15 @@ public class NihilityVaultBlockEntity extends BlockEntity {
         setChanged();
     }
 
+    public boolean isBreakProtected() {
+        return breakProtected;
+    }
+
+    public void setBreakProtected(boolean breakProtected) {
+        this.breakProtected = breakProtected;
+        setChanged();
+    }
+
     @Override
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
@@ -63,6 +73,7 @@ public class NihilityVaultBlockEntity extends BlockEntity {
         items = NonNullList.withSize(getCapacitySlots(), ItemStack.EMPTY);
         ContainerHelper.loadAllItems(input, items);
         chunkLoaded = input.getBooleanOr("ChunkLoaded", false);
+        breakProtected = input.getBooleanOr("BreakProtected", true);
         syncForcedChunk();
     }
 
@@ -71,6 +82,7 @@ public class NihilityVaultBlockEntity extends BlockEntity {
         super.saveAdditional(output);
         ContainerHelper.saveAllItems(output, items);
         output.putBoolean("ChunkLoaded", chunkLoaded);
+        output.putBoolean("BreakProtected", breakProtected);
         output.putInt("CapacityUpgrades", capacityUpgrades);
     }
 

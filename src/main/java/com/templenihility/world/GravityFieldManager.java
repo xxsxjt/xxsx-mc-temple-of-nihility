@@ -70,6 +70,7 @@ public final class GravityFieldManager {
             if (age % SCAN_INTERVAL_TICKS == 1) {
                 scanTargets();
             }
+            NihilityVisualEffects.gravityFieldPulse(level, center, age, targets.size());
             pullTargets();
             return true;
         }

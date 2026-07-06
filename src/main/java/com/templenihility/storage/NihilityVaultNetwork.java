@@ -3,6 +3,7 @@ package com.templenihility.storage;
 import com.templenihility.blockentity.NihilityVaultBlockEntity;
 import com.templenihility.init.ModBlocks;
 import com.templenihility.menu.NihilityTerminalMenu;
+import com.templenihility.world.NihilityVisualEffects;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -32,6 +33,7 @@ public final class NihilityVaultNetwork {
             new NihilityTerminalMenu(id, inventory, vaults),
             Component.translatable("container.templenihility.nihility_terminal", vaults.size(), totalSlots));
         player.openMenu(provider);
+        NihilityVisualEffects.vaultOpen(level, origin, vaults.size());
         return true;
     }
 
@@ -73,10 +75,14 @@ public final class NihilityVaultNetwork {
         int usedSlots = 0;
         int itemCount = 0;
         int chunkLoaded = 0;
+        int breakProtected = 0;
         for (NihilityVaultBlockEntity vault : vaults) {
             totalSlots += vault.getItems().size();
             if (vault.isChunkLoaded()) {
                 chunkLoaded++;
+            }
+            if (vault.isBreakProtected()) {
+                breakProtected++;
             }
             for (ItemStack stack : vault.getItems()) {
                 if (!stack.isEmpty()) {
@@ -85,7 +91,7 @@ public final class NihilityVaultNetwork {
                 }
             }
         }
-        return new Stats(vaults.size(), totalSlots, usedSlots, itemCount, chunkLoaded);
+        return new Stats(vaults.size(), totalSlots, usedSlots, itemCount, chunkLoaded, breakProtected);
     }
 
     public static boolean setNetworkChunkLoaded(ServerLevel level, BlockPos origin, boolean enabled) {
@@ -99,7 +105,19 @@ public final class NihilityVaultNetwork {
         return true;
     }
 
-    public record Stats(int vaultCount, int totalSlots, int usedSlots, int itemCount, int chunkLoadedVaults) {
+    public static boolean setNetworkBreakProtected(ServerLevel level, BlockPos origin, boolean enabled) {
+        List<NihilityVaultBlockEntity> vaults = collect(level, origin);
+        if (vaults.isEmpty()) {
+            return false;
+        }
+        for (NihilityVaultBlockEntity vault : vaults) {
+            vault.setBreakProtected(enabled);
+        }
+        return true;
+    }
+
+    public record Stats(int vaultCount, int totalSlots, int usedSlots, int itemCount,
+                        int chunkLoadedVaults, int breakProtectedVaults) {
         public int emptySlots() {
             return Math.max(0, totalSlots - usedSlots);
         }

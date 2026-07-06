@@ -1,1 +1,12 @@
-{ "parent": "minecraft:block/cube_all", "textures": { "all": "templenihility:block/nihility_altar" } }
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "templenihility:block/nihility_altar_side",
+    "down": "templenihility:block/nihility_altar_bottom",
+    "up": "templenihility:block/nihility_altar_top",
+    "north": "templenihility:block/nihility_altar_side",
+    "south": "templenihility:block/nihility_altar_side",
+    "west": "templenihility:block/nihility_altar_side",
+    "east": "templenihility:block/nihility_altar_side"
+  }
+}

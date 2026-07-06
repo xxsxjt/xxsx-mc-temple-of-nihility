@@ -1,1 +1,10 @@
-{ "variants": { "": { "model": "templenihility:block/nihility_crystal_block" } } }
+{
+  "variants": {
+    "": [
+      { "model": "templenihility:block/nihility_crystal_block", "weight": 4 },
+      { "model": "templenihility:block/nihility_crystal_block_2", "weight": 2 },
+      { "model": "templenihility:block/nihility_crystal_block_3", "weight": 2 },
+      { "model": "templenihility:block/nihility_crystal_block_4", "weight": 2 }
+    ]
+  }
+}

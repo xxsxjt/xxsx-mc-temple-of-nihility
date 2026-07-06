@@ -1,5 +1,6 @@
 package com.templenihility.client.screen;
 
+import com.templenihility.TempleNihilityMod;
 import com.templenihility.menu.NihilityTradeMenu;
 import com.templenihility.trade.TradeOffer;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -7,10 +8,13 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 
 public class NihilityTradeScreen extends AbstractContainerScreen<NihilityTradeMenu> {
+    private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(
+        TempleNihilityMod.MOD_ID, "textures/gui/container/nihility_trade.png");
     private Button tradeButton;
     private Button prevButton;
     private Button nextButton;
@@ -65,15 +69,7 @@ public class NihilityTradeScreen extends AbstractContainerScreen<NihilityTradeMe
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractBackground(graphics, mouseX, mouseY, partialTick);
-        int x = leftPos;
-        int y = topPos;
-        graphics.fill(RenderPipelines.GUI, x, y, x + imageWidth, y + imageHeight, 0xFF100817);
-        graphics.fill(RenderPipelines.GUI, x + 6, y + 21, x + 112, y + 104, 0xFF21102F);
-        graphics.fill(RenderPipelines.GUI, x + 118, y + 21, x + 198, y + 104, 0xFF1A1126);
-        graphics.fill(RenderPipelines.GUI, x + 6, y + 116, x + 198, y + 198, 0xFF170D21);
-        graphics.outline(x, y, imageWidth, imageHeight, 0xFF7B3CC5);
-        graphics.outline(x + 6, y + 21, 106, 83, 0xFF42E6F5);
-        graphics.outline(x + 118, y + 21, 80, 83, 0xFF9D6BFF);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
     }
 
     @Override

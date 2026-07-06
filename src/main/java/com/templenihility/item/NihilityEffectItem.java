@@ -1,6 +1,8 @@
 package com.templenihility.item;
 
 import com.templenihility.world.GravityFieldManager;
+import com.templenihility.init.ModEffects;
+import com.templenihility.world.NihilityVisualEffects;
 import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
@@ -71,13 +73,14 @@ public class NihilityEffectItem extends Item {
         SHADOW_SIGIL(20 * 20, "message.templenihility.nihility_shadow_sigil", UseCost.CONSUME_ONE) {
             @Override
             int apply(Player player) {
-                player.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, 20 * 12, 0, true, false, true));
+                player.addEffect(new MobEffectInstance(ModEffects.INTO_NIHILITY, 20 * 12, 0, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.SPEED, 20 * 18, 1, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 20 * 18, 0, true, false, true));
                 Vec3 dash = player.getLookAngle().normalize().scale(1.25).add(0.0, 0.18, 0.0);
                 player.setDeltaMovement(player.getDeltaMovement().add(dash));
                 player.hurtMarked = true;
                 player.resetFallDistance();
+                NihilityVisualEffects.itemUse(player, NihilityVisualEffects.Burst.SHADOW);
                 return 1;
             }
         },
@@ -96,6 +99,7 @@ public class NihilityEffectItem extends Item {
                         affected++;
                     }
                 }
+                NihilityVisualEffects.itemUse(player, NihilityVisualEffects.Burst.PURIFY);
                 return affected;
             }
         },
@@ -112,6 +116,7 @@ public class NihilityEffectItem extends Item {
                     }
                 }
                 player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 20 * 45, 0, true, false, true));
+                NihilityVisualEffects.itemUse(player, NihilityVisualEffects.Burst.ECHO);
                 return affected + 1;
             }
         },
@@ -130,12 +135,14 @@ public class NihilityEffectItem extends Item {
                         affected++;
                     }
                 }
+                NihilityVisualEffects.itemUse(player, NihilityVisualEffects.Burst.BARRIER);
                 return affected;
             }
         },
         PHASE_FEATHER(20 * 25, "message.templenihility.nihility_phase_feather", UseCost.DAMAGE_ONE) {
             @Override
             int apply(Player player) {
+                player.addEffect(new MobEffectInstance(ModEffects.MELT_INTO_NIHILITY, 20 * 8, 0, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.SPEED, 20 * 18, 2, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.JUMP_BOOST, 20 * 18, 1, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 20 * 24, 0, true, false, true));
@@ -143,6 +150,7 @@ public class NihilityEffectItem extends Item {
                 player.setDeltaMovement(player.getDeltaMovement().add(dash));
                 player.hurtMarked = true;
                 player.resetFallDistance();
+                NihilityVisualEffects.itemUse(player, NihilityVisualEffects.Burst.PHASE);
                 return 1;
             }
         },
@@ -150,6 +158,7 @@ public class NihilityEffectItem extends Item {
             @Override
             int apply(Player player) {
                 GravityFieldManager.create(player);
+                NihilityVisualEffects.itemUse(player, NihilityVisualEffects.Burst.GRAVITY);
                 return 1;
             }
         },
@@ -167,6 +176,7 @@ public class NihilityEffectItem extends Item {
                         affected++;
                     }
                 }
+                NihilityVisualEffects.itemUse(player, NihilityVisualEffects.Burst.WAR);
                 return affected + 1;
             }
         },
@@ -176,6 +186,7 @@ public class NihilityEffectItem extends Item {
                 player.heal(6.0f);
                 player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 20 * 8, 0, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 20 * 45, 0, true, false, true));
+                NihilityVisualEffects.itemUse(player, NihilityVisualEffects.Burst.HEAL);
                 return 1;
             }
         },
@@ -186,6 +197,7 @@ public class NihilityEffectItem extends Item {
                 player.clearFire();
                 player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 20 * 12, 0, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 20 * 20, 0, true, false, true));
+                NihilityVisualEffects.itemUse(player, NihilityVisualEffects.Burst.NULLIFY);
                 return 1;
             }
         },
@@ -202,6 +214,9 @@ public class NihilityEffectItem extends Item {
                         living.hurtMarked = true;
                         affected++;
                     }
+                }
+                if (affected > 0) {
+                    NihilityVisualEffects.itemUse(player, NihilityVisualEffects.Burst.STASIS);
                 }
                 return affected;
             }
@@ -223,6 +238,9 @@ public class NihilityEffectItem extends Item {
                         }
                     }
                 }
+                if (affected > 0) {
+                    NihilityVisualEffects.itemUse(player, NihilityVisualEffects.Burst.RIFT);
+                }
                 return affected;
             }
         },
@@ -241,6 +259,7 @@ public class NihilityEffectItem extends Item {
                         affected++;
                     }
                 }
+                NihilityVisualEffects.itemUse(player, NihilityVisualEffects.Burst.WAR);
                 return affected + 1;
             }
         },
@@ -257,6 +276,7 @@ public class NihilityEffectItem extends Item {
                         affected++;
                     }
                 }
+                NihilityVisualEffects.itemUse(player, NihilityVisualEffects.Burst.VOID_BEACON);
                 return affected + 1;
             }
         };

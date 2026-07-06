@@ -5,35 +5,59 @@ import com.templenihility.init.ModMenus;
 import com.templenihility.storage.NihilityVaultNetwork;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.inventory.DataSlot;
+import net.minecraft.world.inventory.ResultContainer;
+import net.minecraft.world.inventory.ResultSlot;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.inventory.TransientCraftingContainer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeType;
+import org.jspecify.annotations.Nullable;
 
 public class NihilityTerminalMenu extends AbstractContainerMenu {
-    public static final int VISIBLE_SLOTS = 54;
+    public static final int STORAGE_COLUMNS = 9;
+    public static final int STORAGE_ROWS = 5;
+    public static final int VISIBLE_SLOTS = STORAGE_COLUMNS * STORAGE_ROWS;
+    public static final int CRAFT_RESULT_SLOT = VISIBLE_SLOTS;
+    public static final int CRAFT_INPUT_START = CRAFT_RESULT_SLOT + 1;
+    public static final int CRAFT_INPUT_COUNT = 9;
+    public static final int PLAYER_INV_START = CRAFT_INPUT_START + CRAFT_INPUT_COUNT;
     public static final int BUTTON_PREV_PAGE = 0;
     public static final int BUTTON_NEXT_PAGE = 1;
     public static final int BUTTON_CYCLE_SORT = 2;
     public static final int BUTTON_CLEAR_SEARCH = 3;
     public static final int BUTTON_TOGGLE_CHUNKLOAD = 4;
+    public static final int BUTTON_TOGGLE_BREAK_PROTECTION = 5;
     public static final int BUTTON_CHAR_BASE = 1000;
 
     private final List<NihilityVaultBlockEntity> vaults;
     private final TerminalViewContainer terminalContainer;
-    private final int[] data = new int[10];
+    private final CraftingContainer craftSlots;
+    private final ResultContainer resultSlots = new ResultContainer();
+    private final Player player;
+    private final int[] data = new int[11];
     private final List<SlotRef> allRefs = new ArrayList<>();
-    private final List<SlotRef> viewRefs = new ArrayList<>();
+    private final List<StackGroup> viewGroups = new ArrayList<>();
     private String search = "";
     private boolean rebuildingView;
 
@@ -44,14 +68,24 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
     public NihilityTerminalMenu(int id, Inventory inventory, List<NihilityVaultBlockEntity> vaults) {
         super(ModMenus.NIHILITY_TERMINAL.get(), id);
         this.vaults = vaults;
+        this.player = inventory.player;
         this.terminalContainer = new TerminalViewContainer(this);
+        this.craftSlots = new TransientCraftingContainer(this, 3, 3);
 
         rebuildAllRefs();
         rebuildView();
 
-        for (int row = 0; row < 6; row++) {
-            for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(terminalContainer, col + row * 9, 8 + col * 18, 45 + row * 18));
+        for (int row = 0; row < STORAGE_ROWS; row++) {
+            for (int col = 0; col < STORAGE_COLUMNS; col++) {
+                addSlot(new AggregateSlot(terminalContainer, col + row * STORAGE_COLUMNS,
+                    8 + col * 18, 55 + row * 18));
+            }
+        }
+
+        addSlot(new ResultSlot(this.player, craftSlots, resultSlots, 0, 222, 79));
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 3; col++) {
+                addSlot(new Slot(craftSlots, col + row * 3, 181 + col * 18, 61 + row * 18));
             }
         }
         addStandardInventorySlots(inventory, 8, 166);
@@ -85,6 +119,10 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
             toggleChunkLoading(player);
             return true;
         }
+        if (buttonId == BUTTON_TOGGLE_BREAK_PROTECTION) {
+            toggleBreakProtection(player);
+            return true;
+        }
         if (buttonId >= BUTTON_CHAR_BASE) {
             int codePoint = buttonId - BUTTON_CHAR_BASE;
             if (codePoint > 0 && search.length() < 64) {
@@ -97,6 +135,20 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
     }
 
     @Override
+    public void slotsChanged(Container container) {
+        super.slotsChanged(container);
+        if (container == craftSlots && player.level() instanceof ServerLevel level) {
+            updateCraftingResult(this, level, player, craftSlots, resultSlots, null);
+        }
+    }
+
+    @Override
+    public void removed(Player player) {
+        super.removed(player);
+        clearContainer(player, craftSlots);
+    }
+
+    @Override
     public ItemStack quickMoveStack(Player player, int index) {
         Slot slot = slots.get(index);
         if (!slot.hasItem()) {
@@ -105,8 +157,30 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
 
         ItemStack source = slot.getItem();
         ItemStack original = source.copy();
-        if (index < VISIBLE_SLOTS) {
-            if (!moveItemStackTo(source, VISIBLE_SLOTS, slots.size(), true)) {
+        if (isStorageSlot(index)) {
+            int amount = Math.min(source.getCount(), source.getMaxStackSize());
+            ItemStack moving = source.copyWithCount(amount);
+            if (!moveItemStackTo(moving, PLAYER_INV_START, slots.size(), true)) {
+                return ItemStack.EMPTY;
+            }
+            int moved = amount - moving.getCount();
+            if (moved <= 0) {
+                return ItemStack.EMPTY;
+            }
+            terminalContainer.removeItem(index, moved);
+            rebuildView();
+            broadcastFullState();
+            return source.copyWithCount(moved);
+        }
+
+        if (index == CRAFT_RESULT_SLOT) {
+            source.getItem().onCraftedBy(source, player);
+            if (!moveItemStackTo(source, PLAYER_INV_START, slots.size(), true)) {
+                return ItemStack.EMPTY;
+            }
+            slot.onQuickCraft(source, original);
+        } else if (index >= CRAFT_INPUT_START && index < PLAYER_INV_START) {
+            if (!moveItemStackTo(source, PLAYER_INV_START, slots.size(), false)) {
                 return ItemStack.EMPTY;
             }
         } else if (!insertIntoNetwork(source)) {
@@ -118,9 +192,23 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
         } else {
             slot.setChanged();
         }
+
+        if (source.getCount() == original.getCount()) {
+            return ItemStack.EMPTY;
+        }
+
+        slot.onTake(player, source);
+        if (index == CRAFT_RESULT_SLOT) {
+            player.drop(source, false);
+        }
         rebuildView();
         broadcastFullState();
         return original;
+    }
+
+    @Override
+    public boolean canTakeItemForPickAll(ItemStack stack, Slot slot) {
+        return slot.container != resultSlots && super.canTakeItemForPickAll(stack, slot);
     }
 
     @Override
@@ -172,6 +260,43 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
         return data[9];
     }
 
+    public int getBreakProtectedVaults() {
+        return data[10];
+    }
+
+    public boolean isNetworkBreakProtected() {
+        return getVaultCount() > 0 && getBreakProtectedVaults() >= getVaultCount();
+    }
+
+    public boolean isStorageSlot(int index) {
+        return index >= 0 && index < VISIBLE_SLOTS;
+    }
+
+    public int getVisibleItemCount(int slot) {
+        StackGroup group = visibleGroup(slot);
+        if (group != null) {
+            return group.totalCount();
+        }
+        if (slot >= 0 && slot < VISIBLE_SLOTS) {
+            return terminalContainer.clientStacks.get(slot).getCount();
+        }
+        return 0;
+    }
+
+    public String getVisibleCountText(int slot) {
+        int count = getVisibleItemCount(slot);
+        if (count <= 1) {
+            return null;
+        }
+        if (count < 1_000) {
+            return Integer.toString(count);
+        }
+        if (count < 1_000_000) {
+            return (count / 1_000) + "K";
+        }
+        return (count / 1_000_000) + "M";
+    }
+
     public String getSortLabelKey() {
         return switch (getSortMode()) {
             case 1 -> "screen.templenihility.sort_name";
@@ -201,6 +326,20 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
         broadcastFullState();
     }
 
+    private void toggleBreakProtection(Player player) {
+        if (vaults.isEmpty() || !(vaults.getFirst().getLevel() instanceof ServerLevel level)) {
+            return;
+        }
+
+        boolean enabled = !isNetworkBreakProtected();
+        NihilityVaultNetwork.setNetworkBreakProtected(level, vaults.getFirst().getBlockPos(), enabled);
+        player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
+            enabled ? "message.templenihility.vault_protection_on" : "message.templenihility.vault_protection_off",
+            vaults.size()));
+        rebuildView();
+        broadcastFullState();
+    }
+
     private void rebuildAllRefs() {
         allRefs.clear();
         int slotOffset = 0;
@@ -219,36 +358,69 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
         data[6] = stats.emptySlots();
         data[7] = stats.itemCount();
         data[8] = stats.chunkLoadedVaults();
+        data[10] = stats.breakProtectedVaults();
     }
 
     private void rebuildView() {
         rebuildingView = true;
         try {
             rebuildAllRefs();
-            viewRefs.clear();
+            viewGroups.clear();
+            List<StackGroup> groups = buildGroups();
             String needle = search.toLowerCase(Locale.ROOT);
-            for (SlotRef ref : allRefs) {
-                ItemStack stack = ref.get();
-                if (!needle.isEmpty() && (stack.isEmpty() || !matches(stack, needle))) {
+            for (StackGroup group : groups) {
+                if (!needle.isEmpty() && !matches(group.display(), needle)) {
                     continue;
                 }
-                viewRefs.add(ref);
+                viewGroups.add(group);
             }
 
-            Comparator<SlotRef> comparator = switch (data[2]) {
-                case 1 -> Comparator.comparing(ref -> sortName(ref.get()));
-                case 2 -> Comparator.<SlotRef>comparingInt(ref -> ref.get().isEmpty() ? 0 : ref.get().getCount()).reversed();
-                case 3 -> Comparator.comparing(ref -> sortMod(ref.get()));
-                default -> Comparator.comparingInt(SlotRef::globalIndex);
+            Comparator<StackGroup> comparator = switch (data[2]) {
+                case 1 -> Comparator.comparing(group -> sortName(group.display()));
+                case 2 -> Comparator.<StackGroup>comparingInt(StackGroup::totalCount).reversed();
+                case 3 -> Comparator.comparing(group -> sortMod(group.display()));
+                default -> Comparator.comparingInt(StackGroup::firstGlobalIndex);
             };
-            viewRefs.sort(comparator.thenComparingInt(SlotRef::globalIndex));
+            viewGroups.sort(comparator.thenComparingInt(StackGroup::firstGlobalIndex));
 
-            data[1] = Math.max(0, (viewRefs.size() - 1) / VISIBLE_SLOTS);
+            data[1] = Math.max(0, (viewGroups.size() - 1) / VISIBLE_SLOTS);
             data[0] = Math.max(0, Math.min(data[0], data[1]));
-            data[9] = viewRefs.size();
+            data[9] = viewGroups.size();
         } finally {
             rebuildingView = false;
         }
+    }
+
+    private List<StackGroup> buildGroups() {
+        Map<Integer, List<StackGroup>> byHash = new HashMap<>();
+        List<StackGroup> groups = new ArrayList<>();
+        for (SlotRef ref : allRefs) {
+            ItemStack stack = ref.get();
+            if (stack.isEmpty()) {
+                continue;
+            }
+            int hash = ItemStack.hashItemAndComponents(stack);
+            StackGroup group = findMatchingGroup(byHash.get(hash), stack);
+            if (group == null) {
+                group = new StackGroup(stack, ref.globalIndex());
+                groups.add(group);
+                byHash.computeIfAbsent(hash, ignored -> new ArrayList<>()).add(group);
+            }
+            group.add(ref);
+        }
+        return groups;
+    }
+
+    private @Nullable StackGroup findMatchingGroup(@Nullable List<StackGroup> candidates, ItemStack stack) {
+        if (candidates == null) {
+            return null;
+        }
+        for (StackGroup group : candidates) {
+            if (ItemStack.isSameItemSameComponents(group.display(), stack)) {
+                return group;
+            }
+        }
+        return null;
     }
 
     private void markContentChanged() {
@@ -274,9 +446,9 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
         return BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace().toLowerCase(Locale.ROOT);
     }
 
-    private SlotRef visibleRef(int slot) {
+    private StackGroup visibleGroup(int slot) {
         int index = data[0] * VISIBLE_SLOTS + slot;
-        return index >= 0 && index < viewRefs.size() ? viewRefs.get(index) : null;
+        return index >= 0 && index < viewGroups.size() ? viewGroups.get(index) : null;
     }
 
     private boolean insertIntoNetwork(ItemStack source) {
@@ -314,6 +486,47 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
         return source.getCount() != before;
     }
 
+    private static void updateCraftingResult(AbstractContainerMenu menu, ServerLevel level, Player player,
+                                             CraftingContainer container, ResultContainer resultSlots,
+                                             @Nullable RecipeHolder<CraftingRecipe> recipeHint) {
+        CraftingInput input = container.asCraftInput();
+        ServerPlayer serverPlayer = (ServerPlayer) player;
+        ItemStack result = ItemStack.EMPTY;
+        Optional<RecipeHolder<CraftingRecipe>> maybeRecipe =
+            level.getServer().getRecipeManager().getRecipeFor(RecipeType.CRAFTING, input, level, recipeHint);
+        if (maybeRecipe.isPresent()) {
+            RecipeHolder<CraftingRecipe> recipeHolder = maybeRecipe.get();
+            CraftingRecipe craftingRecipe = recipeHolder.value();
+            if (resultSlots.setRecipeUsed(serverPlayer, recipeHolder)) {
+                ItemStack recipeResult = craftingRecipe.assemble(input);
+                if (recipeResult.isItemEnabled(level.enabledFeatures())) {
+                    result = recipeResult;
+                }
+            }
+        }
+
+        resultSlots.setItem(0, result);
+        menu.setRemoteSlot(CRAFT_RESULT_SLOT, result);
+        serverPlayer.connection.send(new ClientboundContainerSetSlotPacket(
+            menu.containerId, menu.incrementStateId(), CRAFT_RESULT_SLOT, result));
+    }
+
+    private static final class AggregateSlot extends Slot {
+        private AggregateSlot(Container container, int slot, int x, int y) {
+            super(container, slot, x, y);
+        }
+
+        @Override
+        public boolean mayPlace(ItemStack stack) {
+            return false;
+        }
+
+        @Override
+        public boolean allowModification(Player player) {
+            return mayPickup(player);
+        }
+    }
+
     private static final class TerminalViewContainer implements Container {
         private final NihilityTerminalMenu menu;
         private final NonNullList<ItemStack> clientStacks = NonNullList.withSize(VISIBLE_SLOTS, ItemStack.EMPTY);
@@ -339,19 +552,21 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
 
         @Override
         public ItemStack getItem(int slot) {
-            SlotRef ref = menu.visibleRef(slot);
-            return ref == null ? clientStacks.get(slot) : ref.get();
+            StackGroup group = menu.visibleGroup(slot);
+            if (group != null) {
+                return group.displayStack();
+            }
+            return clientStacks.get(slot);
         }
 
         @Override
         public ItemStack removeItem(int slot, int amount) {
-            SlotRef ref = menu.visibleRef(slot);
-            if (ref == null) {
+            StackGroup group = menu.visibleGroup(slot);
+            if (group == null) {
                 return ContainerHelper.removeItem(clientStacks, slot, amount);
             }
-            ItemStack removed = ContainerHelper.removeItem(ref.items, ref.slot, amount);
+            ItemStack removed = group.remove(amount);
             if (!removed.isEmpty()) {
-                ref.vault.setChanged();
                 setChanged();
             }
             return removed;
@@ -359,26 +574,24 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
 
         @Override
         public ItemStack removeItemNoUpdate(int slot) {
-            SlotRef ref = menu.visibleRef(slot);
-            if (ref == null) {
+            StackGroup group = menu.visibleGroup(slot);
+            if (group == null) {
                 return ContainerHelper.takeItem(clientStacks, slot);
             }
-            ItemStack removed = ref.get();
-            ref.set(ItemStack.EMPTY);
-            ref.vault.setChanged();
-            setChanged();
-            return removed;
+            return group.remove(group.display().getMaxStackSize());
         }
 
         @Override
         public void setItem(int slot, ItemStack stack) {
-            SlotRef ref = menu.visibleRef(slot);
-            if (ref == null) {
+            StackGroup group = menu.visibleGroup(slot);
+            if (group == null) {
                 clientStacks.set(slot, stack);
                 return;
             }
-            ref.set(stack);
-            ref.vault.setChanged();
+            if (!stack.isEmpty()) {
+                ItemStack inserting = stack.copy();
+                menu.insertIntoNetwork(inserting);
+            }
             setChanged();
         }
 
@@ -395,7 +608,7 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
         @Override
         public void clearContent() {
             for (int i = 0; i < VISIBLE_SLOTS; i++) {
-                setItem(i, ItemStack.EMPTY);
+                removeItemNoUpdate(i);
             }
         }
     }
@@ -407,6 +620,66 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
 
         void set(ItemStack stack) {
             items.set(slot, stack);
+        }
+    }
+
+    private static final class StackGroup {
+        private final ItemStack display;
+        private final List<SlotRef> refs = new ArrayList<>();
+        private final int firstGlobalIndex;
+        private int totalCount;
+
+        private StackGroup(ItemStack stack, int firstGlobalIndex) {
+            this.display = stack.copyWithCount(1);
+            this.firstGlobalIndex = firstGlobalIndex;
+        }
+
+        private void add(SlotRef ref) {
+            refs.add(ref);
+            totalCount = Math.min(Integer.MAX_VALUE, totalCount + ref.get().getCount());
+        }
+
+        private ItemStack display() {
+            return display;
+        }
+
+        private int totalCount() {
+            return totalCount;
+        }
+
+        private int firstGlobalIndex() {
+            return firstGlobalIndex;
+        }
+
+        private ItemStack displayStack() {
+            return display.copyWithCount(Math.max(1, totalCount));
+        }
+
+        private ItemStack remove(int amount) {
+            if (amount <= 0 || totalCount <= 0) {
+                return ItemStack.EMPTY;
+            }
+            int remaining = Math.min(amount, totalCount);
+            int removed = 0;
+            for (SlotRef ref : refs) {
+                ItemStack stack = ref.get();
+                if (stack.isEmpty()) {
+                    continue;
+                }
+                int taken = Math.min(remaining, stack.getCount());
+                stack.shrink(taken);
+                removed += taken;
+                remaining -= taken;
+                if (stack.isEmpty()) {
+                    ref.set(ItemStack.EMPTY);
+                }
+                ref.vault.setChanged();
+                if (remaining <= 0) {
+                    break;
+                }
+            }
+            totalCount -= removed;
+            return removed <= 0 ? ItemStack.EMPTY : display.copyWithCount(removed);
         }
     }
 }

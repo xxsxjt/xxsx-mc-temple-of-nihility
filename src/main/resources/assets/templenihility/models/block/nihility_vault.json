@@ -1,6 +1,12 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "minecraft:block/cube",
   "textures": {
-    "all": "templenihility:block/nihility_vault"
+    "particle": "templenihility:block/nihility_vault_side",
+    "down": "templenihility:block/nihility_vault_bottom",
+    "up": "templenihility:block/nihility_vault_top",
+    "north": "templenihility:block/nihility_vault_front",
+    "south": "templenihility:block/nihility_vault_side",
+    "west": "templenihility:block/nihility_vault_side",
+    "east": "templenihility:block/nihility_vault_side"
   }
 }

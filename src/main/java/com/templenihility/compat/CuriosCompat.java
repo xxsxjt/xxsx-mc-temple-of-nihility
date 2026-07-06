@@ -1,10 +1,13 @@
 package com.templenihility.compat;
 
 import com.templenihility.TempleNihilityMod;
+import com.templenihility.init.ModEffects;
 import com.templenihility.init.ModItems;
 import com.templenihility.world.MagnetManager;
 import com.templenihility.world.NihilityDynamicLight;
+import com.templenihility.world.NihilityVisualEffects;
 import java.util.Optional;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -309,6 +312,7 @@ public final class CuriosCompat {
                     entity.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 20 * 12, 1, true, false, true));
                     entity.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 20 * 8, 0, true, false, true));
                     entity.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 20 * 5, 0, true, false, true));
+                    notifyTriggered(entity, "message.templenihility.nihility_soul_anchor", NihilityVisualEffects.Burst.BARRIER);
                 }
             }
         };
@@ -316,6 +320,16 @@ public final class CuriosCompat {
 
     private static ICurioItem lantern() {
         return new ICurioItem() {
+            @Override
+            public void onEquip(SlotContext slotContext, ItemStack oldStack, ItemStack stack) {
+                LivingEntity entity = slotContext.entity();
+                if (entity instanceof Player player && !player.level().isClientSide()) {
+                    NihilityDynamicLight.update(player);
+                    NihilityVisualEffects.lanternPulse(player);
+                    player.sendSystemMessage(Component.translatable("message.templenihility.nihility_lantern"));
+                }
+            }
+
             @Override
             public void curioTick(SlotContext slotContext, ItemStack stack) {
                 LivingEntity entity = slotContext.entity();
@@ -349,6 +363,7 @@ public final class CuriosCompat {
 
                 entity.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 20 * 6, 0, true, false, true));
                 entity.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 20 * 20, 0, true, false, true));
+                notifyTriggered(entity, "message.templenihility.nihility_recovery_orb", NihilityVisualEffects.Burst.HEAL);
             }
         };
     }
@@ -382,7 +397,7 @@ public final class CuriosCompat {
                 }
                 entity.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 120, 0, true, false, true));
                 if (entity.isShiftKeyDown()) {
-                    entity.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, 60, 0, true, false, true));
+                    entity.addEffect(new MobEffectInstance(ModEffects.HIDDEN_IN_NIHILITY, 60, 0, true, false, true));
                 }
             }
         };
@@ -397,6 +412,7 @@ public final class CuriosCompat {
                     && entity.tickCount % 100 == 0
                     && entity.getHealth() <= entity.getMaxHealth() * 0.6f) {
                     entity.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 120, 0, true, false, true));
+                    notifyTriggered(entity, "message.templenihility.nihility_aegis_charm", NihilityVisualEffects.Burst.BARRIER);
                 }
             }
 
@@ -471,6 +487,7 @@ public final class CuriosCompat {
                 if (!entity.level().isClientSide() && entity.tickCount % 120 == 0 && entity.getHealth() <= entity.getMaxHealth() * 0.5f) {
                     entity.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 120, 0, true, false, true));
                     entity.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 80, 0, true, false, true));
+                    notifyTriggered(entity, "message.templenihility.nihility_crown", NihilityVisualEffects.Burst.HEAL);
                 }
             }
 
@@ -615,6 +632,13 @@ public final class CuriosCompat {
 
     private static Identifier id(String path) {
         return Identifier.fromNamespaceAndPath(TempleNihilityMod.MOD_ID, path);
+    }
+
+    private static void notifyTriggered(LivingEntity entity, String messageKey, NihilityVisualEffects.Burst burst) {
+        if (entity instanceof Player player && !player.level().isClientSide()) {
+            player.sendSystemMessage(Component.translatable(messageKey));
+            NihilityVisualEffects.itemUse(player, burst);
+        }
     }
 
     private CuriosCompat() {

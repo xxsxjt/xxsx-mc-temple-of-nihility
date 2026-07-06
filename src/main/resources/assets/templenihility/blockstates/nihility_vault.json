@@ -1,7 +1,484 @@
 {
   "variants": {
-    "": {
+    "connected=false,east=false,facing=north,north=false,south=false,west=false": {
       "model": "templenihility:block/nihility_vault"
+    },
+    "connected=false,east=false,facing=north,north=false,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_w"
+    },
+    "connected=false,east=false,facing=north,north=false,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_s"
+    },
+    "connected=false,east=false,facing=north,north=false,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_sw"
+    },
+    "connected=false,east=true,facing=north,north=false,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_e"
+    },
+    "connected=false,east=true,facing=north,north=false,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_ew"
+    },
+    "connected=false,east=true,facing=north,north=false,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_es"
+    },
+    "connected=false,east=true,facing=north,north=false,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_esw"
+    },
+    "connected=false,east=false,facing=north,north=true,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_n"
+    },
+    "connected=false,east=false,facing=north,north=true,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nw"
+    },
+    "connected=false,east=false,facing=north,north=true,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_ns"
+    },
+    "connected=false,east=false,facing=north,north=true,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nsw"
+    },
+    "connected=false,east=true,facing=north,north=true,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_ne"
+    },
+    "connected=false,east=true,facing=north,north=true,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_new"
+    },
+    "connected=false,east=true,facing=north,north=true,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_nes"
+    },
+    "connected=false,east=true,facing=north,north=true,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nesw"
+    },
+    "connected=true,east=false,facing=north,north=false,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_none"
+    },
+    "connected=true,east=false,facing=north,north=false,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_w"
+    },
+    "connected=true,east=false,facing=north,north=false,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_s"
+    },
+    "connected=true,east=false,facing=north,north=false,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_sw"
+    },
+    "connected=true,east=true,facing=north,north=false,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_e"
+    },
+    "connected=true,east=true,facing=north,north=false,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_ew"
+    },
+    "connected=true,east=true,facing=north,north=false,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_es"
+    },
+    "connected=true,east=true,facing=north,north=false,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_esw"
+    },
+    "connected=true,east=false,facing=north,north=true,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_n"
+    },
+    "connected=true,east=false,facing=north,north=true,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nw"
+    },
+    "connected=true,east=false,facing=north,north=true,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_ns"
+    },
+    "connected=true,east=false,facing=north,north=true,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nsw"
+    },
+    "connected=true,east=true,facing=north,north=true,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_ne"
+    },
+    "connected=true,east=true,facing=north,north=true,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_new"
+    },
+    "connected=true,east=true,facing=north,north=true,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_nes"
+    },
+    "connected=true,east=true,facing=north,north=true,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nesw"
+    },
+    "connected=false,east=false,facing=east,north=false,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault",
+      "y": 90
+    },
+    "connected=false,east=false,facing=east,north=false,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_s",
+      "y": 90
+    },
+    "connected=false,east=false,facing=east,north=false,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_e",
+      "y": 90
+    },
+    "connected=false,east=false,facing=east,north=false,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_es",
+      "y": 90
+    },
+    "connected=false,east=true,facing=east,north=false,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_n",
+      "y": 90
+    },
+    "connected=false,east=true,facing=east,north=false,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_ns",
+      "y": 90
+    },
+    "connected=false,east=true,facing=east,north=false,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_ne",
+      "y": 90
+    },
+    "connected=false,east=true,facing=east,north=false,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nes",
+      "y": 90
+    },
+    "connected=false,east=false,facing=east,north=true,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_w",
+      "y": 90
+    },
+    "connected=false,east=false,facing=east,north=true,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_sw",
+      "y": 90
+    },
+    "connected=false,east=false,facing=east,north=true,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_ew",
+      "y": 90
+    },
+    "connected=false,east=false,facing=east,north=true,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_esw",
+      "y": 90
+    },
+    "connected=false,east=true,facing=east,north=true,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_nw",
+      "y": 90
+    },
+    "connected=false,east=true,facing=east,north=true,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nsw",
+      "y": 90
+    },
+    "connected=false,east=true,facing=east,north=true,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_new",
+      "y": 90
+    },
+    "connected=false,east=true,facing=east,north=true,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nesw",
+      "y": 90
+    },
+    "connected=true,east=false,facing=east,north=false,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_none",
+      "y": 90
+    },
+    "connected=true,east=false,facing=east,north=false,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_s",
+      "y": 90
+    },
+    "connected=true,east=false,facing=east,north=false,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_e",
+      "y": 90
+    },
+    "connected=true,east=false,facing=east,north=false,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_es",
+      "y": 90
+    },
+    "connected=true,east=true,facing=east,north=false,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_n",
+      "y": 90
+    },
+    "connected=true,east=true,facing=east,north=false,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_ns",
+      "y": 90
+    },
+    "connected=true,east=true,facing=east,north=false,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_ne",
+      "y": 90
+    },
+    "connected=true,east=true,facing=east,north=false,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nes",
+      "y": 90
+    },
+    "connected=true,east=false,facing=east,north=true,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_w",
+      "y": 90
+    },
+    "connected=true,east=false,facing=east,north=true,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_sw",
+      "y": 90
+    },
+    "connected=true,east=false,facing=east,north=true,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_ew",
+      "y": 90
+    },
+    "connected=true,east=false,facing=east,north=true,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_esw",
+      "y": 90
+    },
+    "connected=true,east=true,facing=east,north=true,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_nw",
+      "y": 90
+    },
+    "connected=true,east=true,facing=east,north=true,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nsw",
+      "y": 90
+    },
+    "connected=true,east=true,facing=east,north=true,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_new",
+      "y": 90
+    },
+    "connected=true,east=true,facing=east,north=true,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nesw",
+      "y": 90
+    },
+    "connected=false,east=false,facing=south,north=false,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault",
+      "y": 180
+    },
+    "connected=false,east=false,facing=south,north=false,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_e",
+      "y": 180
+    },
+    "connected=false,east=false,facing=south,north=false,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_n",
+      "y": 180
+    },
+    "connected=false,east=false,facing=south,north=false,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_ne",
+      "y": 180
+    },
+    "connected=false,east=true,facing=south,north=false,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_w",
+      "y": 180
+    },
+    "connected=false,east=true,facing=south,north=false,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_ew",
+      "y": 180
+    },
+    "connected=false,east=true,facing=south,north=false,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_nw",
+      "y": 180
+    },
+    "connected=false,east=true,facing=south,north=false,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_new",
+      "y": 180
+    },
+    "connected=false,east=false,facing=south,north=true,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_s",
+      "y": 180
+    },
+    "connected=false,east=false,facing=south,north=true,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_es",
+      "y": 180
+    },
+    "connected=false,east=false,facing=south,north=true,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_ns",
+      "y": 180
+    },
+    "connected=false,east=false,facing=south,north=true,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nes",
+      "y": 180
+    },
+    "connected=false,east=true,facing=south,north=true,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_sw",
+      "y": 180
+    },
+    "connected=false,east=true,facing=south,north=true,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_esw",
+      "y": 180
+    },
+    "connected=false,east=true,facing=south,north=true,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_nsw",
+      "y": 180
+    },
+    "connected=false,east=true,facing=south,north=true,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nesw",
+      "y": 180
+    },
+    "connected=true,east=false,facing=south,north=false,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_none",
+      "y": 180
+    },
+    "connected=true,east=false,facing=south,north=false,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_e",
+      "y": 180
+    },
+    "connected=true,east=false,facing=south,north=false,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_n",
+      "y": 180
+    },
+    "connected=true,east=false,facing=south,north=false,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_ne",
+      "y": 180
+    },
+    "connected=true,east=true,facing=south,north=false,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_w",
+      "y": 180
+    },
+    "connected=true,east=true,facing=south,north=false,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_ew",
+      "y": 180
+    },
+    "connected=true,east=true,facing=south,north=false,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_nw",
+      "y": 180
+    },
+    "connected=true,east=true,facing=south,north=false,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_new",
+      "y": 180
+    },
+    "connected=true,east=false,facing=south,north=true,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_s",
+      "y": 180
+    },
+    "connected=true,east=false,facing=south,north=true,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_es",
+      "y": 180
+    },
+    "connected=true,east=false,facing=south,north=true,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_ns",
+      "y": 180
+    },
+    "connected=true,east=false,facing=south,north=true,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nes",
+      "y": 180
+    },
+    "connected=true,east=true,facing=south,north=true,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_sw",
+      "y": 180
+    },
+    "connected=true,east=true,facing=south,north=true,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_esw",
+      "y": 180
+    },
+    "connected=true,east=true,facing=south,north=true,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_nsw",
+      "y": 180
+    },
+    "connected=true,east=true,facing=south,north=true,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nesw",
+      "y": 180
+    },
+    "connected=false,east=false,facing=west,north=false,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault",
+      "y": 270
+    },
+    "connected=false,east=false,facing=west,north=false,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_n",
+      "y": 270
+    },
+    "connected=false,east=false,facing=west,north=false,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_w",
+      "y": 270
+    },
+    "connected=false,east=false,facing=west,north=false,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nw",
+      "y": 270
+    },
+    "connected=false,east=true,facing=west,north=false,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_s",
+      "y": 270
+    },
+    "connected=false,east=true,facing=west,north=false,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_ns",
+      "y": 270
+    },
+    "connected=false,east=true,facing=west,north=false,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_sw",
+      "y": 270
+    },
+    "connected=false,east=true,facing=west,north=false,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nsw",
+      "y": 270
+    },
+    "connected=false,east=false,facing=west,north=true,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_e",
+      "y": 270
+    },
+    "connected=false,east=false,facing=west,north=true,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_ne",
+      "y": 270
+    },
+    "connected=false,east=false,facing=west,north=true,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_ew",
+      "y": 270
+    },
+    "connected=false,east=false,facing=west,north=true,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_new",
+      "y": 270
+    },
+    "connected=false,east=true,facing=west,north=true,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_es",
+      "y": 270
+    },
+    "connected=false,east=true,facing=west,north=true,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nes",
+      "y": 270
+    },
+    "connected=false,east=true,facing=west,north=true,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_esw",
+      "y": 270
+    },
+    "connected=false,east=true,facing=west,north=true,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nesw",
+      "y": 270
+    },
+    "connected=true,east=false,facing=west,north=false,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_none",
+      "y": 270
+    },
+    "connected=true,east=false,facing=west,north=false,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_n",
+      "y": 270
+    },
+    "connected=true,east=false,facing=west,north=false,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_w",
+      "y": 270
+    },
+    "connected=true,east=false,facing=west,north=false,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nw",
+      "y": 270
+    },
+    "connected=true,east=true,facing=west,north=false,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_s",
+      "y": 270
+    },
+    "connected=true,east=true,facing=west,north=false,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_ns",
+      "y": 270
+    },
+    "connected=true,east=true,facing=west,north=false,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_sw",
+      "y": 270
+    },
+    "connected=true,east=true,facing=west,north=false,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nsw",
+      "y": 270
+    },
+    "connected=true,east=false,facing=west,north=true,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_e",
+      "y": 270
+    },
+    "connected=true,east=false,facing=west,north=true,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_ne",
+      "y": 270
+    },
+    "connected=true,east=false,facing=west,north=true,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_ew",
+      "y": 270
+    },
+    "connected=true,east=false,facing=west,north=true,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_new",
+      "y": 270
+    },
+    "connected=true,east=true,facing=west,north=true,south=false,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_es",
+      "y": 270
+    },
+    "connected=true,east=true,facing=west,north=true,south=false,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nes",
+      "y": 270
+    },
+    "connected=true,east=true,facing=west,north=true,south=true,west=false": {
+      "model": "templenihility:block/nihility_vault_connected_esw",
+      "y": 270
+    },
+    "connected=true,east=true,facing=west,north=true,south=true,west=true": {
+      "model": "templenihility:block/nihility_vault_connected_nesw",
+      "y": 270
     }
   }
 }

@@ -55,6 +55,7 @@ public final class MagnetManager {
 
     private static void pullCachedTargets(Player player, MagnetState state) {
         Vec3 target = player.position().add(0.0, 0.85, 0.0);
+        int affected = 0;
         Iterator<ItemEntity> iterator = state.targets.iterator();
         while (iterator.hasNext()) {
             ItemEntity item = iterator.next();
@@ -71,6 +72,7 @@ public final class MagnetManager {
             double distanceSqr = pull.lengthSqr();
             if (distanceSqr <= PICKUP_DISTANCE_SQR) {
                 item.playerTouch(player);
+                affected++;
                 continue;
             }
 
@@ -83,6 +85,11 @@ public final class MagnetManager {
             }
             item.setDeltaMovement(velocity);
             item.hurtMarked = true;
+            affected++;
+        }
+
+        if (affected > 0 && player.tickCount % 20 == 0) {
+            NihilityVisualEffects.magnetPulse(player, affected);
         }
     }
 

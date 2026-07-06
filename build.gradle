@@ -3,7 +3,7 @@ plugins {
     id 'net.neoforged.moddev' version '2.0.140'
 }
 
-version = '1.0.0'
+version = '1.0.0-beta.1'
 group = 'com.templenihility'
 base.archivesName = 'temple-of-nihility-neoforge-26.2'
 

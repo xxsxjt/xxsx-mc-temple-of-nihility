@@ -1,6 +1,7 @@
 package com.templenihility.init;
 
 import com.templenihility.TempleNihilityMod;
+import com.templenihility.blockentity.NihilityAltarBlockEntity;
 import com.templenihility.blockentity.NihilityVaultBlockEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -15,6 +16,10 @@ public final class ModBlockEntities {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<NihilityVaultBlockEntity>> NIHILITY_VAULT =
         BLOCK_ENTITIES.register("nihility_vault",
             () -> new BlockEntityType<>(NihilityVaultBlockEntity::new, ModBlocks.NIHILITY_VAULT.get()));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<NihilityAltarBlockEntity>> NIHILITY_ALTAR =
+        BLOCK_ENTITIES.register("nihility_altar",
+            () -> new BlockEntityType<>(NihilityAltarBlockEntity::new, ModBlocks.NIHILITY_ALTAR.get()));
 
     public static void register(IEventBus bus) {
         BLOCK_ENTITIES.register(bus);
