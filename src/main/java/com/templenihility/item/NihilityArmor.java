@@ -2,10 +2,12 @@ package com.templenihility.item;
 
 import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.item.equipment.ArmorType;
 
@@ -21,5 +23,10 @@ public class NihilityArmor extends Item {
             .withStyle(ChatFormatting.DARK_PURPLE));
         tooltip.accept(Component.translatable("tooltip.templenihility.nihility_armor_set_2")
             .withStyle(ChatFormatting.GRAY));
+        int power = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY)
+            .copyTag()
+            .getIntOr(NihilityArmorEvents.STACK_VOID_POWER_KEY, 0);
+        tooltip.accept(Component.translatable("tooltip.templenihility.nihility_armor_power",
+            power, NihilityArmorEvents.getMaxVoidPower()).withStyle(ChatFormatting.AQUA));
     }
 }

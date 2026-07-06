@@ -67,24 +67,38 @@ public class NihilityEffectItem extends Item {
     }
 
     public enum Kind {
-        SHADOW_SIGIL(20 * 45, "message.templenihility.nihility_shadow_sigil", UseCost.CONSUME_ONE) {
+        SHADOW_SIGIL(20 * 20, "message.templenihility.nihility_shadow_sigil", UseCost.CONSUME_ONE) {
             @Override
             int apply(Player player) {
                 player.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, 20 * 12, 0, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.SPEED, 20 * 18, 1, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 20 * 18, 0, true, false, true));
+                Vec3 dash = player.getLookAngle().normalize().scale(1.25).add(0.0, 0.18, 0.0);
+                player.setDeltaMovement(player.getDeltaMovement().add(dash));
+                player.hurtMarked = true;
+                player.resetFallDistance();
                 return 1;
             }
         },
-        PURIFYING_BELL(20 * 60, "message.templenihility.nihility_purifying_bell", UseCost.DAMAGE_ONE) {
+        PURIFYING_BELL(20 * 30, "message.templenihility.nihility_purifying_bell", UseCost.DAMAGE_ONE) {
             @Override
             int apply(Player player) {
                 removeBadEffects(player);
                 player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 20 * 5, 0, true, false, true));
-                return 1;
+                int affected = 1;
+                Vec3 center = player.position().add(0.0, 0.8, 0.0);
+                for (Entity entity : player.level().getEntities(player, player.getBoundingBox().inflate(7.0),
+                        entity -> entity instanceof LivingEntity && entity.isAlive())) {
+                    if (entity instanceof LivingEntity living && isHostile(living)) {
+                        living.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 20 * 6, 0, true, false, true));
+                        pushAway(living, center, 0.55);
+                        affected++;
+                    }
+                }
+                return affected;
             }
         },
-        ECHO_LENS(20 * 40, "message.templenihility.nihility_echo_lens", UseCost.DAMAGE_ONE) {
+        ECHO_LENS(20 * 20, "message.templenihility.nihility_echo_lens", UseCost.DAMAGE_ONE) {
             @Override
             int apply(Player player) {
                 int affected = 0;
@@ -92,6 +106,7 @@ public class NihilityEffectItem extends Item {
                         entity -> entity instanceof LivingEntity && entity.isAlive())) {
                     if (entity instanceof LivingEntity living) {
                         living.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 12, 0, true, false, true));
+                        living.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 20 * 5, 0, true, false, true));
                         affected++;
                     }
                 }
@@ -99,25 +114,38 @@ public class NihilityEffectItem extends Item {
                 return affected + 1;
             }
         },
-        BARRIER_CORE(20 * 120, "message.templenihility.nihility_barrier_core", UseCost.DAMAGE_ONE) {
+        BARRIER_CORE(20 * 45, "message.templenihility.nihility_barrier_core", UseCost.DAMAGE_ONE) {
             @Override
             int apply(Player player) {
                 player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 20 * 16, 1, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 20 * 20, 0, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 20 * 90, 2, true, false, true));
-                return 1;
+                int affected = 1;
+                Vec3 center = player.position().add(0.0, 0.8, 0.0);
+                for (Entity entity : player.level().getEntities(player, player.getBoundingBox().inflate(6.0),
+                        entity -> entity instanceof LivingEntity && entity.isAlive())) {
+                    if (entity instanceof LivingEntity living && !(living instanceof Player)) {
+                        pushAway(living, center, 0.75);
+                        affected++;
+                    }
+                }
+                return affected;
             }
         },
-        PHASE_FEATHER(20 * 55, "message.templenihility.nihility_phase_feather", UseCost.DAMAGE_ONE) {
+        PHASE_FEATHER(20 * 25, "message.templenihility.nihility_phase_feather", UseCost.DAMAGE_ONE) {
             @Override
             int apply(Player player) {
                 player.addEffect(new MobEffectInstance(MobEffects.SPEED, 20 * 18, 2, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.JUMP_BOOST, 20 * 18, 1, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 20 * 24, 0, true, false, true));
+                Vec3 dash = player.getLookAngle().normalize().scale(1.65).add(0.0, 0.22, 0.0);
+                player.setDeltaMovement(player.getDeltaMovement().add(dash));
+                player.hurtMarked = true;
+                player.resetFallDistance();
                 return 1;
             }
         },
-        GRAVITY_SIGIL(20 * 70, "message.templenihility.nihility_gravity_sigil", UseCost.DAMAGE_ONE) {
+        GRAVITY_SIGIL(20 * 30, "message.templenihility.nihility_gravity_sigil", UseCost.DAMAGE_ONE) {
             @Override
             int apply(Player player) {
                 int affected = 0;
@@ -144,7 +172,7 @@ public class NihilityEffectItem extends Item {
                 return affected;
             }
         },
-        WAR_HORN(20 * 85, "message.templenihility.nihility_war_horn", UseCost.DAMAGE_ONE) {
+        WAR_HORN(20 * 35, "message.templenihility.nihility_war_horn", UseCost.DAMAGE_ONE) {
             @Override
             int apply(Player player) {
                 int affected = 0;
@@ -161,7 +189,7 @@ public class NihilityEffectItem extends Item {
                 return affected + 1;
             }
         },
-        SOUL_FLASK(20 * 35, "message.templenihility.nihility_soul_flask", UseCost.CONSUME_ONE) {
+        SOUL_FLASK(20 * 15, "message.templenihility.nihility_soul_flask", UseCost.CONSUME_ONE) {
             @Override
             int apply(Player player) {
                 player.heal(6.0f);
@@ -170,16 +198,17 @@ public class NihilityEffectItem extends Item {
                 return 1;
             }
         },
-        NULL_SCROLL(20 * 50, "message.templenihility.nihility_null_scroll", UseCost.CONSUME_ONE) {
+        NULL_SCROLL(20 * 20, "message.templenihility.nihility_null_scroll", UseCost.CONSUME_ONE) {
             @Override
             int apply(Player player) {
                 removeBadEffects(player);
+                player.clearFire();
                 player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 20 * 12, 0, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 20 * 20, 0, true, false, true));
                 return 1;
             }
         },
-        STASIS_WATCH(20 * 75, "message.templenihility.nihility_stasis_watch", UseCost.DAMAGE_ONE) {
+        STASIS_WATCH(20 * 30, "message.templenihility.nihility_stasis_watch", UseCost.DAMAGE_ONE) {
             @Override
             int apply(Player player) {
                 int affected = 0;
@@ -188,13 +217,15 @@ public class NihilityEffectItem extends Item {
                     if (entity instanceof LivingEntity living && !(living instanceof Player)) {
                         living.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 20 * 10, 4, true, false, true));
                         living.addEffect(new MobEffectInstance(MobEffects.MINING_FATIGUE, 20 * 10, 1, true, false, true));
+                        living.setDeltaMovement(Vec3.ZERO);
+                        living.hurtMarked = true;
                         affected++;
                     }
                 }
                 return affected;
             }
         },
-        RIFT_SNARE(20 * 65, "message.templenihility.nihility_rift_snare", UseCost.DAMAGE_ONE) {
+        RIFT_SNARE(20 * 25, "message.templenihility.nihility_rift_snare", UseCost.DAMAGE_ONE) {
             @Override
             int apply(Player player) {
                 int affected = 0;
@@ -214,7 +245,7 @@ public class NihilityEffectItem extends Item {
                 return affected;
             }
         },
-        ABYSSAL_DRUM(20 * 95, "message.templenihility.nihility_abyssal_drum", UseCost.DAMAGE_ONE) {
+        ABYSSAL_DRUM(20 * 40, "message.templenihility.nihility_abyssal_drum", UseCost.DAMAGE_ONE) {
             @Override
             int apply(Player player) {
                 int affected = 0;
@@ -225,13 +256,14 @@ public class NihilityEffectItem extends Item {
                     if (entity instanceof LivingEntity living && isHostile(living)) {
                         living.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 20 * 12, 1, true, false, true));
                         living.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 20 * 12, 1, true, false, true));
+                        pushAway(living, player.position().add(0.0, 0.8, 0.0), 0.5);
                         affected++;
                     }
                 }
                 return affected + 1;
             }
         },
-        VOID_BEACON(20 * 110, "message.templenihility.nihility_void_beacon", UseCost.DAMAGE_ONE) {
+        VOID_BEACON(20 * 45, "message.templenihility.nihility_void_beacon", UseCost.DAMAGE_ONE) {
             @Override
             int apply(Player player) {
                 int affected = 0;
@@ -291,6 +323,18 @@ public class NihilityEffectItem extends Item {
 
         private static boolean isHostile(LivingEntity living) {
             return !(living instanceof Player) && living.getType().getCategory() == MobCategory.MONSTER;
+        }
+
+        private static void pushAway(LivingEntity living, Vec3 center, double strength) {
+            Vec3 away = living.position().subtract(center);
+            if (away.lengthSqr() < 1.0E-4) {
+                away = new Vec3(0.0, 0.0, 1.0);
+            }
+            living.setDeltaMovement(living.getDeltaMovement().scale(0.25)
+                .add(away.normalize().scale(strength))
+                .add(0.0, 0.16, 0.0));
+            living.hurtMarked = true;
+            living.resetFallDistance();
         }
     }
 

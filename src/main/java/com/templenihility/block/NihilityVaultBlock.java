@@ -46,7 +46,10 @@ public class NihilityVaultBlock extends BaseEntityBlock {
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
                                           Player player, InteractionHand hand, BlockHitResult hit) {
         if (!stack.is(ModItems.NIHILITY_VAULT_EXPANSION.get())) {
-            return InteractionResult.PASS;
+            if (player.isShiftKeyDown() && stack.is(ModItems.NIHILITY_TERMINAL.get())) {
+                return InteractionResult.PASS;
+            }
+            return openVault(level, pos, player);
         }
 
         if (level.isClientSide()) {
@@ -70,6 +73,10 @@ public class NihilityVaultBlock extends BaseEntityBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        return openVault(level, pos, player);
+    }
+
+    private InteractionResult openVault(Level level, BlockPos pos, Player player) {
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
