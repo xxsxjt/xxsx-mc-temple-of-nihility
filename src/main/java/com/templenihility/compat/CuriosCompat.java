@@ -290,12 +290,12 @@ public final class CuriosCompat {
                     .withModifierAdded(
                         Attributes.ATTACK_DAMAGE,
                         new AttributeModifier(id("nihility_gauntlet_damage"), 2.0, AttributeModifier.Operation.ADD_VALUE),
-                        "curio"
+                        "hands"
                     )
                     .withModifierAdded(
                         Attributes.ATTACK_SPEED,
                         new AttributeModifier(id("nihility_gauntlet_speed"), 0.08, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL),
-                        "curio"
+                        "hands"
                     );
             }
         };
@@ -449,11 +449,17 @@ public final class CuriosCompat {
 
             @Override
             public CurioAttributeModifiers getDefaultCurioAttributeModifiers(ItemStack stack) {
-                return CurioAttributeModifiers.EMPTY.withModifierAdded(
-                    Attributes.MOVEMENT_SPEED,
-                    new AttributeModifier(id("nihility_wayfinder_speed"), 0.04, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL),
-                    "charm"
-                );
+                return CurioAttributeModifiers.EMPTY
+                    .withModifierAdded(
+                        Attributes.MOVEMENT_SPEED,
+                        new AttributeModifier(id("nihility_wayfinder_speed_charm"), 0.04, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL),
+                        "charm"
+                    )
+                    .withModifierAdded(
+                        Attributes.MOVEMENT_SPEED,
+                        new AttributeModifier(id("nihility_wayfinder_speed_belt"), 0.04, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL),
+                        "belt"
+                    );
             }
         };
     }
@@ -493,12 +499,12 @@ public final class CuriosCompat {
                     .withModifierAdded(
                         Attributes.MAX_HEALTH,
                         new AttributeModifier(id("nihility_crown_health"), 6.0, AttributeModifier.Operation.ADD_VALUE),
-                        "curio"
+                        "head"
                     )
                     .withModifierAdded(
                         Attributes.LUCK,
                         new AttributeModifier(id("nihility_crown_luck"), 1.0, AttributeModifier.Operation.ADD_VALUE),
-                        "curio"
+                        "head"
                     );
             }
         };
