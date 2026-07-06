@@ -10,6 +10,7 @@ import com.templenihility.init.ModCreativeTab;
 import com.templenihility.init.ModItems;
 import com.templenihility.init.ModMenus;
 import com.templenihility.init.ModStructures;
+import com.templenihility.item.NihilityArmorEvents;
 import com.templenihility.client.ModClientEvents;
 import com.templenihility.world.TempleCommand;
 import org.slf4j.Logger;
@@ -50,6 +51,8 @@ public class TempleNihilityMod {
         }
         // 服务启动在 NeoForge 总线
         NeoForge.EVENT_BUS.register(this);
+        NeoForge.EVENT_BUS.addListener(NihilityArmorEvents::playerTick);
+        NeoForge.EVENT_BUS.addListener(NihilityArmorEvents::incomingDamage);
 
         LOGGER.info("Temple of Nihility loaded");
     }

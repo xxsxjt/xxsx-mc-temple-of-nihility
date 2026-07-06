@@ -341,9 +341,6 @@ public final class CuriosCompat {
                 if (entity instanceof Player player && entity.tickCount % 5 == 0) {
                     NihilityDynamicLight.update(player);
                 }
-                if (entity.tickCount % 80 == 0) {
-                    entity.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 220, 0, true, false, true));
-                }
             }
 
             @Override

@@ -1,7 +1,9 @@
 package com.templenihility.world;
 
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
@@ -54,14 +56,35 @@ public final class NihilityDynamicLight {
     }
 
     private static BlockPos findTarget(ServerLevel level, Player player, TrackedLight old) {
-        BlockPos base = BlockPos.containing(player.getX(), player.getEyeY(), player.getZ());
-        BlockPos[] candidates = {base, player.blockPosition().above(), player.blockPosition(), base.above()};
+        BlockPos feet = player.blockPosition();
+        BlockPos eye = BlockPos.containing(player.getX(), player.getEyeY(), player.getZ());
+        Set<BlockPos> candidates = new LinkedHashSet<>();
+        candidates.add(eye);
+        candidates.add(feet.above());
+        candidates.add(feet);
+        candidates.add(eye.above());
+        candidates.add(feet.above(2));
+        for (int yOffset : new int[] {1, 0, 2}) {
+            candidates.add(feet.offset(1, yOffset, 0));
+            candidates.add(feet.offset(-1, yOffset, 0));
+            candidates.add(feet.offset(0, yOffset, 1));
+            candidates.add(feet.offset(0, yOffset, -1));
+        }
         for (BlockPos candidate : candidates) {
             if (canUseCandidate(level, candidate, old)) {
                 return candidate;
             }
         }
+        if (old != null && old.dimension().equals(level.dimension()) && isUsableOldLight(level, old, player)) {
+            return old.pos();
+        }
         return null;
+    }
+
+    private static boolean isUsableOldLight(ServerLevel level, TrackedLight old, Player player) {
+        return level.isLoaded(old.pos())
+            && level.getBlockState(old.pos()).is(Blocks.LIGHT)
+            && old.pos().distSqr(player.blockPosition()) <= 36.0;
     }
 
     private static boolean canUseCandidate(ServerLevel level, BlockPos pos, TrackedLight old) {
