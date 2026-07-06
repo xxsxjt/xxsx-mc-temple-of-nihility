@@ -11,6 +11,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -33,13 +34,20 @@ public class NihilityEffectItem extends Item {
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (player.getCooldowns().isOnCooldown(stack)) {
+            if (!level.isClientSide()) {
+                player.sendSystemMessage(Component.translatable("message.templenihility.item_cooldown"));
+            }
             return InteractionResult.FAIL;
         }
 
         if (!level.isClientSide()) {
-            kind.apply(player);
-            kind.consumeCost(stack, player, hand);
+            int affected = kind.apply(player);
+            if (affected <= 0) {
+                player.sendSystemMessage(Component.translatable("message.templenihility.item_no_targets"));
+                return InteractionResult.FAIL;
+            }
             player.getCooldowns().addCooldown(stack, kind.cooldownTicks);
+            kind.consumeCost(stack, player, hand);
             player.sendSystemMessage(Component.translatable(kind.messageKey));
         }
         return InteractionResult.SUCCESS;
@@ -54,55 +62,65 @@ public class NihilityEffectItem extends Item {
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
                                 Consumer<Component> tooltip, TooltipFlag flag) {
         tooltip.accept(Component.translatable(tooltipKey).withStyle(ChatFormatting.DARK_AQUA));
+        tooltip.accept(Component.translatable(kind.useCost.tooltipKey, kind.cooldownTicks / 20)
+            .withStyle(ChatFormatting.GRAY));
     }
 
     public enum Kind {
         SHADOW_SIGIL(20 * 45, "message.templenihility.nihility_shadow_sigil", UseCost.CONSUME_ONE) {
             @Override
-            void apply(Player player) {
+            int apply(Player player) {
                 player.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, 20 * 12, 0, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.SPEED, 20 * 18, 1, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 20 * 18, 0, true, false, true));
+                return 1;
             }
         },
         PURIFYING_BELL(20 * 60, "message.templenihility.nihility_purifying_bell", UseCost.DAMAGE_ONE) {
             @Override
-            void apply(Player player) {
+            int apply(Player player) {
                 removeBadEffects(player);
                 player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 20 * 5, 0, true, false, true));
+                return 1;
             }
         },
         ECHO_LENS(20 * 40, "message.templenihility.nihility_echo_lens", UseCost.DAMAGE_ONE) {
             @Override
-            void apply(Player player) {
+            int apply(Player player) {
+                int affected = 0;
                 for (Entity entity : player.level().getEntities(player, player.getBoundingBox().inflate(24.0),
                         entity -> entity instanceof LivingEntity && entity.isAlive())) {
                     if (entity instanceof LivingEntity living) {
                         living.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 12, 0, true, false, true));
+                        affected++;
                     }
                 }
                 player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 20 * 45, 0, true, false, true));
+                return affected + 1;
             }
         },
         BARRIER_CORE(20 * 120, "message.templenihility.nihility_barrier_core", UseCost.DAMAGE_ONE) {
             @Override
-            void apply(Player player) {
+            int apply(Player player) {
                 player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 20 * 16, 1, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 20 * 20, 0, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 20 * 90, 2, true, false, true));
+                return 1;
             }
         },
         PHASE_FEATHER(20 * 55, "message.templenihility.nihility_phase_feather", UseCost.DAMAGE_ONE) {
             @Override
-            void apply(Player player) {
+            int apply(Player player) {
                 player.addEffect(new MobEffectInstance(MobEffects.SPEED, 20 * 18, 2, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.JUMP_BOOST, 20 * 18, 1, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 20 * 24, 0, true, false, true));
+                return 1;
             }
         },
         GRAVITY_SIGIL(20 * 70, "message.templenihility.nihility_gravity_sigil", UseCost.DAMAGE_ONE) {
             @Override
-            void apply(Player player) {
+            int apply(Player player) {
+                int affected = 0;
                 Vec3 center = player.position().add(0.0, 0.8, 0.0);
                 for (Entity entity : player.level().getEntities(player, player.getBoundingBox().inflate(10.0),
                         entity -> entity instanceof LivingEntity && entity.isAlive())) {
@@ -110,99 +128,117 @@ public class NihilityEffectItem extends Item {
                         living.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 20 * 8, 2, true, false, true));
                         living.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 20 * 8, 0, true, false, true));
                         living.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 8, 0, true, false, true));
+                        affected++;
                         Vec3 pull = center.subtract(living.position());
                         if (pull.lengthSqr() > 1.0E-4) {
                             living.setDeltaMovement(living.getDeltaMovement().scale(0.55).add(pull.normalize().scale(0.32)));
                         }
                     }
                 }
+                return affected;
             }
         },
         WAR_HORN(20 * 85, "message.templenihility.nihility_war_horn", UseCost.DAMAGE_ONE) {
             @Override
-            void apply(Player player) {
+            int apply(Player player) {
+                int affected = 0;
                 player.addEffect(new MobEffectInstance(MobEffects.STRENGTH, 20 * 24, 1, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 20 * 16, 0, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 20 * 45, 1, true, false, true));
                 for (Entity entity : player.level().getEntities(player, player.getBoundingBox().inflate(8.0),
                         entity -> entity instanceof LivingEntity && entity.isAlive())) {
-                    if (entity instanceof LivingEntity living && !(living instanceof Player)) {
+                    if (entity instanceof LivingEntity living && isHostile(living)) {
                         living.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 20 * 10, 1, true, false, true));
+                        affected++;
                     }
                 }
+                return affected + 1;
             }
         },
         SOUL_FLASK(20 * 35, "message.templenihility.nihility_soul_flask", UseCost.CONSUME_ONE) {
             @Override
-            void apply(Player player) {
+            int apply(Player player) {
                 player.heal(6.0f);
                 player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 20 * 8, 0, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 20 * 45, 0, true, false, true));
+                return 1;
             }
         },
         NULL_SCROLL(20 * 50, "message.templenihility.nihility_null_scroll", UseCost.CONSUME_ONE) {
             @Override
-            void apply(Player player) {
+            int apply(Player player) {
                 removeBadEffects(player);
                 player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 20 * 12, 0, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 20 * 20, 0, true, false, true));
+                return 1;
             }
         },
         STASIS_WATCH(20 * 75, "message.templenihility.nihility_stasis_watch", UseCost.DAMAGE_ONE) {
             @Override
-            void apply(Player player) {
-                player.addEffect(new MobEffectInstance(MobEffects.SPEED, 20 * 12, 0, true, false, true));
+            int apply(Player player) {
+                int affected = 0;
                 for (Entity entity : player.level().getEntities(player, player.getBoundingBox().inflate(12.0),
                         entity -> entity instanceof LivingEntity && entity.isAlive())) {
                     if (entity instanceof LivingEntity living && !(living instanceof Player)) {
                         living.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 20 * 10, 4, true, false, true));
                         living.addEffect(new MobEffectInstance(MobEffects.MINING_FATIGUE, 20 * 10, 1, true, false, true));
+                        affected++;
                     }
                 }
+                return affected;
             }
         },
         RIFT_SNARE(20 * 65, "message.templenihility.nihility_rift_snare", UseCost.DAMAGE_ONE) {
             @Override
-            void apply(Player player) {
+            int apply(Player player) {
+                int affected = 0;
                 Vec3 center = player.position().add(0.0, 1.0, 0.0);
                 for (Entity entity : player.level().getEntities(player, player.getBoundingBox().inflate(9.0),
                         entity -> entity instanceof LivingEntity && entity.isAlive())) {
                     if (entity instanceof LivingEntity living && !(living instanceof Player)) {
                         living.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 10, 0, true, false, true));
                         living.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 20 * 8, 2, true, false, true));
+                        affected++;
                         Vec3 pull = center.subtract(living.position());
                         if (pull.lengthSqr() > 1.0E-4) {
                             living.setDeltaMovement(living.getDeltaMovement().scale(0.35).add(pull.normalize().scale(0.45)).add(0, 0.18, 0));
                         }
                     }
                 }
+                return affected;
             }
         },
         ABYSSAL_DRUM(20 * 95, "message.templenihility.nihility_abyssal_drum", UseCost.DAMAGE_ONE) {
             @Override
-            void apply(Player player) {
+            int apply(Player player) {
+                int affected = 0;
                 player.addEffect(new MobEffectInstance(MobEffects.STRENGTH, 20 * 30, 1, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.SPEED, 20 * 18, 1, true, false, true));
                 for (Entity entity : player.level().getEntities(player, player.getBoundingBox().inflate(14.0),
                         entity -> entity instanceof LivingEntity && entity.isAlive())) {
-                    if (entity instanceof LivingEntity living && !(living instanceof Player)) {
+                    if (entity instanceof LivingEntity living && isHostile(living)) {
                         living.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 20 * 12, 1, true, false, true));
                         living.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 20 * 12, 1, true, false, true));
+                        affected++;
                     }
                 }
+                return affected + 1;
             }
         },
         VOID_BEACON(20 * 110, "message.templenihility.nihility_void_beacon", UseCost.DAMAGE_ONE) {
             @Override
-            void apply(Player player) {
+            int apply(Player player) {
+                int affected = 0;
                 player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 20 * 90, 0, true, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.LUCK, 20 * 90, 1, true, false, true));
                 for (Entity entity : player.level().getEntities(player, player.getBoundingBox().inflate(28.0),
                         entity -> entity instanceof LivingEntity && entity.isAlive())) {
                     if (entity instanceof LivingEntity living && !(living instanceof Player)) {
                         living.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 30, 0, true, false, true));
+                        affected++;
                     }
                 }
+                return affected + 1;
             }
         };
 
@@ -216,7 +252,7 @@ public class NihilityEffectItem extends Item {
             this.useCost = useCost;
         }
 
-        abstract void apply(Player player);
+        abstract int apply(Player player);
 
         void consumeCost(ItemStack stack, Player player, InteractionHand hand) {
             if (player.getAbilities().instabuild) {
@@ -246,10 +282,20 @@ public class NihilityEffectItem extends Item {
         private static void remove(Player player, Holder<MobEffect> effect) {
             player.removeEffect(effect);
         }
+
+        private static boolean isHostile(LivingEntity living) {
+            return !(living instanceof Player) && living.getType().getCategory() == MobCategory.MONSTER;
+        }
     }
 
     private enum UseCost {
-        CONSUME_ONE,
-        DAMAGE_ONE
+        CONSUME_ONE("tooltip.templenihility.use_cost.consume"),
+        DAMAGE_ONE("tooltip.templenihility.use_cost.durability");
+
+        private final String tooltipKey;
+
+        UseCost(String tooltipKey) {
+            this.tooltipKey = tooltipKey;
+        }
     }
 }
