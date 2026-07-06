@@ -7,6 +7,7 @@ modId="templenihility"
 version="1.0.0"
 displayName="Temple of Nihility"
 logoFile="logo.png"
+logoBlur=false
 description='''
 虚无圣殿 - Temple of Nihility for NeoForge 26.2
 '''
@@ -28,7 +29,7 @@ side="BOTH"
 
 [[dependencies.templenihility]]
 modId="curios"
-type="optional"
+type="required"
 versionRange="[15.0.0-beta.1,)"
 ordering="AFTER"
 side="BOTH"
