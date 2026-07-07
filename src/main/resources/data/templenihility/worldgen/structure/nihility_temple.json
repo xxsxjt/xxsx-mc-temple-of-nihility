@@ -1,0 +1,6 @@
+{
+  "type": "templenihility:nihility_temple",
+  "biomes": "#templenihility:has_structure/nihility_temple",
+  "spawn_overrides": {},
+  "step": "surface_structures"
+}

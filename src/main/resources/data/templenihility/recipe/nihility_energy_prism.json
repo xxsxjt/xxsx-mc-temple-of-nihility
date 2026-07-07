@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "C": "templenihility:nihility_crystal",
+    "R": "templenihility:nihility_rune",
+    "S": "templenihility:temple_seal",
+    "A": "minecraft:amethyst_block"
+  },
+  "pattern": [
+    "CRC",
+    "SAS",
+    "CRC"
+  ],
+  "result": {
+    "id": "templenihility:nihility_energy_prism"
+  }
+}

@@ -19,6 +19,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -34,6 +35,9 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class NihilityVaultBlock extends BaseEntityBlock {
     public static final MapCodec<NihilityVaultBlock> CODEC = simpleCodec(NihilityVaultBlock::new);
@@ -43,6 +47,8 @@ public class NihilityVaultBlock extends BaseEntityBlock {
     public static final BooleanProperty EAST = BooleanProperty.create("east");
     public static final BooleanProperty SOUTH = BooleanProperty.create("south");
     public static final BooleanProperty WEST = BooleanProperty.create("west");
+    public static final BooleanProperty UP = BooleanProperty.create("up");
+    public static final BooleanProperty DOWN = BooleanProperty.create("down");
 
     public NihilityVaultBlock(BlockBehaviour.Properties properties) {
         super(properties);
@@ -52,7 +58,9 @@ public class NihilityVaultBlock extends BaseEntityBlock {
             .setValue(NORTH, false)
             .setValue(EAST, false)
             .setValue(SOUTH, false)
-            .setValue(WEST, false));
+            .setValue(WEST, false)
+            .setValue(UP, false)
+            .setValue(DOWN, false));
     }
 
     @Override
@@ -68,6 +76,26 @@ public class NihilityVaultBlock extends BaseEntityBlock {
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
+    }
+
+    @Override
+    protected boolean skipRendering(BlockState state, BlockState adjacentState, Direction side) {
+        return adjacentState.getBlock() instanceof NihilityVaultBlock || super.skipRendering(state, adjacentState, side);
+    }
+
+    @Override
+    protected VoxelShape getVisualShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return Shapes.empty();
+    }
+
+    @Override
+    protected float getShadeBrightness(BlockState state, BlockGetter level, BlockPos pos) {
+        return 1.0F;
+    }
+
+    @Override
+    protected boolean propagatesSkylightDown(BlockState state) {
+        return true;
     }
 
     @Override
@@ -101,6 +129,12 @@ public class NihilityVaultBlock extends BaseEntityBlock {
         if (state.getValue(WEST)) {
             addConnectionSpark(level, random, pos, Direction.WEST);
         }
+        if (state.getValue(UP)) {
+            addConnectionSpark(level, random, pos, Direction.UP);
+        }
+        if (state.getValue(DOWN)) {
+            addConnectionSpark(level, random, pos, Direction.DOWN);
+        }
     }
 
     @Override
@@ -128,7 +162,9 @@ public class NihilityVaultBlock extends BaseEntityBlock {
             rotatedValue(rotation, Direction.NORTH, north, east, south, west),
             rotatedValue(rotation, Direction.EAST, north, east, south, west),
             rotatedValue(rotation, Direction.SOUTH, north, east, south, west),
-            rotatedValue(rotation, Direction.WEST, north, east, south, west));
+            rotatedValue(rotation, Direction.WEST, north, east, south, west),
+            hasConnection(state, Direction.UP),
+            hasConnection(state, Direction.DOWN));
     }
 
     @Override
@@ -138,7 +174,7 @@ public class NihilityVaultBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, CONNECTED, NORTH, EAST, SOUTH, WEST);
+        builder.add(FACING, CONNECTED, NORTH, EAST, SOUTH, WEST, UP, DOWN);
     }
 
     @Override
@@ -206,16 +242,21 @@ public class NihilityVaultBlock extends BaseEntityBlock {
             isVault(level, pos.north()),
             isVault(level, pos.east()),
             isVault(level, pos.south()),
-            isVault(level, pos.west()));
+            isVault(level, pos.west()),
+            isVault(level, pos.above()),
+            isVault(level, pos.below()));
     }
 
-    private static BlockState setConnections(BlockState state, boolean north, boolean east, boolean south, boolean west) {
+    private static BlockState setConnections(BlockState state, boolean north, boolean east, boolean south, boolean west,
+                                             boolean up, boolean down) {
         return state
             .setValue(NORTH, north)
             .setValue(EAST, east)
             .setValue(SOUTH, south)
             .setValue(WEST, west)
-            .setValue(CONNECTED, north || east || south || west);
+            .setValue(UP, up)
+            .setValue(DOWN, down)
+            .setValue(CONNECTED, north || east || south || west || up || down);
     }
 
     private static boolean isVault(LevelReader level, BlockPos pos) {
@@ -224,6 +265,13 @@ public class NihilityVaultBlock extends BaseEntityBlock {
 
     private static void addConnectionSpark(Level level, RandomSource random, BlockPos pos, Direction direction) {
         if (random.nextInt(3) != 0) {
+            return;
+        }
+        if (direction.getAxis() == Direction.Axis.Y) {
+            double x = pos.getX() + 0.26 + random.nextDouble() * 0.48;
+            double y = pos.getY() + (direction == Direction.UP ? 1.02 : -0.02);
+            double z = pos.getZ() + 0.26 + random.nextDouble() * 0.48;
+            level.addParticle(ParticleTypes.END_ROD, x, y, z, 0.0, direction.getStepY() * 0.012, 0.0);
             return;
         }
         double along = 0.18 + random.nextDouble() * 0.64;
@@ -244,6 +292,8 @@ public class NihilityVaultBlock extends BaseEntityBlock {
             case EAST -> state.getValue(EAST);
             case SOUTH -> state.getValue(SOUTH);
             case WEST -> state.getValue(WEST);
+            case UP -> state.getValue(UP);
+            case DOWN -> state.getValue(DOWN);
             default -> false;
         };
     }

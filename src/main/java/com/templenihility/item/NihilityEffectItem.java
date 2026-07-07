@@ -64,6 +64,7 @@ public class NihilityEffectItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
                                 Consumer<Component> tooltip, TooltipFlag flag) {
+        tooltip.accept(NihilityAspect.fromTooltip(tooltipKey).line());
         tooltip.accept(Component.translatable(tooltipKey).withStyle(ChatFormatting.DARK_AQUA));
         tooltip.accept(Component.translatable(kind.useCost.tooltipKey, kind.cooldownTicks / 20)
             .withStyle(ChatFormatting.GRAY));

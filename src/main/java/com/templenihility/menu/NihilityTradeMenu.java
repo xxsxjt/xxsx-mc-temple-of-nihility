@@ -19,7 +19,7 @@ public class NihilityTradeMenu extends AbstractContainerMenu {
     public static final int PAYMENT_SLOT = 0;
     public static final int RESULT_SLOT = 1;
     public static final int PLAYER_INV_START = 2;
-    public static final int OFFERS_PER_PAGE = 5;
+    public static final int OFFERS_PER_PAGE = 4;
     public static final int BUTTON_TRADE = 0;
     public static final int BUTTON_PREV_PAGE = 1;
     public static final int BUTTON_NEXT_PAGE = 2;

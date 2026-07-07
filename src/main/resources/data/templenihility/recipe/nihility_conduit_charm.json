@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "C": "templenihility:nihility_core",
+    "P": "templenihility:nihility_power_charm",
+    "R": "templenihility:nihility_resonance_core",
+    "S": "templenihility:nihility_rune",
+    "G": "minecraft:gold_ingot"
+  },
+  "pattern": [
+    "GSG",
+    "RPR",
+    "GCG"
+  ],
+  "result": {
+    "id": "templenihility:nihility_conduit_charm"
+  }
+}

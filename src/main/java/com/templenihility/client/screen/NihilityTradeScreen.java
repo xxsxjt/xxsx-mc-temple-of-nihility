@@ -102,12 +102,24 @@ public class NihilityTradeScreen extends AbstractContainerScreen<NihilityTradeMe
         drawMiniItem(graphics, offer.getCost(), 33, y - 1);
         graphics.text(font, ">", 53, y + 3, 0xFF7EEBFF, false);
         drawMiniItem(graphics, offer.getResult(), 64, y - 1);
-        graphics.text(font, offer.getResult().getHoverName(), 83, y + 3, 0xFFE9D8FF, false);
+        graphics.text(font, compactOfferName(offer.getResult(), 34), 83, y + 3, 0xFFE9D8FF, false);
     }
 
     private void drawMiniItem(GuiGraphicsExtractor graphics, ItemStack stack, int x, int y) {
         graphics.item(stack, x, y);
         graphics.itemDecorations(font, stack, x, y);
+    }
+
+    private Component compactOfferName(ItemStack stack, int maxWidth) {
+        Component hoverName = stack.getHoverName();
+        String name = hoverName.getString();
+        if (font.width(name) <= maxWidth) {
+            return hoverName;
+        }
+
+        String suffix = "...";
+        int bodyWidth = Math.max(0, maxWidth - font.width(suffix));
+        return Component.literal(font.plainSubstrByWidth(name, bodyWidth) + suffix);
     }
 
     private void sendButton(int id) {

@@ -1,0 +1,104 @@
+{
+  "textures": {
+    "particle": "templenihility:block/nihility_vault_connected_side_nn",
+    "link": {
+      "force_translucent": true,
+      "sprite": "templenihility:block/nihility_vault_vertical_link"
+    }
+  },
+  "elements": [
+    {
+      "from": [
+        5,
+        8,
+        -0.02
+      ],
+      "to": [
+        11,
+        16,
+        0.02
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#link"
+        }
+      }
+    },
+    {
+      "from": [
+        5,
+        8,
+        15.98
+      ],
+      "to": [
+        11,
+        16,
+        16.02
+      ],
+      "faces": {
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#link"
+        }
+      }
+    },
+    {
+      "from": [
+        -0.02,
+        8,
+        5
+      ],
+      "to": [
+        0.02,
+        16,
+        11
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#link"
+        }
+      }
+    },
+    {
+      "from": [
+        15.98,
+        8,
+        5
+      ],
+      "to": [
+        16.02,
+        16,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#link"
+        }
+      }
+    }
+  ],
+  "ambientocclusion": false
+}

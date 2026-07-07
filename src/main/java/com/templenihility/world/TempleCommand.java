@@ -58,7 +58,7 @@ public class TempleCommand {
     private static int openTerminal(CommandSourceStack src) {
         ServerPlayer player = src.getPlayer();
         if (player == null) {
-            src.sendFailure(Component.literal("Only players can open a nihility terminal."));
+            src.sendFailure(Component.literal("Only players can open a Void Terminal."));
             return 0;
         }
 

@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "C": "templenihility:nihility_core",
+    "R": "templenihility:nihility_resonance_core",
+    "G": "minecraft:gold_ingot",
+    "A": "minecraft:amethyst_shard"
+  },
+  "pattern": [
+    "GAG",
+    "CRC",
+    "GAG"
+  ],
+  "result": {
+    "id": "templenihility:nihility_power_charm"
+  }
+}

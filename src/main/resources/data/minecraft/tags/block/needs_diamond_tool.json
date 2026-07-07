@@ -2,6 +2,9 @@
   "replace": false,
   "values": [
     "templenihility:nihility_altar",
-    "templenihility:nihility_vault"
+    "templenihility:nihility_vault",
+    "templenihility:nihility_energy_prism",
+    "templenihility:nihility_energy_cell",
+    "templenihility:nihility_transport_core"
   ]
 }

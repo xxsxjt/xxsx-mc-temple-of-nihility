@@ -49,6 +49,6 @@ public class TemplePiece extends StructurePiece {
     public void postProcess(WorldGenLevel level, StructureManager manager, ChunkGenerator gen,
                             RandomSource random, BoundingBox box, ChunkPos chunkPos, BlockPos pos) {
         BlockPos center = new BlockPos(boundingBox.minX() + 16, boundingBox.minY() + 1, boundingBox.minZ() + 16);
-        TempleGenerator.generateTemple(level.getLevel(), center, templeType);
+        TempleGenerator.generateTemple(level, center, templeType, random);
     }
 }

@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "C": "templenihility:nihility_core",
+    "G": "minecraft:glass",
+    "R": "templenihility:nihility_rune",
+    "P": "templenihility:nihility_energy_prism"
+  },
+  "pattern": [
+    "GRG",
+    "CPC",
+    "GRG"
+  ],
+  "result": {
+    "id": "templenihility:nihility_energy_cell"
+  }
+}

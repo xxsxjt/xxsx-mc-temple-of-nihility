@@ -1,6 +1,8 @@
 package com.templenihility.compat;
 
 import com.templenihility.TempleNihilityMod;
+import com.templenihility.blockentity.NihilityEnergyCellBlockEntity;
+import com.templenihility.energy.VoidPower;
 import com.templenihility.init.ModEffects;
 import com.templenihility.init.ModItems;
 import com.templenihility.world.MagnetManager;
@@ -8,6 +10,7 @@ import com.templenihility.world.NihilityDynamicLight;
 import com.templenihility.world.NihilityVisualEffects;
 import java.util.Optional;
 import net.minecraft.network.chat.Component;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -56,6 +59,8 @@ public final class CuriosCompat {
         register(ModItems.NIHILITY_SENTINEL_EYE.get(), sentinelEye());
         register(ModItems.NIHILITY_TRADER_SEAL.get(), traderSeal());
         register(ModItems.NIHILITY_TERMINAL.get(), new ICurioItem() {});
+        register(ModItems.NIHILITY_POWER_CHARM.get(), powerCharm());
+        register(ModItems.NIHILITY_CONDUIT_CHARM.get(), conduitCharm());
         if (!eventsRegistered) {
             NeoForge.EVENT_BUS.addListener(CuriosCompat::playerTick);
             NeoForge.EVENT_BUS.addListener(CuriosCompat::playerLoggedOut);
@@ -74,6 +79,14 @@ public final class CuriosCompat {
             .map(result -> result.stack());
     }
 
+    public static boolean hasVoidPowerBattery(Player player) {
+        return hasCurio(player, ModItems.NIHILITY_POWER_CHARM.get());
+    }
+
+    public static boolean hasVoidConduitCharm(Player player) {
+        return hasCurio(player, ModItems.NIHILITY_CONDUIT_CHARM.get());
+    }
+
     private static void playerTick(PlayerTickEvent.Post event) {
         Player player = event.getEntity();
         if (player.level().isClientSide() || player.tickCount % 20 != 0) {
@@ -90,8 +103,12 @@ public final class CuriosCompat {
     }
 
     private static boolean hasLantern(Player player) {
+        return hasCurio(player, ModItems.NIHILITY_LANTERN.get());
+    }
+
+    private static boolean hasCurio(Player player, Item item) {
         return CuriosApi.getCuriosInventory(player)
-            .flatMap(handler -> handler.findFirstCurio(stack -> stack.is(ModItems.NIHILITY_LANTERN.get())))
+            .flatMap(handler -> handler.findFirstCurio(stack -> stack.is(item)))
             .isPresent();
     }
 
@@ -628,6 +645,91 @@ public final class CuriosCompat {
                 );
             }
         };
+    }
+
+    private static ICurioItem powerCharm() {
+        return new ICurioItem() {
+            @Override
+            public void onEquip(SlotContext slotContext, ItemStack oldStack, ItemStack stack) {
+                LivingEntity entity = slotContext.entity();
+                if (entity instanceof Player player && !player.level().isClientSide()) {
+                    VoidPower.syncArmorTooltipPower(player);
+                    player.sendSystemMessage(Component.translatable(
+                        "message.templenihility.power_charm_equipped", VoidPower.getMax(player)));
+                }
+            }
+
+            @Override
+            public void onUnequip(SlotContext slotContext, ItemStack newStack, ItemStack stack) {
+                if (slotContext.entity() instanceof Player player && !player.level().isClientSide()) {
+                    VoidPower.set(player, VoidPower.get(player));
+                }
+            }
+        };
+    }
+
+    private static ICurioItem conduitCharm() {
+        return new ICurioItem() {
+            @Override
+            public void onEquip(SlotContext slotContext, ItemStack oldStack, ItemStack stack) {
+                LivingEntity entity = slotContext.entity();
+                if (entity instanceof Player player && !player.level().isClientSide()) {
+                    VoidPower.syncArmorTooltipPower(player);
+                    player.sendSystemMessage(Component.translatable(
+                        "message.templenihility.conduit_charm_equipped", VoidPower.getMax(player)));
+                }
+            }
+
+            @Override
+            public void onUnequip(SlotContext slotContext, ItemStack newStack, ItemStack stack) {
+                if (slotContext.entity() instanceof Player player && !player.level().isClientSide()) {
+                    VoidPower.set(player, VoidPower.get(player));
+                }
+            }
+
+            @Override
+            public void curioTick(SlotContext slotContext, ItemStack stack) {
+                LivingEntity entity = slotContext.entity();
+                if (!(entity instanceof Player player) || player.level().isClientSide() || player.tickCount % 20 != 0) {
+                    return;
+                }
+                transferWithNearbyCells(player);
+            }
+        };
+    }
+
+    private static void transferWithNearbyCells(Player player) {
+        BlockPos base = player.blockPosition();
+        int range = 4;
+        int perSecond = 24;
+
+        for (BlockPos pos : BlockPos.betweenClosed(base.offset(-range, -range, -range), base.offset(range, range, range))) {
+            if (!(player.level().getBlockEntity(pos) instanceof NihilityEnergyCellBlockEntity cell)) {
+                continue;
+            }
+
+            if (player.isShiftKeyDown()) {
+                int extracted = Math.min(perSecond, VoidPower.get(player));
+                if (extracted <= 0) {
+                    return;
+                }
+                int accepted = cell.addEnergy(extracted);
+                if (accepted > 0) {
+                    VoidPower.tryConsume(player, accepted);
+                    return;
+                }
+            } else {
+                int need = VoidPower.getMax(player) - VoidPower.get(player);
+                if (need <= 0) {
+                    return;
+                }
+                int extracted = cell.extractEnergy(Math.min(perSecond, need));
+                if (extracted > 0) {
+                    VoidPower.add(player, extracted);
+                    return;
+                }
+            }
+        }
     }
 
     private static Identifier id(String path) {

@@ -4,6 +4,7 @@ import com.templenihility.config.ModConfig;
 import com.templenihility.blockentity.NihilityVaultBlockEntity;
 import com.templenihility.entity.NihilityCreature;
 import com.templenihility.compat.CuriosCompat;
+import com.templenihility.compat.WaystonesCompat;
 import com.templenihility.init.ModBlocks;
 import com.templenihility.init.ModBlockEntities;
 import com.templenihility.init.ModEntities;
@@ -27,6 +28,8 @@ import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
@@ -48,12 +51,13 @@ public class TempleNihilityMod {
         ModEntities.register(modEventBus);
         ModEffects.register(modEventBus);
         ModMenus.register(modEventBus);
-        // ModStructures.register(modEventBus);  // 结构系统暂时关闭，待修复
+        ModStructures.register(modEventBus);
         ModCreativeTab.register(modEventBus);
 
         // 属性只在 MOD 总线
         modEventBus.addListener(this::onCommonSetup);
         modEventBus.addListener(this::onAttributeCreate);
+        modEventBus.addListener(this::registerCapabilities);
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
             ModClientEvents.register(modEventBus);
         }
@@ -78,6 +82,20 @@ public class TempleNihilityMod {
         if (ModList.get().isLoaded("curios")) {
             event.enqueueWork(CuriosCompat::register);
         }
+        if (ModList.get().isLoaded("waystones")) {
+            event.enqueueWork(WaystonesCompat::register);
+        }
+    }
+
+    private void registerCapabilities(RegisterCapabilitiesEvent event) {
+        event.registerBlockEntity(
+            Capabilities.Energy.BLOCK,
+            ModBlockEntities.NIHILITY_ENERGY_CELL.get(),
+            (cell, side) -> cell.getEnergyHandler());
+        event.registerBlockEntity(
+            Capabilities.Energy.BLOCK,
+            ModBlockEntities.NIHILITY_ENERGY_PRISM.get(),
+            (prism, side) -> prism.getEnergyHandler());
     }
 
     @SubscribeEvent

@@ -4,7 +4,7 @@ license="All Rights Reserved"
 
 [[mods]]
 modId="templenihility"
-version="1.0.0-beta.1"
+version="1.0.0-beta.2"
 displayName="Temple of Nihility"
 logoFile="logo.png"
 logoBlur=false
@@ -41,3 +41,10 @@ type="optional"
 versionRange="[30.6.0.36,)"
 ordering="AFTER"
 side="CLIENT"
+
+[[dependencies.templenihility]]
+modId="waystones"
+type="optional"
+versionRange="[26.2.0.3,)"
+ordering="AFTER"
+side="BOTH"

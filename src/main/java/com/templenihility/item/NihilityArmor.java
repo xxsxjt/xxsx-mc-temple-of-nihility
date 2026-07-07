@@ -19,6 +19,7 @@ public class NihilityArmor extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
                                 Consumer<Component> tooltip, TooltipFlag flag) {
+        tooltip.accept(NihilityAspect.NIHILITY.line());
         tooltip.accept(Component.translatable("tooltip.templenihility.nihility_armor_set_1")
             .withStyle(ChatFormatting.DARK_PURPLE));
         tooltip.accept(Component.translatable("tooltip.templenihility.nihility_armor_set_2")
@@ -26,7 +27,10 @@ public class NihilityArmor extends Item {
         int power = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY)
             .copyTag()
             .getIntOr(NihilityArmorEvents.STACK_VOID_POWER_KEY, 0);
+        int maxPower = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY)
+            .copyTag()
+            .getIntOr(NihilityArmorEvents.STACK_VOID_POWER_MAX_KEY, NihilityArmorEvents.getMaxVoidPower());
         tooltip.accept(Component.translatable("tooltip.templenihility.nihility_armor_power",
-            power, NihilityArmorEvents.getMaxVoidPower()).withStyle(ChatFormatting.AQUA));
+            power, maxPower).withStyle(ChatFormatting.AQUA));
     }
 }

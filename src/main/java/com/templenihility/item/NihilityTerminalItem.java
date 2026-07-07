@@ -64,6 +64,7 @@ public class NihilityTerminalItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
                                 Consumer<Component> tooltip, TooltipFlag flag) {
+        tooltip.accept(NihilityAspect.VOID.line());
         tooltip.accept(Component.translatable("tooltip.templenihility.nihility_terminal").withStyle(ChatFormatting.DARK_AQUA));
         readBoundPos(stack).ifPresentOrElse(
             pos -> tooltip.accept(Component.translatable("tooltip.templenihility.nihility_terminal_bound",

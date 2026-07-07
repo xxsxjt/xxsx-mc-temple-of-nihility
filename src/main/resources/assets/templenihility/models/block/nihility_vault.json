@@ -2,11 +2,30 @@
   "parent": "minecraft:block/cube",
   "textures": {
     "particle": "templenihility:block/nihility_vault_side",
-    "down": "templenihility:block/nihility_vault_bottom",
-    "up": "templenihility:block/nihility_vault_top",
-    "north": "templenihility:block/nihility_vault_front",
-    "south": "templenihility:block/nihility_vault_side",
-    "west": "templenihility:block/nihility_vault_side",
-    "east": "templenihility:block/nihility_vault_side"
-  }
+    "down": {
+      "force_translucent": true,
+      "sprite": "templenihility:block/nihility_vault_bottom"
+    },
+    "up": {
+      "force_translucent": true,
+      "sprite": "templenihility:block/nihility_vault_top"
+    },
+    "north": {
+      "force_translucent": true,
+      "sprite": "templenihility:block/nihility_vault_front"
+    },
+    "south": {
+      "force_translucent": true,
+      "sprite": "templenihility:block/nihility_vault_side"
+    },
+    "west": {
+      "force_translucent": true,
+      "sprite": "templenihility:block/nihility_vault_side"
+    },
+    "east": {
+      "force_translucent": true,
+      "sprite": "templenihility:block/nihility_vault_side"
+    }
+  },
+  "ambientocclusion": false
 }

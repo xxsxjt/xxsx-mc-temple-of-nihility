@@ -4,6 +4,7 @@ import com.templenihility.TempleNihilityMod;
 import com.templenihility.menu.NihilityAltarMenu;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
@@ -26,7 +27,8 @@ public class NihilityAltarScreen extends AbstractContainerScreen<NihilityAltarMe
         super.init();
         addRenderableWidget(Button.builder(Component.translatable("screen.templenihility.altar_button"),
                 button -> sendButton(NihilityAltarMenu.BUTTON_PERFORM_RITUAL))
-            .bounds(leftPos + 75, topPos + 55, 48, 18)
+            .bounds(leftPos + 126, topPos + 16, 42, 16)
+            .tooltip(Tooltip.create(Component.translatable("screen.templenihility.altar_button_tip")))
             .build());
     }
 

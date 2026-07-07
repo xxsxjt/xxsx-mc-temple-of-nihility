@@ -21,6 +21,7 @@ import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.ResultContainer;
@@ -36,14 +37,14 @@ import org.jspecify.annotations.Nullable;
 
 public class NihilityTerminalMenu extends AbstractContainerMenu {
     public static final int STORAGE_COLUMNS = 9;
-    public static final int STORAGE_ROWS = 5;
+    public static final int STORAGE_ROWS = 4;
     public static final int VISIBLE_SLOTS = STORAGE_COLUMNS * STORAGE_ROWS;
     public static final int CRAFT_RESULT_SLOT = VISIBLE_SLOTS;
     public static final int CRAFT_INPUT_START = CRAFT_RESULT_SLOT + 1;
     public static final int CRAFT_INPUT_COUNT = 9;
     public static final int PLAYER_INV_START = CRAFT_INPUT_START + CRAFT_INPUT_COUNT;
-    public static final int BUTTON_PREV_PAGE = 0;
-    public static final int BUTTON_NEXT_PAGE = 1;
+    public static final int BUTTON_SCROLL_UP = 0;
+    public static final int BUTTON_SCROLL_DOWN = 1;
     public static final int BUTTON_CYCLE_SORT = 2;
     public static final int BUTTON_CLEAR_SEARCH = 3;
     public static final int BUTTON_TOGGLE_CHUNKLOAD = 4;
@@ -78,17 +79,21 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
         for (int row = 0; row < STORAGE_ROWS; row++) {
             for (int col = 0; col < STORAGE_COLUMNS; col++) {
                 addSlot(new AggregateSlot(terminalContainer, col + row * STORAGE_COLUMNS,
-                    8 + col * 18, 55 + row * 18));
+                    NihilityTerminalLayout.STORAGE_X + col * NihilityTerminalLayout.SLOT_STEP,
+                    NihilityTerminalLayout.STORAGE_Y + row * NihilityTerminalLayout.SLOT_STEP));
             }
         }
 
-        addSlot(new ResultSlot(this.player, craftSlots, resultSlots, 0, 222, 79));
+        addSlot(new ResultSlot(this.player, craftSlots, resultSlots, 0,
+            NihilityTerminalLayout.CRAFT_RESULT_X, NihilityTerminalLayout.CRAFT_RESULT_Y));
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 3; col++) {
-                addSlot(new Slot(craftSlots, col + row * 3, 181 + col * 18, 61 + row * 18));
+                addSlot(new Slot(craftSlots, col + row * 3,
+                    NihilityTerminalLayout.CRAFT_GRID_X + col * NihilityTerminalLayout.SLOT_STEP,
+                    NihilityTerminalLayout.CRAFT_GRID_Y + row * NihilityTerminalLayout.SLOT_STEP));
             }
         }
-        addStandardInventorySlots(inventory, 8, 166);
+        addStandardInventorySlots(inventory, NihilityTerminalLayout.PLAYER_INV_X, NihilityTerminalLayout.PLAYER_INV_Y);
 
         for (int i = 0; i < data.length; i++) {
             addDataSlot(DataSlot.shared(data, i));
@@ -97,22 +102,22 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
 
     @Override
     public boolean clickMenuButton(Player player, int buttonId) {
-        if (buttonId == BUTTON_PREV_PAGE) {
-            setPage(getPage() - 1);
+        if (buttonId == BUTTON_SCROLL_UP) {
+            setScrollOffset(getScrollOffset() - 1);
             return true;
         }
-        if (buttonId == BUTTON_NEXT_PAGE) {
-            setPage(getPage() + 1);
+        if (buttonId == BUTTON_SCROLL_DOWN) {
+            setScrollOffset(getScrollOffset() + 1);
             return true;
         }
         if (buttonId == BUTTON_CYCLE_SORT) {
             data[2] = (data[2] + 1) % 4;
-            setPage(0);
+            setScrollOffset(0);
             return true;
         }
         if (buttonId == BUTTON_CLEAR_SEARCH) {
             search = "";
-            setPage(0);
+            setScrollOffset(0);
             return true;
         }
         if (buttonId == BUTTON_TOGGLE_CHUNKLOAD) {
@@ -127,7 +132,7 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
             int codePoint = buttonId - BUTTON_CHAR_BASE;
             if (codePoint > 0 && search.length() < 64) {
                 search += Character.toString((char) codePoint);
-                setPage(0);
+                setScrollOffset(0);
                 return true;
             }
         }
@@ -216,11 +221,41 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
         return vaults.isEmpty() || vaults.stream().anyMatch(vault -> !vault.isRemoved());
     }
 
+    @Override
+    public void clicked(int slotId, int button, ContainerInput input, Player player) {
+        if (input == ContainerInput.PICKUP && isStorageSlot(slotId) && (button == 0 || button == 1)) {
+            ItemStack carried = getCarried();
+            if (!carried.isEmpty()) {
+                ItemStack inserting = button == 0 ? carried.copy() : carried.copyWithCount(1);
+                int before = inserting.getCount();
+                if (insertIntoNetwork(inserting)) {
+                    int moved = before - inserting.getCount();
+                    if (moved > 0) {
+                        carried.shrink(moved);
+                        setCarried(carried.isEmpty() ? ItemStack.EMPTY : carried);
+                        rebuildView();
+                        broadcastFullState();
+                    }
+                    return;
+                }
+            }
+        }
+        super.clicked(slotId, button, input, player);
+    }
+
     public int getPage() {
         return data[0];
     }
 
     public int getMaxPage() {
+        return data[1];
+    }
+
+    public int getScrollOffset() {
+        return data[0];
+    }
+
+    public int getMaxScrollOffset() {
         return data[1];
     }
 
@@ -306,8 +341,8 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
         };
     }
 
-    private void setPage(int page) {
-        data[0] = Math.max(0, Math.min(page, data[1]));
+    private void setScrollOffset(int offsetRows) {
+        data[0] = Math.max(0, Math.min(offsetRows, data[1]));
         rebuildView();
         broadcastFullState();
     }
@@ -383,7 +418,9 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
             };
             viewGroups.sort(comparator.thenComparingInt(StackGroup::firstGlobalIndex));
 
-            data[1] = Math.max(0, (viewGroups.size() - 1) / VISIBLE_SLOTS);
+            int visibleRows = Math.max(1, STORAGE_ROWS);
+            int totalRows = Math.max(0, (viewGroups.size() + STORAGE_COLUMNS - 1) / STORAGE_COLUMNS);
+            data[1] = Math.max(0, totalRows - visibleRows);
             data[0] = Math.max(0, Math.min(data[0], data[1]));
             data[9] = viewGroups.size();
         } finally {
@@ -447,7 +484,7 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
     }
 
     private StackGroup visibleGroup(int slot) {
-        int index = data[0] * VISIBLE_SLOTS + slot;
+        int index = data[0] * STORAGE_COLUMNS + slot;
         return index >= 0 && index < viewGroups.size() ? viewGroups.get(index) : null;
     }
 

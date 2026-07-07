@@ -11,11 +11,17 @@ import net.minecraft.world.item.component.TooltipDisplay;
 public class NihilityTooltipItem extends Item {
     private final boolean foil;
     private final String tooltipKey;
+    private final NihilityAspect aspect;
 
     public NihilityTooltipItem(Item.Properties properties, boolean foil, String tooltipKey) {
+        this(properties, foil, tooltipKey, NihilityAspect.fromTooltip(tooltipKey));
+    }
+
+    public NihilityTooltipItem(Item.Properties properties, boolean foil, String tooltipKey, NihilityAspect aspect) {
         super(properties);
         this.foil = foil;
         this.tooltipKey = tooltipKey;
+        this.aspect = aspect;
     }
 
     @Override
@@ -26,6 +32,7 @@ public class NihilityTooltipItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
                                 Consumer<Component> tooltip, TooltipFlag flag) {
+        tooltip.accept(aspect.line());
         tooltip.accept(Component.translatable(tooltipKey).withStyle(ChatFormatting.DARK_AQUA));
     }
 }

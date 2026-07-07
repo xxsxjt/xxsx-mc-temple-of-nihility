@@ -3,7 +3,7 @@ plugins {
     id 'net.neoforged.moddev' version '2.0.140'
 }
 
-version = '1.0.0-beta.1'
+version = '1.0.0-beta.2'
 group = 'com.templenihility'
 base.archivesName = 'temple-of-nihility-neoforge-26.2'
 
@@ -29,6 +29,9 @@ neoForge {
 dependencies {
     compileOnly files('D:/_dx/_Games/MC/xxxxxx/.minecraft/versions/26.2-NeoForge_26.2.0.7-beta/mods/curios-neoforge-15.0.0-beta.1+26.2.jar')
     compileOnly files('D:/_dx/_Games/MC/xxxxxx/.minecraft/versions/26.2-NeoForge_26.2.0.7-beta/mods/[JEI物品管理器] jei-26.2-neoforge-30.6.0.36.jar')
+    compileOnly files('D:/_dx/_Games/MC/xxxxxx/.minecraft/versions/26.2-NeoForge_26.2.0.7-beta/mods/[传送石碑／指路石] waystones-neoforge-26.2-26.2.0.3.jar')
+    compileOnly files('D:/_dx/_Games/MC/xxxxxx/.minecraft/versions/26.2-NeoForge_26.2.0.7-beta/mods/balm-neoforge-26.2-26.2.0.2.jar')
+    compileOnly files('D:/_dx/_Games/MC/xxxxxx/.minecraft/versions/26.2-NeoForge_26.2.0.7-beta/mods/shogi-neoforge-26.2-26.2.0.2.jar')
 }
 
 jar {

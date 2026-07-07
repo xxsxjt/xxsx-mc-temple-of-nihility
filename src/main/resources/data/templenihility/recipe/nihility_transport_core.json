@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "key": {
+    "C": "templenihility:nihility_core",
+    "E": "templenihility:nihility_energy_cell",
+    "R": "templenihility:nihility_resonance_core",
+    "S": "templenihility:nihility_rune",
+    "Q": "minecraft:quartz"
+  },
+  "pattern": [
+    "QSQ",
+    "CEC",
+    "QRQ"
+  ],
+  "result": {
+    "id": "templenihility:nihility_transport_core"
+  }
+}

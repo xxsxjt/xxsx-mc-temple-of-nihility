@@ -78,6 +78,9 @@ public class ModCreativeTab {
                 output.accept(ModItems.NIHILITY_PEARL_BELT.get());
                 output.accept(ModItems.NIHILITY_SENTINEL_EYE.get());
                 output.accept(ModItems.NIHILITY_TRADER_SEAL.get());
+                output.accept(ModItems.NIHILITY_WAYSTONE.get());
+                output.accept(ModItems.NIHILITY_POWER_CHARM.get());
+                output.accept(ModItems.NIHILITY_CONDUIT_CHARM.get());
                 output.accept(ModBlocks.NIHILITY_STONE.get());
                 output.accept(ModBlocks.NIHILITY_CRYSTAL_BLOCK.get());
                 output.accept(ModBlocks.NIHILITY_BRICKS.get());
@@ -89,6 +92,9 @@ public class ModCreativeTab {
                 output.accept(ModBlocks.NIHILITY_LAMP.get());
                 output.accept(ModBlocks.NIHILITY_GLASS.get());
                 output.accept(ModBlocks.NIHILITY_ALTAR.get());
+                output.accept(ModBlocks.NIHILITY_ENERGY_PRISM.get());
+                output.accept(ModBlocks.NIHILITY_ENERGY_CELL.get());
+                output.accept(ModBlocks.NIHILITY_TRANSPORT_CORE.get());
             })
             .build());
 

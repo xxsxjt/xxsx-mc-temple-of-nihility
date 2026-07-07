@@ -15,36 +15,43 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public class ModItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(TempleNihilityMod.MOD_ID);
 
-    // 虚无碎片 - 基础货币
+    // 无相残片 - 基础材料
     public static final DeferredItem<Item> NIHILITY_SHARD = ITEMS.register("nihility_shard",
         id -> new NihilityShard(itemProperties(id).stacksTo(64)));
 
-    // 虚无结晶 - 高级货币
+    // 空相结晶 - 虚空系高级材料
     public static final DeferredItem<Item> NIHILITY_CRYSTAL = ITEMS.register("nihility_crystal",
-        id -> new Item(itemProperties(id).stacksTo(64).rarity(Rarity.UNCOMMON)));
+        id -> new NihilityTooltipItem(itemProperties(id).stacksTo(64).rarity(Rarity.UNCOMMON),
+            false, "tooltip.templenihility.nihility_crystal", NihilityAspect.VOID));
 
-    // 虚无粉尘 - 基础加工材料
+    // 归尘 - 无相系基础加工材料
     public static final DeferredItem<Item> NIHILITY_DUST = ITEMS.register("nihility_dust",
-        id -> new Item(itemProperties(id).stacksTo(64)));
+        id -> new NihilityTooltipItem(itemProperties(id).stacksTo(64),
+            false, "tooltip.templenihility.nihility_dust", NihilityAspect.NIHILITY));
 
-    // 虚无符文 - 建筑与祭坛材料
+    // 圣殿符文 - 祭坛与结构材料
     public static final DeferredItem<Item> NIHILITY_RUNE = ITEMS.register("nihility_rune",
-        id -> new Item(itemProperties(id).stacksTo(64).rarity(Rarity.UNCOMMON)));
+        id -> new NihilityTooltipItem(itemProperties(id).stacksTo(64).rarity(Rarity.UNCOMMON),
+            false, "tooltip.templenihility.nihility_rune", NihilityAspect.NIHILITY));
 
     // 圣殿封印 - 高级仪式材料
     public static final DeferredItem<Item> TEMPLE_SEAL = ITEMS.register("temple_seal",
-        id -> new Item(itemProperties(id).stacksTo(64).rarity(Rarity.UNCOMMON)));
+        id -> new NihilityTooltipItem(itemProperties(id).stacksTo(64).rarity(Rarity.UNCOMMON),
+            true, "tooltip.templenihility.temple_seal", NihilityAspect.NIHILITY));
 
     // 虚无核心 - 核心材料
     public static final DeferredItem<Item> NIHILITY_CORE = ITEMS.register("nihility_core",
-        id -> new Item(itemProperties(id).stacksTo(16).rarity(Rarity.RARE)));
+        id -> new NihilityTooltipItem(itemProperties(id).stacksTo(16).rarity(Rarity.RARE),
+            true, "tooltip.templenihility.nihility_core", NihilityAspect.NIHILITY));
 
     // 遗物级材料
     public static final DeferredItem<Item> NIHILITY_RELIC_FRAGMENT = ITEMS.register("nihility_relic_fragment",
-        id -> new Item(itemProperties(id).stacksTo(64).rarity(Rarity.RARE)));
+        id -> new NihilityTooltipItem(itemProperties(id).stacksTo(64).rarity(Rarity.RARE),
+            true, "tooltip.templenihility.nihility_relic_fragment", NihilityAspect.ABYSS));
 
     public static final DeferredItem<Item> NIHILITY_RESONANCE_CORE = ITEMS.register("nihility_resonance_core",
-        id -> new Item(itemProperties(id).stacksTo(16).rarity(Rarity.EPIC)));
+        id -> new NihilityTooltipItem(itemProperties(id).stacksTo(16).rarity(Rarity.EPIC),
+            true, "tooltip.templenihility.nihility_resonance_core", NihilityAspect.CHAOS));
 
     // 宝库升级件
     public static final DeferredItem<Item> NIHILITY_VAULT_EXPANSION = ITEMS.register("nihility_vault_expansion",
@@ -247,6 +254,17 @@ public class ModItems {
 
     public static final DeferredItem<Item> NIHILITY_TERMINAL = ITEMS.register("nihility_terminal",
         id -> new NihilityTerminalItem(itemProperties(id).stacksTo(1).rarity(Rarity.RARE)));
+
+    public static final DeferredItem<Item> NIHILITY_WAYSTONE = ITEMS.register("nihility_waystone",
+        id -> NihilityWaystoneItemFactory.create(itemProperties(id).stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final DeferredItem<Item> NIHILITY_POWER_CHARM = ITEMS.register("nihility_power_charm",
+        id -> new NihilityTooltipItem(itemProperties(id).stacksTo(1).rarity(Rarity.RARE),
+            true, "tooltip.templenihility.nihility_power_charm"));
+
+    public static final DeferredItem<Item> NIHILITY_CONDUIT_CHARM = ITEMS.register("nihility_conduit_charm",
+        id -> new NihilityTooltipItem(itemProperties(id).stacksTo(1).rarity(Rarity.EPIC),
+            true, "tooltip.templenihility.nihility_conduit_charm"));
 
     // 装备
     public static final DeferredItem<Item> NIHILITY_HELMET = ITEMS.register("nihility_helmet",

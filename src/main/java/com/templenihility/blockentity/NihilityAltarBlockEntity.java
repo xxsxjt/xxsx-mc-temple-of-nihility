@@ -3,6 +3,7 @@ package com.templenihility.blockentity;
 import com.templenihility.init.ModBlockEntities;
 import com.templenihility.init.ModBlocks;
 import com.templenihility.init.ModItems;
+import com.templenihility.energy.VoidPower;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -87,6 +88,17 @@ public class NihilityAltarBlockEntity extends BlockEntity implements Container {
                 playFailureEffects(info);
                 return false;
             }
+        }
+
+        if (!VoidPower.tryConsume(player, recipe.energyCost())) {
+            player.sendSystemMessage(Component.translatable(
+                "message.templenihility.not_enough_void_power",
+                recipe.energyCost(), VoidPower.get(player), VoidPower.getMax(player)));
+            playFailureEffects(info);
+            return false;
+        }
+
+        if (!output.isEmpty()) {
             output.grow(result.getCount());
         } else {
             items.set(OUTPUT_SLOT, result);
@@ -100,6 +112,10 @@ public class NihilityAltarBlockEntity extends BlockEntity implements Container {
         playSuccessEffects(info);
         player.sendSystemMessage(Component.translatable("message.templenihility.altar_success",
             result.getCount(), result.getHoverName(), Component.translatable(tierNameKey(info.tier()))));
+        if (recipe.energyCost() > 0) {
+            player.sendSystemMessage(Component.translatable(
+                "message.templenihility.altar_energy_spent", recipe.energyCost(), VoidPower.get(player), VoidPower.getMax(player)));
+        }
         return true;
     }
 
@@ -340,13 +356,13 @@ public class NihilityAltarBlockEntity extends BlockEntity implements Container {
 
     private static List<RitualRecipe> recipes() {
         return List.of(
-            new RitualRecipe(ModItems.NIHILITY_DUST.get(), 8, new ItemStack(ModItems.NIHILITY_SHARD.get()), 0),
-            new RitualRecipe(ModItems.NIHILITY_SHARD.get(), 4, new ItemStack(ModItems.NIHILITY_CRYSTAL.get()), 1),
-            new RitualRecipe(ModItems.NIHILITY_CRYSTAL.get(), 4, new ItemStack(ModItems.NIHILITY_RUNE.get()), 1),
-            new RitualRecipe(ModItems.NIHILITY_RUNE.get(), 4, new ItemStack(ModItems.TEMPLE_SEAL.get()), 2),
-            new RitualRecipe(ModItems.TEMPLE_SEAL.get(), 4, new ItemStack(ModItems.NIHILITY_CORE.get()), 2),
-            new RitualRecipe(ModItems.NIHILITY_CORE.get(), 4, new ItemStack(ModItems.NIHILITY_RESONANCE_CORE.get()), 3),
-            new RitualRecipe(ModItems.NIHILITY_RELIC_FRAGMENT.get(), 8, new ItemStack(ModItems.TEMPLE_SEAL.get()), 3)
+            new RitualRecipe(ModItems.NIHILITY_DUST.get(), 8, new ItemStack(ModItems.NIHILITY_SHARD.get()), 0, 0),
+            new RitualRecipe(ModItems.NIHILITY_SHARD.get(), 4, new ItemStack(ModItems.NIHILITY_CRYSTAL.get()), 1, 3),
+            new RitualRecipe(ModItems.NIHILITY_CRYSTAL.get(), 4, new ItemStack(ModItems.NIHILITY_RUNE.get()), 1, 6),
+            new RitualRecipe(ModItems.NIHILITY_RUNE.get(), 4, new ItemStack(ModItems.TEMPLE_SEAL.get()), 2, 10),
+            new RitualRecipe(ModItems.TEMPLE_SEAL.get(), 4, new ItemStack(ModItems.NIHILITY_CORE.get()), 2, 16),
+            new RitualRecipe(ModItems.NIHILITY_CORE.get(), 4, new ItemStack(ModItems.NIHILITY_RESONANCE_CORE.get()), 3, 24),
+            new RitualRecipe(ModItems.NIHILITY_RELIC_FRAGMENT.get(), 8, new ItemStack(ModItems.TEMPLE_SEAL.get()), 3, 20)
         );
     }
 
@@ -413,6 +429,6 @@ public class NihilityAltarBlockEntity extends BlockEntity implements Container {
     public record StructureInfo(int tier, int runes, int crystals, int pillars, int chiseled) {
     }
 
-    private record RitualRecipe(Item input, int inputCount, ItemStack result, int minTier) {
+    private record RitualRecipe(Item input, int inputCount, ItemStack result, int minTier, int energyCost) {
     }
 }

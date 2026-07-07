@@ -1,0 +1,23 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "waystones"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "C": "templenihility:nihility_crystal",
+    "R": "templenihility:nihility_rune",
+    "W": "waystones:warp_stone"
+  },
+  "pattern": [
+    " C ",
+    "RWR",
+    " C "
+  ],
+  "result": {
+    "id": "templenihility:nihility_waystone"
+  }
+}
