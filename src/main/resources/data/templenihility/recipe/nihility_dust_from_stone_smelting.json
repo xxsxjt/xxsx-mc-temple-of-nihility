@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:smelting",
+  "category": "misc",
+  "cookingtime": 100,
+  "experience": 0.1,
+  "group": "nihility_dust",
+  "ingredient": "templenihility:nihility_stone",
+  "result": {
+    "id": "templenihility:nihility_dust"
+  }
+}

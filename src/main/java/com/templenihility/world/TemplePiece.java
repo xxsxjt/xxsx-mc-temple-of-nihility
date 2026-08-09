@@ -13,6 +13,11 @@ import net.minecraft.world.level.levelgen.structure.StructurePiece;
 import net.minecraft.world.level.levelgen.structure.StructurePieceAccessor;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 public class TemplePiece extends StructurePiece {
+    private static final int BOUNDING_BOX_FORMAT = 2;
+    private static final int LEGACY_X_SPAN = 33;
+    private static final int LEGACY_Y_SPAN = 17;
+    private static final int LEGACY_Z_SPAN = 33;
+
     private TempleType templeType;
 
     // ContextlessType (no serialization context needed)
@@ -31,7 +36,15 @@ public class TemplePiece extends StructurePiece {
     private static BoundingBox makeBoundingBox(CompoundTag tag) {
         int x = tag.getInt("BBx").orElse(0), y = tag.getInt("BBy").orElse(64), z = tag.getInt("BBz").orElse(0);
         int w = tag.getInt("BBw").orElse(32), h = tag.getInt("BBh").orElse(16), d = tag.getInt("BBd").orElse(32);
-        return new BoundingBox(x, y, z, x + w, y + h, z + d);
+        int format = tag.getInt("BBFormat").orElse(1);
+        if (format < BOUNDING_BOX_FORMAT) {
+            // beta.2 restored inclusive spans as offsets, so repeatedly loaded pieces grew.
+            w = Math.min(w, LEGACY_X_SPAN);
+            h = Math.min(h, LEGACY_Y_SPAN);
+            d = Math.min(d, LEGACY_Z_SPAN);
+        }
+        return new BoundingBox(x, y, z, x + Math.max(1, w) - 1,
+            y + Math.max(1, h) - 1, z + Math.max(1, d) - 1);
     }
 
     @Override
@@ -40,6 +53,7 @@ public class TemplePiece extends StructurePiece {
         tag.putInt("BBx", boundingBox.minX());
         tag.putInt("BBy", boundingBox.minY());
         tag.putInt("BBz", boundingBox.minZ());
+        tag.putInt("BBFormat", BOUNDING_BOX_FORMAT);
         tag.putInt("BBw", boundingBox.getXSpan());
         tag.putInt("BBh", boundingBox.getYSpan());
         tag.putInt("BBd", boundingBox.getZSpan());
@@ -49,6 +63,7 @@ public class TemplePiece extends StructurePiece {
     public void postProcess(WorldGenLevel level, StructureManager manager, ChunkGenerator gen,
                             RandomSource random, BoundingBox box, ChunkPos chunkPos, BlockPos pos) {
         BlockPos center = new BlockPos(boundingBox.minX() + 16, boundingBox.minY() + 1, boundingBox.minZ() + 16);
-        TempleGenerator.generateTemple(level, center, templeType, random);
+        RandomSource structureRandom = RandomSource.create(center.asLong() ^ ((long) templeType.ordinal() << 48));
+        TempleGenerator.generateTemple(level, center, templeType, structureRandom, box);
     }
 }

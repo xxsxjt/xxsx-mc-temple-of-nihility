@@ -3,8 +3,8 @@ package com.templenihility.block;
 import com.mojang.serialization.MapCodec;
 import com.templenihility.blockentity.NihilityEnergyCellBlockEntity;
 import com.templenihility.init.ModBlockEntities;
+import com.templenihility.init.ModParticles;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
@@ -64,7 +64,7 @@ public class NihilityEnergyCellBlock extends BaseEntityBlock {
     @Override
     public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
         if (random.nextInt(5) == 0) {
-            level.addParticle(ParticleTypes.REVERSE_PORTAL,
+            level.addParticle(ModParticles.NIHILITY_MOTE.get(),
                 pos.getX() + 0.5 + (random.nextDouble() - 0.5) * 0.55,
                 pos.getY() + 0.68 + random.nextDouble() * 0.24,
                 pos.getZ() + 0.5 + (random.nextDouble() - 0.5) * 0.55,

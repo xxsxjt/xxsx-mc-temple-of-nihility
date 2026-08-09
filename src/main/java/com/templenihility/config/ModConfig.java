@@ -9,8 +9,6 @@ public class ModConfig {
     public static final ModConfigSpec.IntValue SHRINE_WEIGHT;
     public static final ModConfigSpec.IntValue TEMPLE_WEIGHT;
     public static final ModConfigSpec.IntValue COMPLEX_WEIGHT;
-    public static final ModConfigSpec.IntValue MIN_SPAWN_DISTANCE;
-    public static final ModConfigSpec.IntValue MAX_SPAWN_DISTANCE;
 
     // 生物配置
     public static final ModConfigSpec.IntValue BELIEVER_SPAWN_CHANCE;
@@ -22,6 +20,16 @@ public class ModConfig {
     // 交易配置
     public static final ModConfigSpec.DoubleValue TRADE_PRICE_MULTIPLIER;
     public static final ModConfigSpec.IntValue TRADE_COOLDOWN;
+
+    // 宝库配置
+    public static final ModConfigSpec.IntValue VAULT_MAX_NETWORK_BLOCKS;
+    public static final ModConfigSpec.IntValue VAULT_MAX_FORCED_CHUNKS;
+
+    // 传输配置
+    public static final ModConfigSpec.IntValue TRANSPORT_INTERVAL_TICKS;
+    public static final ModConfigSpec.IntValue TRANSPORT_ITEMS_PER_OPERATION;
+    public static final ModConfigSpec.IntValue TRANSPORT_FLUID_PER_OPERATION;
+    public static final ModConfigSpec.IntValue TRANSPORT_ENERGY_PER_OPERATION;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -39,14 +47,6 @@ public class ModConfig {
         COMPLEX_WEIGHT = builder
             .comment("圣殿群生成权重")
             .defineInRange("complex_weight", 10, 1, 100);
-
-        MIN_SPAWN_DISTANCE = builder
-            .comment("最小生成距离 (方块)")
-            .defineInRange("min_spawn_distance", 500, 100, 5000);
-
-        MAX_SPAWN_DISTANCE = builder
-            .comment("最大生成距离 (方块)")
-            .defineInRange("max_spawn_distance", 2000, 500, 10000);
 
         builder.pop();
 
@@ -83,6 +83,38 @@ public class ModConfig {
         TRADE_COOLDOWN = builder
             .comment("交易冷却时间 (tick)")
             .defineInRange("trade_cooldown", 20, 0, 200);
+
+        builder.pop();
+
+        builder.comment("虚空宝库安全配置").push("vault");
+
+        VAULT_MAX_NETWORK_BLOCKS = builder
+            .comment("单个相连宝库网络允许扫描的最大宝库方块数")
+            .defineInRange("max_network_blocks", 256, 1, 4096);
+
+        VAULT_MAX_FORCED_CHUNKS = builder
+            .comment("单个宝库网络允许常加载的最大区块数，设为 0 可禁用常加载")
+            .defineInRange("max_forced_chunks", 9, 0, 64);
+
+        builder.pop();
+
+        builder.comment("虚空传输核心性能与吞吐配置").push("transport");
+
+        TRANSPORT_INTERVAL_TICKS = builder
+            .comment("传输核心执行一次搬运的间隔 tick；20 tick 约为 1 秒")
+            .defineInRange("interval_ticks", 20, 5, 200);
+
+        TRANSPORT_ITEMS_PER_OPERATION = builder
+            .comment("每次搬运最多传输的物品数量")
+            .defineInRange("items_per_operation", 16, 1, 1024);
+
+        TRANSPORT_FLUID_PER_OPERATION = builder
+            .comment("每次搬运最多传输的流体量，单位 mB")
+            .defineInRange("fluid_per_operation", 250, 1, 64000);
+
+        TRANSPORT_ENERGY_PER_OPERATION = builder
+            .comment("每次搬运最多传输的 NeoForge 能量")
+            .defineInRange("energy_per_operation", 256, 1, 1000000);
 
         builder.pop();
 

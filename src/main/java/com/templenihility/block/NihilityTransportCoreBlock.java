@@ -3,12 +3,14 @@ package com.templenihility.block;
 import com.mojang.serialization.MapCodec;
 import com.templenihility.blockentity.NihilityTransportCoreBlockEntity;
 import com.templenihility.init.ModBlockEntities;
+import com.templenihility.init.ModParticles;
+import com.templenihility.menu.NihilityTransportCoreMenu;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -66,7 +68,7 @@ public class NihilityTransportCoreBlock extends BaseEntityBlock {
         if (random.nextInt(4) != 0) {
             return;
         }
-        level.addParticle(random.nextBoolean() ? ParticleTypes.PORTAL : ParticleTypes.ELECTRIC_SPARK,
+        level.addParticle(random.nextBoolean() ? ModParticles.NIHILITY_SHARD.get() : ModParticles.NIHILITY_RIPPLE.get(),
             pos.getX() + 0.5 + (random.nextDouble() - 0.5) * 0.62,
             pos.getY() + 0.5 + (random.nextDouble() - 0.5) * 0.62,
             pos.getZ() + 0.5 + (random.nextDouble() - 0.5) * 0.62,
@@ -76,12 +78,13 @@ public class NihilityTransportCoreBlock extends BaseEntityBlock {
     }
 
     private InteractionResult showStatus(Level level, BlockPos pos, Player player) {
-        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof NihilityTransportCoreBlockEntity core) {
-            player.sendSystemMessage(Component.translatable(
-                "message.templenihility.transport_core_status",
-                core.getLastItemMoved(),
-                core.getLastFluidMoved(),
-                core.getLastEnergyMoved()));
+        if (level.isClientSide()) {
+            return InteractionResult.SUCCESS;
+        }
+        if (level.getBlockEntity(pos) instanceof NihilityTransportCoreBlockEntity core) {
+            player.openMenu(new SimpleMenuProvider(
+                (id, inventory, p) -> new NihilityTransportCoreMenu(id, inventory, core),
+                Component.translatable("container.templenihility.nihility_transport_core")));
         }
         return InteractionResult.SUCCESS;
     }

@@ -3,13 +3,16 @@ package com.templenihility.menu;
 import com.templenihility.blockentity.NihilityVaultBlockEntity;
 import com.templenihility.init.ModMenus;
 import com.templenihility.storage.NihilityVaultNetwork;
+import com.templenihility.storage.VaultTransferPlanner;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -49,7 +52,7 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
     public static final int BUTTON_CLEAR_SEARCH = 3;
     public static final int BUTTON_TOGGLE_CHUNKLOAD = 4;
     public static final int BUTTON_TOGGLE_BREAK_PROTECTION = 5;
-    public static final int BUTTON_CHAR_BASE = 1000;
+    public static final int BUTTON_HELP = 6;
 
     private final List<NihilityVaultBlockEntity> vaults;
     private final TerminalViewContainer terminalContainer;
@@ -73,7 +76,6 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
         this.terminalContainer = new TerminalViewContainer(this);
         this.craftSlots = new TransientCraftingContainer(this, 3, 3);
 
-        rebuildAllRefs();
         rebuildView();
 
         for (int row = 0; row < STORAGE_ROWS; row++) {
@@ -112,12 +114,13 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
         }
         if (buttonId == BUTTON_CYCLE_SORT) {
             data[2] = (data[2] + 1) % 4;
-            setScrollOffset(0);
+            data[0] = 0;
+            rebuildView();
+            broadcastFullState();
             return true;
         }
         if (buttonId == BUTTON_CLEAR_SEARCH) {
-            search = "";
-            setScrollOffset(0);
+            setSearchQuery("");
             return true;
         }
         if (buttonId == BUTTON_TOGGLE_CHUNKLOAD) {
@@ -128,15 +131,25 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
             toggleBreakProtection(player);
             return true;
         }
-        if (buttonId >= BUTTON_CHAR_BASE) {
-            int codePoint = buttonId - BUTTON_CHAR_BASE;
-            if (codePoint > 0 && search.length() < 64) {
-                search += Character.toString((char) codePoint);
-                setScrollOffset(0);
-                return true;
-            }
+        if (buttonId == BUTTON_HELP) {
+            showHelp(player);
+            return true;
         }
         return super.clickMenuButton(player, buttonId);
+    }
+
+    public void setSearchQuery(String query) {
+        String safeQuery = query == null ? "" : query;
+        if (safeQuery.length() > 64) {
+            safeQuery = safeQuery.substring(0, 64);
+        }
+        if (safeQuery.equals(search)) {
+            return;
+        }
+        search = safeQuery;
+        data[0] = 0;
+        rebuildView();
+        broadcastFullState();
     }
 
     @Override
@@ -218,11 +231,25 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return vaults.isEmpty() || vaults.stream().anyMatch(vault -> !vault.isRemoved());
+        if (vaults.isEmpty()) {
+            return true;
+        }
+        for (NihilityVaultBlockEntity vault : vaults) {
+            if (vault.isRemoved()
+                || !(vault.getLevel() instanceof ServerLevel level)
+                || level.getBlockEntity(vault.getBlockPos()) != vault) {
+                return false;
+            }
+        }
+        return NihilityVaultNetwork.canAccess(vaults, player);
     }
 
     @Override
     public void clicked(int slotId, int button, ContainerInput input, Player player) {
+        if (input == ContainerInput.SWAP && isStorageSlot(slotId)) {
+            swapStorageStack(player, slotId, button);
+            return;
+        }
         if (input == ContainerInput.PICKUP && isStorageSlot(slotId) && (button == 0 || button == 1)) {
             ItemStack carried = getCarried();
             if (!carried.isEmpty()) {
@@ -236,11 +263,58 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
                         rebuildView();
                         broadcastFullState();
                     }
-                    return;
                 }
+                return;
             }
         }
         super.clicked(slotId, button, input, player);
+    }
+
+    private void swapStorageStack(Player player, int slotId, int inventorySlot) {
+        if (!(inventorySlot >= 0 && inventorySlot < 9 || inventorySlot == 40)) {
+            return;
+        }
+        StackGroup group = visibleGroup(slotId);
+        if (group == null) {
+            return;
+        }
+
+        Inventory inventory = player.getInventory();
+        ItemStack inventoryStack = inventory.getItem(inventorySlot);
+        if (!inventoryStack.isEmpty()
+            && !ItemStack.isSameItemSameComponents(inventoryStack, group.display())) {
+            return;
+        }
+        int capacity = inventoryStack.isEmpty()
+            ? group.display().getMaxStackSize()
+            : inventoryStack.getMaxStackSize() - inventoryStack.getCount();
+        if (capacity <= 0) {
+            return;
+        }
+
+        ItemStack removed = group.remove(capacity);
+        if (removed.isEmpty()) {
+            return;
+        }
+        ItemStack previous = inventoryStack.copy();
+        try {
+            if (inventoryStack.isEmpty()) {
+                inventory.setItem(inventorySlot, removed);
+            } else {
+                inventoryStack.grow(removed.getCount());
+            }
+            inventory.setChanged();
+        } catch (RuntimeException exception) {
+            inventory.setItem(inventorySlot, previous);
+            ItemStack rollback = removed.copy();
+            if (!insertIntoNetwork(rollback) || !rollback.isEmpty()) {
+                exception.addSuppressed(new IllegalStateException(
+                    "Failed to roll back a Void Vault hotbar transfer"));
+            }
+            throw exception;
+        }
+        rebuildView();
+        broadcastFullState();
     }
 
     public int getPage() {
@@ -342,8 +416,11 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
     }
 
     private void setScrollOffset(int offsetRows) {
-        data[0] = Math.max(0, Math.min(offsetRows, data[1]));
-        rebuildView();
+        int nextOffset = Math.max(0, Math.min(offsetRows, data[1]));
+        if (nextOffset == data[0]) {
+            return;
+        }
+        data[0] = nextOffset;
         broadcastFullState();
     }
 
@@ -353,7 +430,10 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
         }
 
         boolean enabled = !isNetworkChunkLoaded();
-        NihilityVaultNetwork.setNetworkChunkLoaded(level, vaults.getFirst().getBlockPos(), enabled);
+        if (!NihilityVaultNetwork.setNetworkChunkLoaded(
+            level, vaults.getFirst().getBlockPos(), player, enabled)) {
+            return;
+        }
         player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
             enabled ? "message.templenihility.vault_chunkload_on" : "message.templenihility.vault_chunkload_off",
             vaults.size()));
@@ -367,12 +447,26 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
         }
 
         boolean enabled = !isNetworkBreakProtected();
-        NihilityVaultNetwork.setNetworkBreakProtected(level, vaults.getFirst().getBlockPos(), enabled);
+        if (!NihilityVaultNetwork.setNetworkBreakProtected(
+            level, vaults.getFirst().getBlockPos(), player, enabled)) {
+            return;
+        }
         player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
             enabled ? "message.templenihility.vault_protection_on" : "message.templenihility.vault_protection_off",
             vaults.size()));
         rebuildView();
         broadcastFullState();
+    }
+
+    private void showHelp(Player player) {
+        player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
+            "message.templenihility.help_title"));
+        player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
+            "message.templenihility.help_vault"));
+        player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
+            "message.templenihility.help_terminal"));
+        player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
+            "message.templenihility.help_chunkload"));
     }
 
     private void rebuildAllRefs() {
@@ -386,6 +480,17 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
             }
             slotOffset += items.size();
         }
+    }
+
+    private boolean refsOutdated() {
+        int currentSlotCount = 0;
+        for (NihilityVaultBlockEntity vault : vaults) {
+            currentSlotCount += vault.getItems().size();
+        }
+        return currentSlotCount != allRefs.size();
+    }
+
+    private void refreshStats() {
         NihilityVaultNetwork.Stats stats = NihilityVaultNetwork.stats(vaults);
         data[3] = stats.vaultCount();
         data[4] = stats.totalSlots();
@@ -399,7 +504,10 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
     private void rebuildView() {
         rebuildingView = true;
         try {
-            rebuildAllRefs();
+            if (refsOutdated()) {
+                rebuildAllRefs();
+            }
+            refreshStats();
             viewGroups.clear();
             List<StackGroup> groups = buildGroups();
             String needle = search.toLowerCase(Locale.ROOT);
@@ -493,34 +601,68 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
             return false;
         }
 
-        int before = source.getCount();
-        for (SlotRef ref : allRefs) {
-            ItemStack existing = ref.get();
-            if (!existing.isEmpty() && ItemStack.isSameItemSameComponents(existing, source)) {
-                int moved = Math.min(existing.getMaxStackSize() - existing.getCount(), source.getCount());
-                if (moved > 0) {
-                    existing.grow(moved);
-                    source.shrink(moved);
-                    ref.vault.setChanged();
+        VaultTransferPlanner.Plan plan = VaultTransferPlanner.planInsert(
+            source.getCount(), allRefs.size(), new VaultTransferPlanner.InsertSlotAccess() {
+                @Override
+                public VaultTransferPlanner.SlotKind kind(int index) {
+                    ItemStack existing = allRefs.get(index).get();
+                    if (existing.isEmpty()) {
+                        return VaultTransferPlanner.SlotKind.EMPTY;
+                    }
+                    return ItemStack.isSameItemSameComponents(existing, source)
+                        ? VaultTransferPlanner.SlotKind.MATCHING
+                        : VaultTransferPlanner.SlotKind.BLOCKED;
                 }
-            }
-            if (source.isEmpty()) {
-                return true;
-            }
+
+                @Override
+                public int count(int index) {
+                    return allRefs.get(index).get().getCount();
+                }
+
+                @Override
+                public int maxCount(int index) {
+                    ItemStack existing = allRefs.get(index).get();
+                    return existing.isEmpty() ? source.getMaxStackSize() : existing.getMaxStackSize();
+                }
+            });
+        if (plan.moved() <= 0) {
+            return false;
         }
 
-        for (SlotRef ref : allRefs) {
-            if (ref.get().isEmpty()) {
-                int moved = Math.min(source.getMaxStackSize(), source.getCount());
-                ref.set(source.copyWithCount(moved));
-                source.shrink(moved);
-                ref.vault.setChanged();
+        int sourceCountBefore = source.getCount();
+        List<SlotMutationSnapshot> snapshots = new ArrayList<>();
+        Set<NihilityVaultBlockEntity> changedVaults = new HashSet<>();
+        try {
+            int applied = 0;
+            for (int index = 0; index < allRefs.size(); index++) {
+                int moved = plan.deltaAt(index);
+                if (moved <= 0) {
+                    continue;
+                }
+                SlotRef ref = allRefs.get(index);
+                ItemStack existing = ref.get();
+                snapshots.add(new SlotMutationSnapshot(ref, existing.copy()));
+                if (existing.isEmpty()) {
+                    ref.set(source.copyWithCount(moved));
+                } else {
+                    existing.grow(moved);
+                }
+                changedVaults.add(ref.vault());
+                applied += moved;
             }
-            if (source.isEmpty()) {
-                return true;
+            if (applied != plan.moved()) {
+                throw new IllegalStateException("Vault insertion plan was only partially applied");
             }
+            source.shrink(applied);
+        } catch (RuntimeException exception) {
+            for (SlotMutationSnapshot snapshot : snapshots) {
+                snapshot.ref().set(snapshot.stack().copy());
+            }
+            source.setCount(sourceCountBefore);
+            throw exception;
         }
-        return source.getCount() != before;
+        changedVaults.forEach(NihilityVaultBlockEntity::setChanged);
+        return true;
     }
 
     private static void updateCraftingResult(AbstractContainerMenu menu, ServerLevel level, Player player,
@@ -625,10 +767,7 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
                 clientStacks.set(slot, stack);
                 return;
             }
-            if (!stack.isEmpty()) {
-                ItemStack inserting = stack.copy();
-                menu.insertIntoNetwork(inserting);
-            }
+            // Aggregate slots are a read-only view. All server mutations use the menu's transaction paths.
             setChanged();
         }
 
@@ -660,6 +799,9 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
         }
     }
 
+    private record SlotMutationSnapshot(SlotRef ref, ItemStack stack) {
+    }
+
     private static final class StackGroup {
         private final ItemStack display;
         private final List<SlotRef> refs = new ArrayList<>();
@@ -689,34 +831,56 @@ public class NihilityTerminalMenu extends AbstractContainerMenu {
         }
 
         private ItemStack displayStack() {
-            return display.copyWithCount(Math.max(1, totalCount));
+            return display.copyWithCount(Math.min(display.getMaxStackSize(), Math.max(1, totalCount)));
         }
 
         private ItemStack remove(int amount) {
             if (amount <= 0 || totalCount <= 0) {
                 return ItemStack.EMPTY;
             }
-            int remaining = Math.min(amount, totalCount);
-            int removed = 0;
-            for (SlotRef ref : refs) {
-                ItemStack stack = ref.get();
-                if (stack.isEmpty()) {
-                    continue;
-                }
-                int taken = Math.min(remaining, stack.getCount());
-                stack.shrink(taken);
-                removed += taken;
-                remaining -= taken;
-                if (stack.isEmpty()) {
-                    ref.set(ItemStack.EMPTY);
-                }
-                ref.vault.setChanged();
-                if (remaining <= 0) {
-                    break;
-                }
+
+            VaultTransferPlanner.Plan plan = VaultTransferPlanner.planExtract(
+                Math.min(amount, totalCount), refs.size(), index -> {
+                    ItemStack stack = refs.get(index).get();
+                    return stack.isEmpty() || !ItemStack.isSameItemSameComponents(display, stack)
+                        ? 0
+                        : stack.getCount();
+                });
+            if (plan.moved() <= 0) {
+                return ItemStack.EMPTY;
             }
-            totalCount -= removed;
-            return removed <= 0 ? ItemStack.EMPTY : display.copyWithCount(removed);
+
+            List<SlotMutationSnapshot> snapshots = new ArrayList<>();
+            Set<NihilityVaultBlockEntity> changedVaults = new HashSet<>();
+            try {
+                int applied = 0;
+                for (int index = 0; index < refs.size(); index++) {
+                    int taken = plan.deltaAt(index);
+                    if (taken <= 0) {
+                        continue;
+                    }
+                    SlotRef ref = refs.get(index);
+                    ItemStack stack = ref.get();
+                    snapshots.add(new SlotMutationSnapshot(ref, stack.copy()));
+                    stack.shrink(taken);
+                    if (stack.isEmpty()) {
+                        ref.set(ItemStack.EMPTY);
+                    }
+                    changedVaults.add(ref.vault());
+                    applied += taken;
+                }
+                if (applied != plan.moved()) {
+                    throw new IllegalStateException("Vault extraction plan was only partially applied");
+                }
+            } catch (RuntimeException exception) {
+                for (SlotMutationSnapshot snapshot : snapshots) {
+                    snapshot.ref().set(snapshot.stack().copy());
+                }
+                throw exception;
+            }
+            changedVaults.forEach(NihilityVaultBlockEntity::setChanged);
+            totalCount = Math.max(0, totalCount - plan.moved());
+            return display.copyWithCount(plan.moved());
         }
     }
 }

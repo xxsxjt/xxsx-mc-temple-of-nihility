@@ -1,0 +1,11 @@
+{
+  "type": "templenihility:nihility_ritual",
+  "input": "templenihility:nihility_dust",
+  "input_count": 8,
+  "result": {
+    "id": "templenihility:nihility_shard",
+    "count": 1
+  },
+  "min_tier": 0,
+  "energy_cost": 0
+}

@@ -1,6 +1,7 @@
 package com.templenihility.item;
 
 import com.templenihility.energy.VoidPower;
+import com.templenihility.effect.VoidPhaseEvents;
 import com.templenihility.init.ModItems;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.damagesource.DamageSource;
@@ -34,6 +35,8 @@ public final class NihilityArmorEvents {
         if (!(event.getEntity() instanceof Player player)
             || player.level().isClientSide()
             || event.getAmount() <= 0.0F
+            || event.isCanceled()
+            || VoidPhaseEvents.hasFullPhase(player)
             || !hasFullSet(player)
             || !isAttack(event.getSource())) {
             return;

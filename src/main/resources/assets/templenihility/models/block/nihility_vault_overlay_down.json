@@ -2,7 +2,6 @@
   "textures": {
     "particle": "templenihility:block/nihility_vault_connected_side_nn",
     "link": {
-      "force_translucent": true,
       "sprite": "templenihility:block/nihility_vault_vertical_link"
     }
   },

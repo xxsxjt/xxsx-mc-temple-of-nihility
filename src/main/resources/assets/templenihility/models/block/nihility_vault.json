@@ -3,27 +3,21 @@
   "textures": {
     "particle": "templenihility:block/nihility_vault_side",
     "down": {
-      "force_translucent": true,
       "sprite": "templenihility:block/nihility_vault_bottom"
     },
     "up": {
-      "force_translucent": true,
       "sprite": "templenihility:block/nihility_vault_top"
     },
     "north": {
-      "force_translucent": true,
       "sprite": "templenihility:block/nihility_vault_front"
     },
     "south": {
-      "force_translucent": true,
       "sprite": "templenihility:block/nihility_vault_side"
     },
     "west": {
-      "force_translucent": true,
       "sprite": "templenihility:block/nihility_vault_side"
     },
     "east": {
-      "force_translucent": true,
       "sprite": "templenihility:block/nihility_vault_side"
     }
   },

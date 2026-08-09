@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "templenihility:nihility_stone",
+    "templenihility:nihility_shard",
+    "templenihility:nihility_dust"
+  ]
+}

@@ -3,6 +3,7 @@ package com.templenihility.compat;
 import com.templenihility.TempleNihilityMod;
 import com.templenihility.blockentity.NihilityEnergyCellBlockEntity;
 import com.templenihility.energy.VoidPower;
+import com.templenihility.effect.NihilityRelicEffects;
 import com.templenihility.init.ModEffects;
 import com.templenihility.init.ModItems;
 import com.templenihility.world.MagnetManager;
@@ -12,6 +13,7 @@ import java.util.Optional;
 import net.minecraft.network.chat.Component;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
@@ -21,8 +23,12 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import top.theillusivec4.curios.api.CurioAttributeModifiers;
 import top.theillusivec4.curios.api.CuriosApi;
@@ -31,6 +37,13 @@ import top.theillusivec4.curios.api.type.capability.ICurioItem;
 
 public final class CuriosCompat {
     private static boolean eventsRegistered;
+    private static final String STATE_PREFIX = TempleNihilityMod.MOD_ID + ".Curio.";
+    private static final String AEGIS_READY_AT = STATE_PREFIX + "AegisReadyAt";
+    private static final String RECOVERY_READY_AT = STATE_PREFIX + "RecoveryReadyAt";
+    private static final String SOUL_ANCHOR_READY_AT = STATE_PREFIX + "SoulAnchorReadyAt";
+    private static final String CROWN_READY_AT = STATE_PREFIX + "CrownReadyAt";
+    private static final String RIFT_RING_LAST_HIT = STATE_PREFIX + "RiftRingLastHit";
+    private static final String HOURGLASS_LAST_TICK = STATE_PREFIX + "HourglassLastTick";
 
     public static void register() {
         register(ModItems.NIHILITY_RING.get(), ring());
@@ -64,6 +77,9 @@ public final class CuriosCompat {
         if (!eventsRegistered) {
             NeoForge.EVENT_BUS.addListener(CuriosCompat::playerTick);
             NeoForge.EVENT_BUS.addListener(CuriosCompat::playerLoggedOut);
+            NeoForge.EVENT_BUS.addListener(CuriosCompat::incomingDamage);
+            NeoForge.EVENT_BUS.addListener(CuriosCompat::damagePost);
+            NeoForge.EVENT_BUS.addListener(CuriosCompat::livingDeath);
             eventsRegistered = true;
         }
         TempleNihilityMod.LOGGER.info("Temple of Nihility Curios integration loaded");
@@ -87,6 +103,10 @@ public final class CuriosCompat {
         return hasCurio(player, ModItems.NIHILITY_CONDUIT_CHARM.get());
     }
 
+    public static boolean hasTraderSeal(Player player) {
+        return hasCurio(player, ModItems.NIHILITY_TRADER_SEAL.get());
+    }
+
     private static void playerTick(PlayerTickEvent.Post event) {
         Player player = event.getEntity();
         if (player.level().isClientSide() || player.tickCount % 20 != 0) {
@@ -100,6 +120,119 @@ public final class CuriosCompat {
     private static void playerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         NihilityDynamicLight.clear(event.getEntity());
         MagnetManager.clear(event.getEntity());
+    }
+
+    private static void incomingDamage(LivingIncomingDamageEvent event) {
+        if (!(event.getEntity() instanceof Player player)
+            || event.isCanceled()
+            || player.level().isClientSide()
+            || event.getAmount() <= 0.0F) {
+            return;
+        }
+
+        if (hasCurio(player, ModItems.NIHILITY_ABYSS_MANTLE.get())
+            && (event.getSource().is(DamageTypeTags.IS_FIRE)
+                || event.getSource().is(DamageTypeTags.IS_FALL))) {
+            event.setCanceled(true);
+            event.setInvulnerabilityTicks(6);
+            player.clearFire();
+            player.resetFallDistance();
+            return;
+        }
+
+        if (hasCurio(player, ModItems.NIHILITY_WARD.get())) {
+            event.setAmount(event.getAmount() * 0.90F);
+        }
+
+        long now = player.level().getGameTime();
+        if (hasCurio(player, ModItems.NIHILITY_AEGIS_CHARM.get())
+            && player.getHealth() - event.getAmount() <= player.getMaxHealth() * 0.60F
+            && ready(player, AEGIS_READY_AT, now)) {
+            player.getPersistentData().putLong(AEGIS_READY_AT, now + 20L * 30L);
+            event.setAmount(event.getAmount() * 0.55F);
+            NihilityRelicEffects.grantSoulShield(player, 4.0F, 20 * 12);
+            notifyTriggered(player, "message.templenihility.nihility_aegis_charm",
+                NihilityVisualEffects.Burst.BARRIER);
+        }
+
+        if (hasCurio(player, ModItems.NIHILITY_RECOVERY_ORB.get())
+            && player.getHealth() - event.getAmount() <= player.getMaxHealth() * 0.30F
+            && ready(player, RECOVERY_READY_AT, now)) {
+            player.getPersistentData().putLong(RECOVERY_READY_AT, now + 20L * 90L);
+            player.heal(6.0F);
+            event.setAmount(event.getAmount() * 0.35F);
+            NihilityRelicEffects.grantSoulShield(player, 6.0F, 20 * 20);
+            notifyTriggered(player, "message.templenihility.nihility_recovery_orb",
+                NihilityVisualEffects.Burst.HEAL);
+        }
+    }
+
+    private static void damagePost(LivingDamageEvent.Post event) {
+        if (!(event.getSource().getEntity() instanceof Player attacker)
+            || attacker.level().isClientSide()
+            || event.getHealthDamage() <= 0.0F) {
+            return;
+        }
+
+        if (hasCurio(attacker, ModItems.NIHILITY_SIPHON_RING.get())) {
+            attacker.heal(Math.min(2.0F, event.getHealthDamage() * 0.18F));
+        }
+
+        long now = attacker.level().getGameTime();
+        if (hasCurio(attacker, ModItems.NIHILITY_RIFT_RING.get())
+            && ready(attacker, RIFT_RING_LAST_HIT, now)) {
+            attacker.getPersistentData().putLong(RIFT_RING_LAST_HIT, now + 10L);
+            LivingEntity target = event.getEntity();
+            Vec3 pull = attacker.position().subtract(target.position());
+            if (pull.lengthSqr() > 0.04) {
+                target.setDeltaMovement(target.getDeltaMovement().scale(0.65)
+                    .add(pull.normalize().scale(0.28)));
+                target.hurtMarked = true;
+            }
+            NihilityRelicEffects.markEcho(target, 40);
+            VoidPower.add(attacker, 1);
+        }
+    }
+
+    private static void livingDeath(LivingDeathEvent event) {
+        if (!(event.getEntity() instanceof Player player) || player.level().isClientSide()) {
+            return;
+        }
+
+        long now = player.level().getGameTime();
+        if (hasCurio(player, ModItems.NIHILITY_SOUL_ANCHOR.get())
+            && ready(player, SOUL_ANCHOR_READY_AT, now)) {
+            player.getPersistentData().putLong(SOUL_ANCHOR_READY_AT, now + 20L * 60L * 10L);
+            preventDeath(event, player, 8.0F, 10.0F,
+                "message.templenihility.nihility_soul_anchor");
+            return;
+        }
+
+        if (hasCurio(player, ModItems.NIHILITY_CROWN.get())
+            && ready(player, CROWN_READY_AT, now)
+            && VoidPower.tryConsume(player, 60)) {
+            player.getPersistentData().putLong(CROWN_READY_AT, now + 20L * 120L);
+            preventDeath(event, player, 6.0F, 8.0F,
+                "message.templenihility.nihility_crown");
+        }
+    }
+
+    private static void preventDeath(LivingDeathEvent event, Player player, float health,
+                                     float shield, String messageKey) {
+        event.setCanceled(true);
+        player.setHealth(Math.min(player.getMaxHealth(), health));
+        player.clearFire();
+        player.resetFallDistance();
+        player.invulnerableTime = 60;
+        NihilityRelicEffects.grantSoulShield(player, shield, 20 * 30);
+        NihilityVisualEffects.Burst burst = messageKey.equals("message.templenihility.nihility_crown")
+            ? NihilityVisualEffects.Burst.CHAOS
+            : NihilityVisualEffects.Burst.HEAL;
+        notifyTriggered(player, messageKey, burst);
+    }
+
+    private static boolean ready(Player player, String key, long now) {
+        return player.getPersistentData().getLongOr(key, 0L) <= now;
     }
 
     private static boolean hasLantern(Player player) {
@@ -170,8 +303,11 @@ public final class CuriosCompat {
             @Override
             public void curioTick(SlotContext slotContext, ItemStack stack) {
                 LivingEntity entity = slotContext.entity();
-                if (!entity.level().isClientSide() && entity.tickCount % 40 == 0) {
-                    entity.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 80, 0, true, false, true));
+                if (!entity.level().isClientSide() && entity.getDeltaMovement().y < -0.55) {
+                    Vec3 movement = entity.getDeltaMovement();
+                    entity.setDeltaMovement(movement.x, -0.55, movement.z);
+                    entity.hurtMarked = true;
+                    entity.resetFallDistance();
                 }
             }
 
@@ -188,14 +324,6 @@ public final class CuriosCompat {
 
     private static ICurioItem charm() {
         return new ICurioItem() {
-            @Override
-            public void curioTick(SlotContext slotContext, ItemStack stack) {
-                LivingEntity entity = slotContext.entity();
-                if (!entity.level().isClientSide() && entity.tickCount % 100 == 0) {
-                    entity.addEffect(new MobEffectInstance(MobEffects.LUCK, 220, 0, true, false, true));
-                }
-            }
-
             @Override
             public CurioAttributeModifiers getDefaultCurioAttributeModifiers(ItemStack stack) {
                 return CurioAttributeModifiers.EMPTY.withModifierAdded(
@@ -262,14 +390,6 @@ public final class CuriosCompat {
     private static ICurioItem ward() {
         return new ICurioItem() {
             @Override
-            public void curioTick(SlotContext slotContext, ItemStack stack) {
-                LivingEntity entity = slotContext.entity();
-                if (!entity.level().isClientSide() && entity.tickCount % 100 == 0) {
-                    entity.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 140, 0, true, false, true));
-                }
-            }
-
-            @Override
             public CurioAttributeModifiers getDefaultCurioAttributeModifiers(ItemStack stack) {
                 return CurioAttributeModifiers.EMPTY
                     .withModifierAdded(
@@ -310,29 +430,19 @@ public final class CuriosCompat {
             @Override
             public void curioTick(SlotContext slotContext, ItemStack stack) {
                 LivingEntity entity = slotContext.entity();
-                if (!entity.level().isClientSide() && entity.tickCount % 100 == 0) {
-                    entity.addEffect(new MobEffectInstance(MobEffects.HASTE, 140, 0, true, false, true));
-                    entity.addEffect(new MobEffectInstance(MobEffects.SPEED, 140, 0, true, false, true));
+                if (entity instanceof Player player && !entity.level().isClientSide() && entity.tickCount % 2 == 0) {
+                    long now = player.level().getGameTime();
+                    if (player.getPersistentData().getLongOr(HOURGLASS_LAST_TICK, -1L) != now) {
+                        player.getPersistentData().putLong(HOURGLASS_LAST_TICK, now);
+                        player.getCooldowns().tick();
+                    }
                 }
             }
         };
     }
 
     private static ICurioItem soulAnchor() {
-        return new ICurioItem() {
-            @Override
-            public void curioTick(SlotContext slotContext, ItemStack stack) {
-                LivingEntity entity = slotContext.entity();
-                if (!entity.level().isClientSide()
-                    && entity.tickCount % 160 == 0
-                    && entity.getHealth() <= entity.getMaxHealth() * 0.35f) {
-                    entity.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 20 * 12, 1, true, false, true));
-                    entity.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 20 * 8, 0, true, false, true));
-                    entity.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 20 * 5, 0, true, false, true));
-                    notifyTriggered(entity, "message.templenihility.nihility_soul_anchor", NihilityVisualEffects.Burst.BARRIER);
-                }
-            }
-        };
+        return new ICurioItem() {};
     }
 
     private static ICurioItem lantern() {
@@ -368,21 +478,7 @@ public final class CuriosCompat {
     }
 
     private static ICurioItem recoveryOrb() {
-        return new ICurioItem() {
-            @Override
-            public void curioTick(SlotContext slotContext, ItemStack stack) {
-                LivingEntity entity = slotContext.entity();
-                if (entity.level().isClientSide()
-                    || entity.tickCount % 160 != 0
-                    || entity.getHealth() > entity.getMaxHealth() * 0.55f) {
-                    return;
-                }
-
-                entity.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 20 * 6, 0, true, false, true));
-                entity.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 20 * 20, 0, true, false, true));
-                notifyTriggered(entity, "message.templenihility.nihility_recovery_orb", NihilityVisualEffects.Burst.HEAL);
-            }
-        };
+        return new ICurioItem() {};
     }
 
     private static ICurioItem riftRing() {
@@ -423,17 +519,6 @@ public final class CuriosCompat {
     private static ICurioItem aegisCharm() {
         return new ICurioItem() {
             @Override
-            public void curioTick(SlotContext slotContext, ItemStack stack) {
-                LivingEntity entity = slotContext.entity();
-                if (!entity.level().isClientSide()
-                    && entity.tickCount % 100 == 0
-                    && entity.getHealth() <= entity.getMaxHealth() * 0.6f) {
-                    entity.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 120, 0, true, false, true));
-                    notifyTriggered(entity, "message.templenihility.nihility_aegis_charm", NihilityVisualEffects.Burst.BARRIER);
-                }
-            }
-
-            @Override
             public CurioAttributeModifiers getDefaultCurioAttributeModifiers(ItemStack stack) {
                 return CurioAttributeModifiers.EMPTY
                     .withModifierAdded(
@@ -453,15 +538,6 @@ public final class CuriosCompat {
     private static ICurioItem wayfinder() {
         return new ICurioItem() {
             @Override
-            public void curioTick(SlotContext slotContext, ItemStack stack) {
-                LivingEntity entity = slotContext.entity();
-                if (!entity.level().isClientSide() && entity.tickCount % 100 == 0) {
-                    entity.addEffect(new MobEffectInstance(MobEffects.SPEED, 140, 0, true, false, true));
-                    entity.addEffect(new MobEffectInstance(MobEffects.LUCK, 140, 0, true, false, true));
-                }
-            }
-
-            @Override
             public CurioAttributeModifiers getDefaultCurioAttributeModifiers(ItemStack stack) {
                 return CurioAttributeModifiers.EMPTY
                     .withModifierAdded(
@@ -472,6 +548,16 @@ public final class CuriosCompat {
                     .withModifierAdded(
                         Attributes.MOVEMENT_SPEED,
                         new AttributeModifier(id("nihility_wayfinder_speed_belt"), 0.04, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL),
+                        "belt"
+                    )
+                    .withModifierAdded(
+                        Attributes.LUCK,
+                        new AttributeModifier(id("nihility_wayfinder_luck_charm"), 1.0, AttributeModifier.Operation.ADD_VALUE),
+                        "charm"
+                    )
+                    .withModifierAdded(
+                        Attributes.LUCK,
+                        new AttributeModifier(id("nihility_wayfinder_luck_belt"), 1.0, AttributeModifier.Operation.ADD_VALUE),
                         "belt"
                     );
             }
@@ -490,6 +576,7 @@ public final class CuriosCompat {
                         target -> target instanceof LivingEntity && target.isAlive())) {
                     if (nearby instanceof LivingEntity living && !(living instanceof Player)) {
                         living.addEffect(new MobEffectInstance(MobEffects.GLOWING, 120, 0, true, false, true));
+                        NihilityRelicEffects.markEcho(living, 120);
                     }
                 }
             }
@@ -498,16 +585,6 @@ public final class CuriosCompat {
 
     private static ICurioItem crown() {
         return new ICurioItem() {
-            @Override
-            public void curioTick(SlotContext slotContext, ItemStack stack) {
-                LivingEntity entity = slotContext.entity();
-                if (!entity.level().isClientSide() && entity.tickCount % 120 == 0 && entity.getHealth() <= entity.getMaxHealth() * 0.5f) {
-                    entity.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 120, 0, true, false, true));
-                    entity.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 80, 0, true, false, true));
-                    notifyTriggered(entity, "message.templenihility.nihility_crown", NihilityVisualEffects.Burst.HEAL);
-                }
-            }
-
             @Override
             public CurioAttributeModifiers getDefaultCurioAttributeModifiers(ItemStack stack) {
                 return CurioAttributeModifiers.EMPTY
@@ -530,9 +607,11 @@ public final class CuriosCompat {
             @Override
             public void curioTick(SlotContext slotContext, ItemStack stack) {
                 LivingEntity entity = slotContext.entity();
-                if (!entity.level().isClientSide() && entity.tickCount % 60 == 0) {
-                    entity.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 100, 0, true, false, true));
-                    entity.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 100, 0, true, false, true));
+                if (!entity.level().isClientSide() && entity.getDeltaMovement().y < -0.35) {
+                    Vec3 movement = entity.getDeltaMovement();
+                    entity.setDeltaMovement(movement.x, -0.35, movement.z);
+                    entity.hurtMarked = true;
+                    entity.resetFallDistance();
                 }
             }
 
@@ -556,14 +635,6 @@ public final class CuriosCompat {
     private static ICurioItem siphonRing() {
         return new ICurioItem() {
             @Override
-            public void curioTick(SlotContext slotContext, ItemStack stack) {
-                LivingEntity entity = slotContext.entity();
-                if (!entity.level().isClientSide() && entity.tickCount % 160 == 0 && entity.getHealth() < entity.getMaxHealth()) {
-                    entity.heal(1.0f);
-                }
-            }
-
-            @Override
             public CurioAttributeModifiers getDefaultCurioAttributeModifiers(ItemStack stack) {
                 return CurioAttributeModifiers.EMPTY
                     .withModifierAdded(
@@ -583,14 +654,6 @@ public final class CuriosCompat {
     private static ICurioItem pearlBelt() {
         return new ICurioItem() {
             @Override
-            public void curioTick(SlotContext slotContext, ItemStack stack) {
-                LivingEntity entity = slotContext.entity();
-                if (!entity.level().isClientSide() && entity.tickCount % 80 == 0) {
-                    entity.addEffect(new MobEffectInstance(MobEffects.JUMP_BOOST, 120, 0, true, false, true));
-                }
-            }
-
-            @Override
             public CurioAttributeModifiers getDefaultCurioAttributeModifiers(ItemStack stack) {
                 return CurioAttributeModifiers.EMPTY
                     .withModifierAdded(
@@ -601,6 +664,11 @@ public final class CuriosCompat {
                     .withModifierAdded(
                         Attributes.STEP_HEIGHT,
                         new AttributeModifier(id("nihility_pearl_belt_step"), 0.75, AttributeModifier.Operation.ADD_VALUE),
+                        "belt"
+                    )
+                    .withModifierAdded(
+                        Attributes.JUMP_STRENGTH,
+                        new AttributeModifier(id("nihility_pearl_belt_jump"), 0.12, AttributeModifier.Operation.ADD_VALUE),
                         "belt"
                     );
             }
@@ -619,7 +687,7 @@ public final class CuriosCompat {
                         target -> target instanceof LivingEntity && target.isAlive())) {
                     if (nearby instanceof LivingEntity living && !(living instanceof Player)) {
                         living.addEffect(new MobEffectInstance(MobEffects.GLOWING, 100, 0, true, false, true));
-                        living.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80, 0, true, false, true));
+                        NihilityRelicEffects.markBeacon(living, 100);
                     }
                 }
             }
@@ -628,14 +696,6 @@ public final class CuriosCompat {
 
     private static ICurioItem traderSeal() {
         return new ICurioItem() {
-            @Override
-            public void curioTick(SlotContext slotContext, ItemStack stack) {
-                LivingEntity entity = slotContext.entity();
-                if (!entity.level().isClientSide() && entity.tickCount % 120 == 0) {
-                    entity.addEffect(new MobEffectInstance(MobEffects.LUCK, 180, 1, true, false, true));
-                }
-            }
-
             @Override
             public CurioAttributeModifiers getDefaultCurioAttributeModifiers(ItemStack stack) {
                 return CurioAttributeModifiers.EMPTY.withModifierAdded(

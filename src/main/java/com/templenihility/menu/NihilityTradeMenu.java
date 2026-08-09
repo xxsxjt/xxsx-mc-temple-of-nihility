@@ -1,5 +1,6 @@
 package com.templenihility.menu;
 
+import com.templenihility.entity.NihilityCreature;
 import com.templenihility.init.ModMenus;
 import com.templenihility.trade.TradeManager;
 import com.templenihility.trade.TradeOffer;
@@ -16,14 +17,18 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 public class NihilityTradeMenu extends AbstractContainerMenu {
+    private static final double MAX_TRADING_DISTANCE_SQR = 8.0 * 8.0;
     public static final int PAYMENT_SLOT = 0;
-    public static final int RESULT_SLOT = 1;
-    public static final int PLAYER_INV_START = 2;
-    public static final int OFFERS_PER_PAGE = 4;
+    public static final int REQUIRED_SLOT = 1;
+    public static final int RESULT_SLOT = 2;
+    public static final int PLAYER_INV_START = 3;
+    public static final int OFFERS_PER_PAGE = 7;
     public static final int BUTTON_TRADE = 0;
-    public static final int BUTTON_PREV_PAGE = 1;
-    public static final int BUTTON_NEXT_PAGE = 2;
     public static final int BUTTON_SELECT_BASE = 100;
+    public static final int PAYMENT_SLOT_X = 136;
+    public static final int REQUIRED_SLOT_X = 162;
+    public static final int RESULT_SLOT_X = 220;
+    public static final int TRADE_SLOT_Y = 37;
 
     private final SimpleContainer payment = new SimpleContainer(1) {
         @Override
@@ -32,23 +37,31 @@ public class NihilityTradeMenu extends AbstractContainerMenu {
             updatePreview();
         }
     };
+    private final SimpleContainer required = new SimpleContainer(1);
     private final SimpleContainer result = new SimpleContainer(1);
     private final List<TradeOffer> offers;
-    private final int[] data = new int[4];
+    private final int[] data = new int[3];
+    private final int traderEntityId;
 
     public NihilityTradeMenu(int id, Inventory inventory, RegistryFriendlyByteBuf buffer) {
-        this(id, inventory, buffer.readVarInt());
+        this(id, inventory, buffer.readVarInt(), buffer.readVarInt());
     }
 
-    public NihilityTradeMenu(int id, Inventory inventory, int tier) {
+    public NihilityTradeMenu(int id, Inventory inventory, NihilityCreature trader) {
+        this(id, inventory, trader.getTier(), trader.getId());
+    }
+
+    private NihilityTradeMenu(int id, Inventory inventory, int tier, int traderEntityId) {
         super(ModMenus.NIHILITY_TRADE.get(), id);
+        this.traderEntityId = traderEntityId;
         data[0] = Math.max(1, Math.min(5, tier));
         this.offers = TradeManager.getOffersForTier(data[0]);
         data[1] = 0;
 
-        addSlot(new PaymentSlot(payment, 0, 34, 72, this));
-        addSlot(new ResultSlot(result, 0, 154, 72));
-        addStandardInventorySlots(inventory, 25, 120);
+        addSlot(new PaymentSlot(payment, 0, PAYMENT_SLOT_X, TRADE_SLOT_Y, this));
+        addSlot(new PreviewSlot(required, 0, REQUIRED_SLOT_X, TRADE_SLOT_Y));
+        addSlot(new PreviewSlot(result, 0, RESULT_SLOT_X, TRADE_SLOT_Y));
+        addStandardInventorySlots(inventory, 108, 84);
 
         for (int i = 0; i < data.length; i++) {
             addDataSlot(DataSlot.shared(data, i));
@@ -61,16 +74,8 @@ public class NihilityTradeMenu extends AbstractContainerMenu {
         if (buttonId == BUTTON_TRADE) {
             return trade(player);
         }
-        if (buttonId == BUTTON_PREV_PAGE) {
-            setPage(getPage() - 1);
-            return true;
-        }
-        if (buttonId == BUTTON_NEXT_PAGE) {
-            setPage(getPage() + 1);
-            return true;
-        }
         if (buttonId >= BUTTON_SELECT_BASE) {
-            int index = getPage() * OFFERS_PER_PAGE + buttonId - BUTTON_SELECT_BASE;
+            int index = buttonId - BUTTON_SELECT_BASE;
             if (index >= 0 && index < offers.size()) {
                 data[1] = index;
                 updatePreview();
@@ -119,13 +124,24 @@ public class NihilityTradeMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return true;
+        NihilityCreature trader = getTrader(player);
+        return trader != null && trader.isAlive() && !player.isSpectator()
+            && trader.canTradeWith(player)
+            && trader.distanceToSqr(player) <= MAX_TRADING_DISTANCE_SQR;
     }
 
     @Override
     public void removed(Player player) {
         super.removed(player);
         clearContainer(player, payment);
+        NihilityCreature trader = getTrader(player);
+        if (trader != null) {
+            trader.stopTrading(player);
+        }
+    }
+
+    public boolean isTrader(NihilityCreature creature) {
+        return creature != null && traderEntityId == creature.getId();
     }
 
     public int getTier() {
@@ -134,14 +150,6 @@ public class NihilityTradeMenu extends AbstractContainerMenu {
 
     public int getSelectedIndex() {
         return data[1];
-    }
-
-    public int getPage() {
-        return data[3];
-    }
-
-    public int getMaxPage() {
-        return Math.max(0, (offers.size() - 1) / OFFERS_PER_PAGE);
     }
 
     public boolean canTradeSelected() {
@@ -156,10 +164,6 @@ public class NihilityTradeMenu extends AbstractContainerMenu {
         return offers.get(index);
     }
 
-    public int getVisibleOfferIndex(int row) {
-        return getPage() * OFFERS_PER_PAGE + row;
-    }
-
     public TradeOffer getSelectedOffer() {
         if (offers.isEmpty()) {
             return null;
@@ -169,6 +173,11 @@ public class NihilityTradeMenu extends AbstractContainerMenu {
     }
 
     private boolean trade(Player player) {
+        NihilityCreature trader = getTrader(player);
+        if (trader == null || !stillValid(player) || !trader.checkTradeCooldown(player)) {
+            return false;
+        }
+
         TradeOffer offer = getSelectedOffer();
         if (offer == null) {
             return false;
@@ -194,6 +203,7 @@ public class NihilityTradeMenu extends AbstractContainerMenu {
         if (!player.getInventory().add(resultStack.copy())) {
             player.drop(resultStack.copy(), false);
         }
+        trader.markTradeCompleted(player);
         player.sendSystemMessage(Component.translatable(
             "message.templenihility.trade_success",
             cost.getCount(), cost.getHoverName(), resultStack.getCount(), resultStack.getHoverName()));
@@ -202,23 +212,18 @@ public class NihilityTradeMenu extends AbstractContainerMenu {
         return true;
     }
 
+    private NihilityCreature getTrader(Player player) {
+        return player.level().getEntity(traderEntityId) instanceof NihilityCreature trader ? trader : null;
+    }
+
     private boolean acceptsPayment(ItemStack stack) {
         TradeOffer offer = getSelectedOffer();
         return offer != null && ItemStack.isSameItemSameComponents(offer.getCost(), stack);
     }
 
-    private void setPage(int page) {
-        data[3] = Math.max(0, Math.min(page, getMaxPage()));
-        int first = data[3] * OFFERS_PER_PAGE;
-        if (data[1] < first || data[1] >= first + OFFERS_PER_PAGE || data[1] >= offers.size()) {
-            data[1] = Math.min(first, Math.max(0, offers.size() - 1));
-        }
-        updatePreview();
-        broadcastFullState();
-    }
-
     private void updatePreview() {
         TradeOffer offer = getSelectedOffer();
+        required.setItem(0, offer == null ? ItemStack.EMPTY : offer.getCost());
         result.setItem(0, offer == null ? ItemStack.EMPTY : offer.getResult());
         data[2] = offer != null && offer.canAfford(payment.getItem(0)) ? 1 : 0;
     }
@@ -237,8 +242,8 @@ public class NihilityTradeMenu extends AbstractContainerMenu {
         }
     }
 
-    private static final class ResultSlot extends Slot {
-        private ResultSlot(Container container, int slot, int x, int y) {
+    private static final class PreviewSlot extends Slot {
+        private PreviewSlot(Container container, int slot, int x, int y) {
             super(container, slot, x, y);
         }
 

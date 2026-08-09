@@ -1,6 +1,10 @@
 package com.templenihility.blockentity;
 
+import com.templenihility.TempleNihilityMod;
+import com.templenihility.block.NihilityVaultBlock;
 import com.templenihility.init.ModBlockEntities;
+import java.util.Optional;
+import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.server.level.ServerLevel;
@@ -20,6 +24,8 @@ public class NihilityVaultBlockEntity extends BlockEntity {
     private boolean chunkLoaded;
     private boolean breakProtected = true;
     private int capacityUpgrades;
+    private UUID owner;
+    private boolean legacyVanillaChunkTicket;
 
     public NihilityVaultBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.NIHILITY_VAULT.get(), pos, state);
@@ -43,6 +49,19 @@ public class NihilityVaultBlockEntity extends BlockEntity {
         }
         capacityUpgrades++;
         resizeItems(getCapacitySlots());
+        setChanged();
+        return true;
+    }
+
+    public Optional<UUID> getOwner() {
+        return Optional.ofNullable(owner);
+    }
+
+    public boolean claimOwner(UUID newOwner) {
+        if (owner != null) {
+            return false;
+        }
+        owner = newOwner;
         setChanged();
         return true;
     }
@@ -74,7 +93,13 @@ public class NihilityVaultBlockEntity extends BlockEntity {
         ContainerHelper.loadAllItems(input, items);
         chunkLoaded = input.getBooleanOr("ChunkLoaded", false);
         breakProtected = input.getBooleanOr("BreakProtected", true);
-        syncForcedChunk();
+        legacyVanillaChunkTicket = chunkLoaded && input.getIntOr("ChunkTicketFormat", 1) < 2;
+        String ownerText = input.getStringOr("Owner", "");
+        try {
+            owner = ownerText.isEmpty() ? null : UUID.fromString(ownerText);
+        } catch (IllegalArgumentException ignored) {
+            owner = null;
+        }
     }
 
     @Override
@@ -84,6 +109,25 @@ public class NihilityVaultBlockEntity extends BlockEntity {
         output.putBoolean("ChunkLoaded", chunkLoaded);
         output.putBoolean("BreakProtected", breakProtected);
         output.putInt("CapacityUpgrades", capacityUpgrades);
+        output.putInt("ChunkTicketFormat", 2);
+        if (owner != null) {
+            output.putString("Owner", owner.toString());
+        }
+    }
+
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level instanceof ServerLevel serverLevel) {
+            ChunkPos chunkPos = ChunkPos.containing(worldPosition);
+            if (legacyVanillaChunkTicket) {
+                serverLevel.setChunkForced(chunkPos.x(), chunkPos.z(), false);
+                legacyVanillaChunkTicket = false;
+                setChanged();
+            }
+            syncForcedChunk();
+            NihilityVaultBlock.refreshConnections(serverLevel, worldPosition);
+        }
     }
 
     private void resizeItems(int size) {
@@ -102,19 +146,7 @@ public class NihilityVaultBlockEntity extends BlockEntity {
             return;
         }
         ChunkPos chunkPos = ChunkPos.containing(worldPosition);
-        if (chunkLoaded || !hasOtherLoadedVaultInChunk(serverLevel, chunkPos)) {
-            serverLevel.setChunkForced(chunkPos.x(), chunkPos.z(), chunkLoaded);
-        }
-    }
-
-    private boolean hasOtherLoadedVaultInChunk(ServerLevel serverLevel, ChunkPos chunkPos) {
-        for (BlockEntity blockEntity : serverLevel.getChunk(chunkPos.x(), chunkPos.z()).getBlockEntities().values()) {
-            if (blockEntity != this
-                && blockEntity instanceof NihilityVaultBlockEntity vault
-                && vault.isChunkLoaded()) {
-                return true;
-            }
-        }
-        return false;
+        TempleNihilityMod.VAULT_CHUNK_TICKETS.forceChunk(
+            serverLevel, worldPosition, chunkPos.x(), chunkPos.z(), chunkLoaded, false);
     }
 }

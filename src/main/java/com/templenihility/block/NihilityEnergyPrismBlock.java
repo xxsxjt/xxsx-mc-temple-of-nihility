@@ -3,8 +3,8 @@ package com.templenihility.block;
 import com.mojang.serialization.MapCodec;
 import com.templenihility.blockentity.NihilityEnergyPrismBlockEntity;
 import com.templenihility.init.ModBlockEntities;
+import com.templenihility.init.ModParticles;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
@@ -66,7 +66,7 @@ public class NihilityEnergyPrismBlock extends BaseEntityBlock {
         if (random.nextInt(3) != 0) {
             return;
         }
-        level.addParticle(random.nextBoolean() ? ParticleTypes.END_ROD : ParticleTypes.ELECTRIC_SPARK,
+        level.addParticle(random.nextBoolean() ? ModParticles.NIHILITY_MOTE.get() : ModParticles.NIHILITY_RIPPLE.get(),
             pos.getX() + 0.5 + (random.nextDouble() - 0.5) * 0.35,
             pos.getY() + 1.02 + random.nextDouble() * 0.22,
             pos.getZ() + 0.5 + (random.nextDouble() - 0.5) * 0.35,
@@ -76,7 +76,9 @@ public class NihilityEnergyPrismBlock extends BaseEntityBlock {
     private InteractionResult showEnergy(Level level, BlockPos pos, Player player) {
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof NihilityEnergyPrismBlockEntity prism) {
             player.sendSystemMessage(Component.translatable(
-                "message.templenihility.energy_prism_status", prism.getEnergy(), NihilityEnergyPrismBlockEntity.MAX_BUFFER));
+                "message.templenihility.energy_prism_status",
+                prism.getEnergy(), NihilityEnergyPrismBlockEntity.MAX_BUFFER,
+                prism.getOpenFaceCount(level, pos), prism.getGenerationPerSecond(level, pos)));
         }
         return InteractionResult.SUCCESS;
     }

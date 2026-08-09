@@ -1,6 +1,9 @@
 package com.templenihility.item;
 
 import com.templenihility.blockentity.NihilityVaultBlockEntity;
+import com.templenihility.action.NihilityActionService;
+import com.templenihility.compat.CuriosCompat;
+import com.templenihility.init.ModItems;
 import com.templenihility.storage.NihilityVaultNetwork;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -20,6 +23,7 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
+import net.neoforged.fml.ModList;
 
 public class NihilityTerminalItem extends Item {
     private static final String TAG_DIMENSION = "VaultDimension";
@@ -40,6 +44,9 @@ public class NihilityTerminalItem extends Item {
         }
 
         if (!level.isClientSide()) {
+            if (!NihilityVaultNetwork.prepareAccess((ServerLevel) level, pos, player)) {
+                return InteractionResult.SUCCESS;
+            }
             bind(stack, level, pos);
             player.sendSystemMessage(Component.translatable("message.templenihility.terminal_bound",
                 pos.getX(), pos.getY(), pos.getZ()));
@@ -51,7 +58,7 @@ public class NihilityTerminalItem extends Item {
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (!level.isClientSide()) {
-            openBoundVault(player, stack);
+            NihilityActionService.openBoundTerminal(player, stack);
         }
         return InteractionResult.SUCCESS;
     }
@@ -96,6 +103,19 @@ public class NihilityTerminalItem extends Item {
             return false;
         }
         return NihilityVaultNetwork.open(serverLevel, pos, player);
+    }
+
+    public static Optional<ItemStack> findAvailableTerminal(Player player) {
+        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+            ItemStack stack = player.getInventory().getItem(slot);
+            if (stack.is(ModItems.NIHILITY_TERMINAL.get())) {
+                return Optional.of(stack);
+            }
+        }
+        if (ModList.get().isLoaded("curios")) {
+            return CuriosCompat.findTerminal(player);
+        }
+        return Optional.empty();
     }
 
     public static boolean isBound(ItemStack stack) {

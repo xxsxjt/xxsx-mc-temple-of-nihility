@@ -2,14 +2,15 @@ package com.templenihility.blockentity;
 
 import com.templenihility.init.ModBlockEntities;
 import com.templenihility.init.ModBlocks;
-import com.templenihility.init.ModItems;
+import com.templenihility.init.ModParticles;
 import com.templenihility.energy.VoidPower;
-import java.util.List;
+import com.templenihility.ritual.NihilityRitualRecipe;
+import com.templenihility.ritual.NihilityRitualService;
+import com.templenihility.ritual.RitualExecutionPolicy.Status;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.particles.ParticleOptions;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -17,7 +18,6 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -57,42 +57,22 @@ public class NihilityAltarBlockEntity extends BlockEntity implements Container {
     public boolean performRitual(Player player) {
         StructureInfo info = refreshStructure();
         ItemStack input = items.get(INPUT_SLOT);
-        if (input.isEmpty()) {
-            player.sendSystemMessage(Component.translatable("message.templenihility.altar_no_input"));
-            playFailureEffects(info);
-            return false;
-        }
-
-        RitualRecipe recipe = findRecipe(input, info.tier());
-        if (recipe == null) {
-            RitualRecipe known = findRecipeIgnoringTier(input);
-            if (known != null && known.minTier() > info.tier()) {
-                player.sendSystemMessage(Component.translatable("message.templenihility.altar_structure_too_weak",
-                    Component.translatable(tierNameKey(known.minTier()))));
-            } else if (known != null && input.getCount() < known.inputCount()) {
-                player.sendSystemMessage(Component.translatable("message.templenihility.altar_not_enough",
-                    known.inputCount(), input.getHoverName()));
-            } else {
-                player.sendSystemMessage(Component.translatable("message.templenihility.altar_no_recipe"));
-            }
-            playFailureEffects(info);
-            return false;
-        }
-
-        ItemStack result = recipe.result().copy();
         ItemStack output = items.get(OUTPUT_SLOT);
-        if (!output.isEmpty()) {
-            if (!ItemStack.isSameItemSameComponents(output, result)
-                || output.getCount() + result.getCount() > output.getMaxStackSize()) {
-                player.sendSystemMessage(Component.translatable("message.templenihility.altar_output_blocked"));
-                playFailureEffects(info);
-                return false;
-            }
+        if (level == null) {
+            return false;
+        }
+        NihilityRitualService.RitualPlan plan = NihilityRitualService.inspect(
+            level, input, output, info.tier(), VoidPower.get(player));
+        if (plan.status() != Status.READY) {
+            sendBlockedReason(player, plan);
+            playFailureEffects(info);
+            return false;
         }
 
+        NihilityRitualRecipe recipe = plan.requiredRecipe();
+        ItemStack result = recipe.result().copy();
         if (!VoidPower.tryConsume(player, recipe.energyCost())) {
-            player.sendSystemMessage(Component.translatable(
-                "message.templenihility.not_enough_void_power",
+            player.sendSystemMessage(Component.translatable("message.templenihility.not_enough_void_power",
                 recipe.energyCost(), VoidPower.get(player), VoidPower.getMax(player)));
             playFailureEffects(info);
             return false;
@@ -117,6 +97,26 @@ public class NihilityAltarBlockEntity extends BlockEntity implements Container {
                 "message.templenihility.altar_energy_spent", recipe.energyCost(), VoidPower.get(player), VoidPower.getMax(player)));
         }
         return true;
+    }
+
+    private void sendBlockedReason(Player player, NihilityRitualService.RitualPlan plan) {
+        NihilityRitualRecipe recipe = plan.recipe().map(holder -> holder.value()).orElse(null);
+        switch (plan.status()) {
+            case NO_INPUT -> player.sendSystemMessage(Component.translatable("message.templenihility.altar_no_input"));
+            case NO_RECIPE -> player.sendSystemMessage(Component.translatable("message.templenihility.altar_no_recipe"));
+            case NOT_ENOUGH_INPUT -> player.sendSystemMessage(Component.translatable(
+                "message.templenihility.altar_not_enough", recipe.inputCount(), items.get(INPUT_SLOT).getHoverName()));
+            case TIER_TOO_LOW -> player.sendSystemMessage(Component.translatable(
+                "message.templenihility.altar_structure_too_weak",
+                Component.translatable(tierNameKey(recipe.minTier()))));
+            case OUTPUT_BLOCKED -> player.sendSystemMessage(Component.translatable(
+                "message.templenihility.altar_output_blocked"));
+            case NOT_ENOUGH_ENERGY -> player.sendSystemMessage(Component.translatable(
+                "message.templenihility.not_enough_void_power",
+                recipe.energyCost(), VoidPower.get(player), VoidPower.getMax(player)));
+            case READY -> {
+            }
+        }
     }
 
     public static String tierNameKey(int tier) {
@@ -188,12 +188,12 @@ public class NihilityAltarBlockEntity extends BlockEntity implements Container {
         double cy = worldPosition.getY() + 1.05;
         double cz = worldPosition.getZ() + 0.5;
         if (info.tier() <= 0) {
-            serverLevel.sendParticles(ParticleTypes.SMOKE, cx, cy, cz, 8, 0.25, 0.12, 0.25, 0.01);
+            serverLevel.sendParticles(ModParticles.NIHILITY_SHARD.get(), cx, cy, cz, 8, 0.25, 0.12, 0.25, 0.01);
             level.playSound(null, worldPosition, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 0.35F, 0.65F);
             return;
         }
 
-        serverLevel.sendParticles(ParticleTypes.ENCHANT, cx, cy, cz, 18 + info.tier() * 6, 0.35, 0.18, 0.35, 0.02);
+        serverLevel.sendParticles(ModParticles.NIHILITY_MOTE.get(), cx, cy, cz, 12 + info.tier() * 4, 0.35, 0.18, 0.35, 0.015);
         spawnComponentPulses(serverLevel, info, false);
         level.playSound(null, worldPosition, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.45F, 0.85F + info.tier() * 0.12F);
     }
@@ -206,10 +206,10 @@ public class NihilityAltarBlockEntity extends BlockEntity implements Container {
         double cx = worldPosition.getX() + 0.5;
         double cy = worldPosition.getY() + 1.05;
         double cz = worldPosition.getZ() + 0.5;
-        serverLevel.sendParticles(ParticleTypes.SMOKE, cx, cy, cz, 16, 0.35, 0.18, 0.35, 0.015);
-        serverLevel.sendParticles(ParticleTypes.WITCH, cx, cy + 0.1, cz, 8, 0.22, 0.10, 0.22, 0.02);
+        serverLevel.sendParticles(ModParticles.NIHILITY_SHARD.get(), cx, cy, cz, 16, 0.35, 0.18, 0.35, 0.015);
+        serverLevel.sendParticles(ModParticles.NIHILITY_RIPPLE.get(), cx, cy + 0.1, cz, 8, 0.22, 0.10, 0.22, 0.012);
         if (info.tier() > 0) {
-            spawnRing(serverLevel, 1.15 + info.tier() * 0.45, ParticleTypes.REVERSE_PORTAL, 18, 0.0);
+            spawnRing(serverLevel, 1.15 + info.tier() * 0.45, ModParticles.NIHILITY_RIPPLE.get(), 18, 0.0);
         }
         level.playSound(null, worldPosition, SoundEvents.VAULT_INSERT_ITEM_FAIL, SoundSource.BLOCKS, 0.65F, 0.78F);
         level.playSound(null, worldPosition, SoundEvents.AMETHYST_BLOCK_HIT, SoundSource.BLOCKS, 0.55F, 0.55F);
@@ -224,16 +224,16 @@ public class NihilityAltarBlockEntity extends BlockEntity implements Container {
         double cy = worldPosition.getY() + 1.0;
         double cz = worldPosition.getZ() + 0.5;
         int tier = Math.max(0, info.tier());
-        serverLevel.sendParticles(ParticleTypes.END_ROD, cx, cy + 0.45, cz, 18 + tier * 8, 0.22, 0.35, 0.22, 0.04);
-        serverLevel.sendParticles(ParticleTypes.PORTAL, cx, cy + 0.25, cz, 36 + tier * 18, 0.55 + tier * 0.15, 0.28, 0.55 + tier * 0.15, 0.16);
-        serverLevel.sendParticles(ParticleTypes.ENCHANT, cx, cy + 0.65, cz, 32 + tier * 12, 0.65, 0.35, 0.65, 0.05);
+        serverLevel.sendParticles(ModParticles.NIHILITY_MOTE.get(), cx, cy + 0.45, cz, 18 + tier * 8, 0.22, 0.35, 0.22, 0.04);
+        serverLevel.sendParticles(ModParticles.NIHILITY_SHARD.get(), cx, cy + 0.25, cz, 24 + tier * 12, 0.55 + tier * 0.15, 0.28, 0.55 + tier * 0.15, 0.018);
+        serverLevel.sendParticles(ModParticles.NIHILITY_RIPPLE.get(), cx, cy + 0.65, cz, 18 + tier * 8, 0.65, 0.35, 0.65, 0.018);
         spawnVerticalSpiral(serverLevel, tier);
-        spawnRing(serverLevel, 1.15, ParticleTypes.ENCHANT, 32, 0.03);
+        spawnRing(serverLevel, 1.15, ModParticles.NIHILITY_MOTE.get(), 24, 0.022);
         if (tier >= 2) {
-            spawnRing(serverLevel, 1.75, ParticleTypes.SOUL_FIRE_FLAME, 44, 0.02);
+            spawnRing(serverLevel, 1.75, ModParticles.NIHILITY_RIPPLE.get(), 32, 0.018);
         }
         if (tier >= 3) {
-            spawnRing(serverLevel, 2.55, ParticleTypes.ELECTRIC_SPARK, 56, 0.035);
+            spawnRing(serverLevel, 2.55, ModParticles.NIHILITY_SHARD.get(), 56, 0.035);
         }
         spawnComponentPulses(serverLevel, info, true);
 
@@ -257,7 +257,7 @@ public class NihilityAltarBlockEntity extends BlockEntity implements Container {
             double x = cx + Math.cos(angle) * radius;
             double y = worldPosition.getY() + 0.35 + i * 0.045;
             double z = cz + Math.sin(angle) * radius;
-            serverLevel.sendParticles(i % 3 == 0 ? ParticleTypes.END_ROD : ParticleTypes.REVERSE_PORTAL,
+            serverLevel.sendParticles(i % 3 == 0 ? ModParticles.NIHILITY_MOTE.get() : ModParticles.NIHILITY_SHARD.get(),
                 x, y, z, 1, 0.015, 0.015, 0.015, 0.01);
         }
     }
@@ -280,14 +280,14 @@ public class NihilityAltarBlockEntity extends BlockEntity implements Container {
         for (Direction direction : Direction.Plane.HORIZONTAL) {
             BlockPos rune = worldPosition.relative(direction);
             if (level.getBlockState(rune).is(ModBlocks.NIHILITY_RUNE_BRICKS.get())) {
-                pulseBlock(serverLevel, rune, strong ? ParticleTypes.ENCHANT : ParticleTypes.REVERSE_PORTAL, strong ? 8 : 3);
+                pulseBlock(serverLevel, rune, strong ? ModParticles.NIHILITY_MOTE.get() : ModParticles.NIHILITY_SHARD.get(), strong ? 8 : 3);
             }
 
             BlockPos pillar = worldPosition.relative(direction, 2);
             if (info.tier() >= 3 && level.getBlockState(pillar).is(ModBlocks.NIHILITY_PILLAR.get())) {
-                pulseBlock(serverLevel, pillar, ParticleTypes.ELECTRIC_SPARK, strong ? 10 : 4);
+                pulseBlock(serverLevel, pillar, ModParticles.NIHILITY_RIPPLE.get(), strong ? 10 : 4);
                 if (strong) {
-                    drawParticleLine(serverLevel, pillar, ParticleTypes.ELECTRIC_SPARK);
+                    drawParticleLine(serverLevel, pillar, ModParticles.NIHILITY_RIPPLE.get());
                 }
             }
         }
@@ -296,9 +296,9 @@ public class NihilityAltarBlockEntity extends BlockEntity implements Container {
             for (int dz : new int[] {-1, 1}) {
                 BlockPos crystal = worldPosition.offset(dx, 0, dz);
                 if (info.tier() >= 2 && level.getBlockState(crystal).is(ModBlocks.NIHILITY_CRYSTAL_BLOCK.get())) {
-                    pulseBlock(serverLevel, crystal, ParticleTypes.SOUL_FIRE_FLAME, strong ? 10 : 4);
+                    pulseBlock(serverLevel, crystal, ModParticles.NIHILITY_RIPPLE.get(), strong ? 10 : 4);
                     if (strong) {
-                        drawParticleLine(serverLevel, crystal, ParticleTypes.SOUL);
+                        drawParticleLine(serverLevel, crystal, ModParticles.NIHILITY_MOTE.get());
                     }
                 }
             }
@@ -308,7 +308,7 @@ public class NihilityAltarBlockEntity extends BlockEntity implements Container {
             for (int dz : new int[] {-2, 2}) {
                 BlockPos chiseled = worldPosition.offset(dx, 0, dz);
                 if (info.tier() >= 3 && level.getBlockState(chiseled).is(ModBlocks.CHISELED_NIHILITY_STONE.get())) {
-                    pulseBlock(serverLevel, chiseled, ParticleTypes.PORTAL, strong ? 12 : 5);
+                    pulseBlock(serverLevel, chiseled, ModParticles.NIHILITY_SHARD.get(), strong ? 12 : 5);
                 }
             }
         }
@@ -334,36 +334,6 @@ public class NihilityAltarBlockEntity extends BlockEntity implements Container {
             double z = az + (bz - az) * t;
             serverLevel.sendParticles(particle, x, y, z, 1, 0.01, 0.01, 0.01, 0.01);
         }
-    }
-
-    private static RitualRecipe findRecipe(ItemStack stack, int tier) {
-        for (RitualRecipe recipe : recipes()) {
-            if (stack.is(recipe.input()) && stack.getCount() >= recipe.inputCount() && tier >= recipe.minTier()) {
-                return recipe;
-            }
-        }
-        return null;
-    }
-
-    private static RitualRecipe findRecipeIgnoringTier(ItemStack stack) {
-        for (RitualRecipe recipe : recipes()) {
-            if (stack.is(recipe.input())) {
-                return recipe;
-            }
-        }
-        return null;
-    }
-
-    private static List<RitualRecipe> recipes() {
-        return List.of(
-            new RitualRecipe(ModItems.NIHILITY_DUST.get(), 8, new ItemStack(ModItems.NIHILITY_SHARD.get()), 0, 0),
-            new RitualRecipe(ModItems.NIHILITY_SHARD.get(), 4, new ItemStack(ModItems.NIHILITY_CRYSTAL.get()), 1, 3),
-            new RitualRecipe(ModItems.NIHILITY_CRYSTAL.get(), 4, new ItemStack(ModItems.NIHILITY_RUNE.get()), 1, 6),
-            new RitualRecipe(ModItems.NIHILITY_RUNE.get(), 4, new ItemStack(ModItems.TEMPLE_SEAL.get()), 2, 10),
-            new RitualRecipe(ModItems.TEMPLE_SEAL.get(), 4, new ItemStack(ModItems.NIHILITY_CORE.get()), 2, 16),
-            new RitualRecipe(ModItems.NIHILITY_CORE.get(), 4, new ItemStack(ModItems.NIHILITY_RESONANCE_CORE.get()), 3, 24),
-            new RitualRecipe(ModItems.NIHILITY_RELIC_FRAGMENT.get(), 8, new ItemStack(ModItems.TEMPLE_SEAL.get()), 3, 20)
-        );
     }
 
     @Override
@@ -429,6 +399,4 @@ public class NihilityAltarBlockEntity extends BlockEntity implements Container {
     public record StructureInfo(int tier, int runes, int crystals, int pillars, int chiseled) {
     }
 
-    private record RitualRecipe(Item input, int inputCount, ItemStack result, int minTier, int energyCost) {
-    }
 }

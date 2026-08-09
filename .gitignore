@@ -11,6 +11,7 @@ src/generated/
 # Local backups and generated previews
 _backup*/
 _agnes_raw/
+_image2_raw/
 _preview*.png
 _debug*.png
 temp/
@@ -28,3 +29,6 @@ generate_entity_textures.py
 *.tmp
 .DS_Store
 Thumbs.db
+
+# Minecraft runtime dirs (local, not versioned)
+runs/

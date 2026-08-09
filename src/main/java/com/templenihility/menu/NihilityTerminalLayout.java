@@ -38,6 +38,9 @@ public final class NihilityTerminalLayout {
     public static final int HELP_BUTTON_WIDTH = 12;
     public static final int HELP_BUTTON_HEIGHT = 11;
 
+    public static final int SETTINGS_LABEL_X = 184;
+    public static final int SETTINGS_LABEL_Y = 4;
+
     public static final int STORAGE_X = 8;
     public static final int STORAGE_Y = 55;
     public static final int SLOT_STEP = 18;
@@ -52,6 +55,8 @@ public final class NihilityTerminalLayout {
     public static final int CRAFT_GRID_Y = 94;
     public static final int CRAFT_RESULT_X = 199;
     public static final int CRAFT_RESULT_Y = 164;
+    public static final int CRAFTING_LABEL_X = 181;
+    public static final int CRAFTING_LABEL_Y = 83;
 
     public static final int PLAYER_INV_X = 8;
     public static final int PLAYER_INV_Y = 149;
@@ -98,7 +103,7 @@ public final class NihilityTerminalLayout {
     public static final int BOTTOM_GLOW_WIDTH = IMAGE_WIDTH - 24;
     public static final int BOTTOM_GLOW_HEIGHT = 2;
 
-    public static final int SHARD_ATLAS_WIDTH = 128;
+    public static final int SHARD_ATLAS_WIDTH = 64;
     public static final int SHARD_ATLAS_HEIGHT = 64;
 
     public static final int SHARD_LEFT_TOP_X = -27;

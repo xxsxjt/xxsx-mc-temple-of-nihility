@@ -3,6 +3,7 @@ package com.templenihility.init;
 import com.templenihility.TempleNihilityMod;
 import com.templenihility.menu.NihilityAltarMenu;
 import com.templenihility.menu.NihilityTerminalMenu;
+import com.templenihility.menu.NihilityTransportCoreMenu;
 import com.templenihility.menu.NihilityTradeMenu;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
@@ -23,6 +24,9 @@ public final class ModMenus {
 
     public static final DeferredHolder<MenuType<?>, MenuType<NihilityAltarMenu>> NIHILITY_ALTAR =
         MENUS.register("nihility_altar", () -> IMenuTypeExtension.create(NihilityAltarMenu::new));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<NihilityTransportCoreMenu>> NIHILITY_TRANSPORT_CORE =
+        MENUS.register("nihility_transport_core", () -> IMenuTypeExtension.create(NihilityTransportCoreMenu::new));
 
     public static void register(IEventBus bus) {
         MENUS.register(bus);

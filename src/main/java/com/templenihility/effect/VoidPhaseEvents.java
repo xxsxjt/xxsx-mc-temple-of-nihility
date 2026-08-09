@@ -3,10 +3,14 @@ package com.templenihility.effect;
 import com.templenihility.TempleNihilityMod;
 import com.templenihility.init.ModEffects;
 import com.templenihility.world.NihilityVisualEffects;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 import net.minecraft.network.chat.Component;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -18,6 +22,7 @@ import net.neoforged.neoforge.event.entity.ProjectileImpactEvent;
 import net.neoforged.neoforge.event.entity.living.LivingChangeTargetEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
@@ -26,19 +31,31 @@ public final class VoidPhaseEvents {
     private static final String PREV_MAYFLY_KEY = TempleNihilityMod.MOD_ID + ".VoidPhasePrevMayfly";
     private static final String PREV_FLYING_KEY = TempleNihilityMod.MOD_ID + ".VoidPhasePrevFlying";
     private static final String PREV_NO_GRAVITY_KEY = TempleNihilityMod.MOD_ID + ".VoidPhasePrevNoGravity";
+    private static final String PREV_NO_PHYSICS_KEY = TempleNihilityMod.MOD_ID + ".VoidPhasePrevNoPhysics";
+    private static final String PREV_INVISIBLE_KEY = TempleNihilityMod.MOD_ID + ".VoidPhasePrevInvisible";
+    private static final Set<UUID> CLIENT_PHASED_PLAYERS = new HashSet<>();
 
     public static void playerTick(PlayerTickEvent.Post event) {
         Player player = event.getEntity();
         boolean fullPhase = hasFullPhase(player);
         boolean weakPhase = player.hasEffect(ModEffects.HIDDEN_IN_NIHILITY);
 
+        if (player.level().isClientSide()) {
+            updateClientCollisionState(player, fullPhase);
+            if (fullPhase || weakPhase) {
+                player.clearFire();
+                player.resetFallDistance();
+            }
+            return;
+        }
+
         if (fullPhase) {
             if (!isPhaseActive(player)) {
                 rememberAbilities(player);
             }
-            applyFullPhase(player);
+            applyServerFullPhase(player);
             clearNearbyMobTargets(player);
-            if (!player.level().isClientSide() && player.tickCount % 8 == 0) {
+            if (player.tickCount % 8 == 0) {
                 NihilityVisualEffects.voidPhaseTrail(player);
             }
         } else if (isPhaseActive(player)) {
@@ -88,12 +105,10 @@ public final class VoidPhaseEvents {
 
     public static void attackEntity(AttackEntityEvent event) {
         Player player = event.getEntity();
-        if (player.hasEffect(ModEffects.INTO_NIHILITY)) {
+        if (!player.level().isClientSide() && player.hasEffect(ModEffects.INTO_NIHILITY)) {
             player.removeEffect(ModEffects.INTO_NIHILITY);
             restoreAbilities(player);
-            if (!player.level().isClientSide()) {
-                player.sendOverlayMessage(Component.translatable("message.templenihility.into_nihility_broken"));
-            }
+            player.sendOverlayMessage(Component.translatable("message.templenihility.into_nihility_broken"));
         }
 
         if (event.getTarget() instanceof Player target && hasFullPhase(target)) {
@@ -128,13 +143,51 @@ public final class VoidPhaseEvents {
             || player.hasEffect(ModEffects.MELT_INTO_NIHILITY);
     }
 
-    private static void applyFullPhase(Player player) {
+    public static void playerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        resetServerSnapshot(event.getEntity());
+    }
+
+    public static void playerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        resetServerSnapshot(event.getEntity());
+        CLIENT_PHASED_PLAYERS.remove(event.getEntity().getUUID());
+    }
+
+    public static void playerRespawn(PlayerEvent.PlayerRespawnEvent event) {
+        resetServerSnapshot(event.getEntity());
+    }
+
+    public static void playerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+        resetServerSnapshot(event.getEntity());
+    }
+
+    public static void playerChangeGameMode(PlayerEvent.PlayerChangeGameModeEvent event) {
+        resetServerSnapshot(event.getEntity());
+    }
+
+    public static void playerCloned(PlayerEvent.Clone event) {
+        Player original = event.getOriginal();
+        boolean originalWasPhased = isPhaseActive(original);
+        resetServerSnapshot(original);
+        clearSnapshot(event.getEntity());
+        if (originalWasPhased && !event.getEntity().level().isClientSide()) {
+            Player player = event.getEntity();
+            player.noPhysics = player.isSpectator();
+            player.setNoGravity(false);
+            player.setInvisible(player.hasEffect(MobEffects.INVISIBILITY));
+        }
+    }
+
+    private static void applyServerFullPhase(Player player) {
         player.noPhysics = true;
         player.setNoGravity(true);
+        player.setInvisible(true);
         Abilities abilities = player.getAbilities();
+        boolean abilitiesChanged = !abilities.mayfly || !abilities.flying;
         abilities.mayfly = true;
         abilities.flying = true;
-        player.onUpdateAbilities();
+        if (abilitiesChanged) {
+            player.onUpdateAbilities();
+        }
         player.clearFire();
         player.resetFallDistance();
     }
@@ -142,37 +195,88 @@ public final class VoidPhaseEvents {
     private static void rememberAbilities(Player player) {
         var data = player.getPersistentData();
         Abilities abilities = player.getAbilities();
+        var snapshot = new VoidPhaseStateResolver.Snapshot(
+            abilities.mayfly,
+            abilities.flying,
+            player.isNoGravity(),
+            player.noPhysics,
+            player.isInvisible()
+        );
         data.putInt(ACTIVE_KEY, 1);
-        data.putInt(PREV_MAYFLY_KEY, abilities.mayfly ? 1 : 0);
-        data.putInt(PREV_FLYING_KEY, abilities.flying ? 1 : 0);
-        data.putInt(PREV_NO_GRAVITY_KEY, player.isNoGravity() ? 1 : 0);
+        data.putInt(PREV_MAYFLY_KEY, snapshot.mayFly() ? 1 : 0);
+        data.putInt(PREV_FLYING_KEY, snapshot.flying() ? 1 : 0);
+        data.putInt(PREV_NO_GRAVITY_KEY, snapshot.noGravity() ? 1 : 0);
+        data.putInt(PREV_NO_PHYSICS_KEY, snapshot.noPhysics() ? 1 : 0);
+        data.putInt(PREV_INVISIBLE_KEY, snapshot.invisible() ? 1 : 0);
     }
 
     private static void restoreAbilities(Player player) {
         if (!isPhaseActive(player)) {
-            player.noPhysics = false;
-            player.setNoGravity(false);
             return;
         }
 
         var data = player.getPersistentData();
         Abilities abilities = player.getAbilities();
-        boolean mayfly = data.getIntOr(PREV_MAYFLY_KEY, 0) == 1;
-        boolean flying = data.getIntOr(PREV_FLYING_KEY, 0) == 1;
-        boolean noGravity = data.getIntOr(PREV_NO_GRAVITY_KEY, 0) == 1;
+        var snapshot = new VoidPhaseStateResolver.Snapshot(
+            data.getIntOr(PREV_MAYFLY_KEY, 0) == 1,
+            data.getIntOr(PREV_FLYING_KEY, 0) == 1,
+            data.getIntOr(PREV_NO_GRAVITY_KEY, 0) == 1,
+            data.getIntOr(PREV_NO_PHYSICS_KEY, 0) == 1,
+            data.getIntOr(PREV_INVISIBLE_KEY, 0) == 1
+        );
+        var restored = VoidPhaseStateResolver.resolve(
+            snapshot,
+            player.isSpectator(),
+            abilities.mayfly,
+            abilities.flying,
+            player.hasEffect(MobEffects.INVISIBILITY)
+        );
 
-        player.noPhysics = player.isSpectator();
-        player.setNoGravity(noGravity);
-        if (!player.isSpectator()) {
-            abilities.mayfly = mayfly;
-            abilities.flying = mayfly && flying;
+        player.noPhysics = restored.noPhysics();
+        player.setNoGravity(restored.noGravity());
+        player.setInvisible(restored.invisible());
+        boolean abilitiesChanged = abilities.mayfly != restored.mayFly()
+            || abilities.flying != restored.flying();
+        abilities.mayfly = restored.mayFly();
+        abilities.flying = restored.flying();
+        if (abilitiesChanged) {
             player.onUpdateAbilities();
         }
-        data.putInt(ACTIVE_KEY, 0);
+        clearSnapshot(player);
     }
 
     private static boolean isPhaseActive(Player player) {
         return player.getPersistentData().getIntOr(ACTIVE_KEY, 0) == 1;
+    }
+
+    private static void resetServerSnapshot(Player player) {
+        if (!player.level().isClientSide() && isPhaseActive(player)) {
+            restoreAbilities(player);
+        }
+    }
+
+    private static void clearSnapshot(Player player) {
+        var data = player.getPersistentData();
+        data.remove(ACTIVE_KEY);
+        data.remove(PREV_MAYFLY_KEY);
+        data.remove(PREV_FLYING_KEY);
+        data.remove(PREV_NO_GRAVITY_KEY);
+        data.remove(PREV_NO_PHYSICS_KEY);
+        data.remove(PREV_INVISIBLE_KEY);
+    }
+
+    private static void updateClientCollisionState(Player player, boolean fullPhase) {
+        UUID playerId = player.getUUID();
+        if (fullPhase) {
+            CLIENT_PHASED_PLAYERS.add(playerId);
+            player.noPhysics = true;
+            player.setNoGravity(true);
+        } else if (CLIENT_PHASED_PLAYERS.remove(playerId)) {
+            player.noPhysics = player.isSpectator();
+            if (!player.isSpectator()) {
+                player.setNoGravity(false);
+            }
+        }
     }
 
     private static void clearNearbyMobTargets(Player player) {

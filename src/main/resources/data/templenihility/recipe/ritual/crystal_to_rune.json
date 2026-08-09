@@ -1,0 +1,11 @@
+{
+  "type": "templenihility:nihility_ritual",
+  "input": "templenihility:nihility_crystal",
+  "input_count": 4,
+  "result": {
+    "id": "templenihility:nihility_rune",
+    "count": 1
+  },
+  "min_tier": 1,
+  "energy_cost": 6
+}

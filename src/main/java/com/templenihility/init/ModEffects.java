@@ -13,13 +13,13 @@ public final class ModEffects {
         DeferredRegister.create(Registries.MOB_EFFECT, TempleNihilityMod.MOD_ID);
 
     public static final DeferredHolder<MobEffect, MobEffect> INTO_NIHILITY =
-        EFFECTS.register("into_nihility", () -> new VoidPhaseEffect(0x45206F));
+        EFFECTS.register("into_nihility", () -> new VoidPhaseEffect(0x8C9196));
 
     public static final DeferredHolder<MobEffect, MobEffect> MELT_INTO_NIHILITY =
-        EFFECTS.register("melt_into_nihility", () -> new VoidPhaseEffect(0x2F8FA3));
+        EFFECTS.register("melt_into_nihility", () -> new VoidPhaseEffect(0xC5C9CC));
 
     public static final DeferredHolder<MobEffect, MobEffect> HIDDEN_IN_NIHILITY =
-        EFFECTS.register("hidden_in_nihility", () -> new VoidPhaseEffect(0x1D2739));
+        EFFECTS.register("hidden_in_nihility", () -> new VoidPhaseEffect(0x555B61));
 
     public static void register(IEventBus bus) {
         EFFECTS.register(bus);

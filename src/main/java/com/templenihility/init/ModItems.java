@@ -15,7 +15,11 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public class ModItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(TempleNihilityMod.MOD_ID);
 
-    // 无相残片 - 基础材料
+    // 游戏内指导书 - 低阶材料即可制作
+    public static final DeferredItem<Item> NIHILITY_GUIDE = ITEMS.register("nihility_guide",
+        id -> new NihilityGuideItem(itemProperties(id).stacksTo(1).rarity(Rarity.UNCOMMON)));
+
+    // 虚无残片 - 基础材料
     public static final DeferredItem<Item> NIHILITY_SHARD = ITEMS.register("nihility_shard",
         id -> new NihilityShard(itemProperties(id).stacksTo(64)));
 
@@ -24,7 +28,7 @@ public class ModItems {
         id -> new NihilityTooltipItem(itemProperties(id).stacksTo(64).rarity(Rarity.UNCOMMON),
             false, "tooltip.templenihility.nihility_crystal", NihilityAspect.VOID));
 
-    // 归尘 - 无相系基础加工材料
+    // 归尘 - 虚无系基础加工材料
     public static final DeferredItem<Item> NIHILITY_DUST = ITEMS.register("nihility_dust",
         id -> new NihilityTooltipItem(itemProperties(id).stacksTo(64),
             false, "tooltip.templenihility.nihility_dust", NihilityAspect.NIHILITY));

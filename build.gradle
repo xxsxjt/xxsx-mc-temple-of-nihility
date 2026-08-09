@@ -3,7 +3,7 @@ plugins {
     id 'net.neoforged.moddev' version '2.0.140'
 }
 
-version = '1.0.0-beta.2'
+version = '1.0.0-beta.3'
 group = 'com.templenihility'
 base.archivesName = 'temple-of-nihility-neoforge-26.2'
 
@@ -13,9 +13,14 @@ neoForge {
     version = '26.2.0.7-beta'
 
     runs {
-        configureEach {
+        client {
             client()
+            gameDirectory = project.file('runs/client')
+        }
+        server {
             server()
+            gameDirectory = project.file('runs/server')
+            programArgument('--nogui')
         }
     }
 
@@ -26,12 +31,40 @@ neoForge {
     }
 }
 
+repositories {
+    mavenCentral()
+    maven {
+        name = 'BlameJared'
+        url = uri('https://maven.blamejared.com')
+    }
+    maven {
+        name = 'Curios'
+        url = uri('https://maven.theillusivec4.top')
+    }
+    maven {
+        name = 'Modrinth'
+        url = uri('https://api.modrinth.com/maven')
+    }
+}
+
 dependencies {
-    compileOnly files('D:/_dx/_Games/MC/xxxxxx/.minecraft/versions/26.2-NeoForge_26.2.0.7-beta/mods/curios-neoforge-15.0.0-beta.1+26.2.jar')
-    compileOnly files('D:/_dx/_Games/MC/xxxxxx/.minecraft/versions/26.2-NeoForge_26.2.0.7-beta/mods/[JEI物品管理器] jei-26.2-neoforge-30.6.0.36.jar')
-    compileOnly files('D:/_dx/_Games/MC/xxxxxx/.minecraft/versions/26.2-NeoForge_26.2.0.7-beta/mods/[传送石碑／指路石] waystones-neoforge-26.2-26.2.0.3.jar')
-    compileOnly files('D:/_dx/_Games/MC/xxxxxx/.minecraft/versions/26.2-NeoForge_26.2.0.7-beta/mods/balm-neoforge-26.2-26.2.0.2.jar')
-    compileOnly files('D:/_dx/_Games/MC/xxxxxx/.minecraft/versions/26.2-NeoForge_26.2.0.7-beta/mods/shogi-neoforge-26.2-26.2.0.2.jar')
+    // Curios has not published its 26.2 API artifact yet. The API signatures used by this
+    // project are identical in beta.1+26.1; runtime metadata still requires the 26.2 build.
+    compileOnly('top.theillusivec4.curios:curios-neoforge:15.0.0-beta.1+26.1') {
+        transitive = false
+    }
+    compileOnly 'mezz.jei:jei-26.2-neoforge-api:30.7.0.40'
+    compileOnly('maven.modrinth:waystones:26.2.0.3+neoforge-26.2') {
+        transitive = false
+    }
+    compileOnly('maven.modrinth:balm:26.2.0.2+neoforge-26.2') {
+        transitive = false
+    }
+    compileOnly('maven.modrinth:shogi:26.2.0.2+neoforge-26.2') {
+        transitive = false
+    }
+    testImplementation 'org.junit.jupiter:junit-jupiter:6.1.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:6.1.2'
 }
 
 jar {
@@ -50,4 +83,217 @@ jar {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+}
+
+def safeTestRuntimeDir = new File(System.getProperty('java.io.tmpdir'), "${project.name}-test-runtime")
+def prepareSafeTestRuntime = tasks.register('prepareSafeTestRuntime', Sync) {
+    dependsOn(tasks.named('classes'), tasks.named('testClasses'))
+    into(safeTestRuntimeDir)
+    from(sourceSets.main.output) {
+        into('main')
+    }
+    from(sourceSets.test.output) {
+        into('test')
+    }
+}
+
+tasks.named('test') {
+    dependsOn(prepareSafeTestRuntime)
+    useJUnitPlatform()
+    testClassesDirs = files(new File(safeTestRuntimeDir, 'test'))
+    classpath = files(
+        new File(safeTestRuntimeDir, 'test'),
+        new File(safeTestRuntimeDir, 'main'),
+        configurations.testRuntimeClasspath
+    )
+}
+
+// Normal gameplay must use typed server APIs, events, and custom payloads rather than chat-command routing.
+def verifyNoGameplayCommandRouting = tasks.register('verifyNoGameplayCommandRouting') {
+    doLast {
+        def debugCommandFile = file('src/main/java/com/templenihility/world/TempleCommand.java').canonicalFile
+        def forbidden = [
+            'performCommand(',
+            'performPrefixedCommand(',
+            'getDispatcher().execute(',
+            'sendCommand(',
+            'runCommand(',
+            'Commands.literal(',
+            'CommandSourceStack'
+        ]
+        def violations = []
+        fileTree('src/main/java') {
+            include '**/*.java'
+        }.files.each { source ->
+            if (source.canonicalFile == debugCommandFile) {
+                return
+            }
+            def sourceText = source.getText('UTF-8')
+            forbidden.each { marker ->
+                if (sourceText.contains(marker)) {
+                    violations << "${source}: ${marker}"
+                }
+            }
+        }
+
+        fileTree('src/main/resources') {
+            include '**/*.mcfunction'
+        }.files.each { source ->
+            violations << "${source}: gameplay function file"
+        }
+
+        def debugText = debugCommandFile.getText('UTF-8')
+        if (!debugText.contains('Permissions.COMMANDS_GAMEMASTER')) {
+            violations << "${debugCommandFile}: debug command is not restricted to gamemaster permission"
+        }
+        if (debugText.contains('literal(\"nihility\"')) {
+            violations << "${debugCommandFile}: player-facing nihility command tree"
+        }
+
+        if (!violations.isEmpty()) {
+            throw new GradleException(
+                'Gameplay command routing detected. Use direct server APIs, NeoForge events, or custom payloads:\n'
+                    + violations.join('\n'))
+        }
+    }
+}
+
+def verifyResourcesAndLanguages = tasks.register('verifyResourcesAndLanguages') {
+    inputs.files(fileTree('src/main/resources') {
+        include '**/*.json'
+    })
+    doLast {
+        def parser = new groovy.json.JsonSlurper()
+        def parsed = [:]
+        fileTree('src/main/resources') {
+            include '**/*.json'
+        }.files.each { resource ->
+            try {
+                parsed[resource.canonicalFile] = parser.parseText(resource.getText('UTF-8'))
+            } catch (Exception exception) {
+                throw new GradleException("Invalid JSON resource: ${resource}", exception)
+            }
+        }
+
+        def zhFile = file('src/main/resources/assets/templenihility/lang/zh_cn.json').canonicalFile
+        def enFile = file('src/main/resources/assets/templenihility/lang/en_us.json').canonicalFile
+        def zh = parsed[zhFile] as Map
+        def en = parsed[enFile] as Map
+        def missingEnglish = (zh.keySet() - en.keySet()).sort()
+        def missingChinese = (en.keySet() - zh.keySet()).sort()
+        if (!missingEnglish.isEmpty() || !missingChinese.isEmpty()) {
+            throw new GradleException(
+                "Language key mismatch. Missing en_us=${missingEnglish}; missing zh_cn=${missingChinese}")
+        }
+    }
+}
+
+def verifyRitualDefinitions = tasks.register('verifyRitualDefinitions') {
+    def ritualFiles = fileTree('src/main/resources/data/templenihility/recipe/ritual') {
+        include '**/*.json'
+    }
+    inputs.files(ritualFiles)
+    doLast {
+        def parser = new groovy.json.JsonSlurper()
+        def files = ritualFiles.files.sort { it.path }
+        if (files.isEmpty()) {
+            throw new GradleException('No Nihility ritual definitions were found')
+        }
+
+        def identities = new HashSet<String>()
+        files.each { resource ->
+            def recipe = parser.parseText(resource.getText('UTF-8')) as Map
+            if (recipe.type != 'templenihility:nihility_ritual') {
+                throw new GradleException("Invalid ritual type in ${resource}: ${recipe.type}")
+            }
+            if (!(recipe.input instanceof String || recipe.input instanceof Map)) {
+                throw new GradleException("Ritual input must be an item/tag ingredient in ${resource}")
+            }
+            if (!(recipe.input_count instanceof Number)
+                || recipe.input_count.intValue() < 1 || recipe.input_count.intValue() > 99) {
+                throw new GradleException("Ritual input_count must be 1..99 in ${resource}")
+            }
+            if (!(recipe.result instanceof Map)
+                || !(recipe.result.id instanceof String)
+                || recipe.result.id.isBlank()) {
+                throw new GradleException("Ritual result.id is missing in ${resource}")
+            }
+            def resultCount = recipe.result.count == null ? 1 : recipe.result.count
+            if (!(resultCount instanceof Number) || resultCount.intValue() < 1 || resultCount.intValue() > 99) {
+                throw new GradleException("Ritual result.count must be 1..99 in ${resource}")
+            }
+            def minTier = recipe.min_tier == null ? 0 : recipe.min_tier
+            if (!(minTier instanceof Number) || minTier.intValue() < 0 || minTier.intValue() > 3) {
+                throw new GradleException("Ritual min_tier must be 0..3 in ${resource}")
+            }
+            def energyCost = recipe.energy_cost == null ? 0 : recipe.energy_cost
+            if (!(energyCost instanceof Number) || energyCost.intValue() < 0) {
+                throw new GradleException("Ritual energy_cost must not be negative in ${resource}")
+            }
+
+            def identity = groovy.json.JsonOutput.toJson(recipe.input) + '@' + minTier.intValue()
+            if (!identities.add(identity)) {
+                throw new GradleException("Duplicate ritual input/tier identity in ${resource}: ${identity}")
+            }
+        }
+
+        def altarSource = file('src/main/java/com/templenihility/blockentity/NihilityAltarBlockEntity.java')
+            .getText('UTF-8')
+        if (altarSource.contains('new RitualRecipe(') || altarSource.contains('private static List<RitualRecipe>')) {
+            throw new GradleException('Hard-coded altar ritual definitions detected; use data recipes')
+        }
+    }
+}
+
+def verifyExplorationDefinitions = tasks.register('verifyExplorationDefinitions') {
+    def peacefulRecipe = file('src/main/resources/data/templenihility/recipe/nihility_dust_from_stone_smelting.json')
+    def shrineLoot = file('src/main/resources/data/templenihility/loot_table/chests/nihility_shrine.json')
+    def templeLoot = file('src/main/resources/data/templenihility/loot_table/chests/nihility_temple_supplies.json')
+    def complexLoot = file('src/main/resources/data/templenihility/loot_table/chests/nihility_complex_relics.json')
+    inputs.files(peacefulRecipe, shrineLoot, templeLoot, complexLoot)
+    doLast {
+        def parser = new groovy.json.JsonSlurper()
+        def recipe = parser.parseText(peacefulRecipe.getText('UTF-8')) as Map
+        if (recipe.type != 'minecraft:smelting'
+            || recipe.ingredient != 'templenihility:nihility_stone'
+            || !(recipe.result instanceof Map)
+            || recipe.result.id != 'templenihility:nihility_dust') {
+            throw new GradleException('Peaceful Stillstone -> Nihility Dust progression recipe is missing or invalid')
+        }
+
+        def loot = parser.parseText(shrineLoot.getText('UTF-8')) as Map
+        if (loot.type != 'minecraft:chest' || !(loot.pools instanceof List)) {
+            throw new GradleException('Nihility shrine cache must be a chest loot table')
+        }
+        def itemNames = loot.pools.collectMany { pool ->
+            pool.entries instanceof List ? pool.entries : []
+        }.collect { entry -> entry.name }.findAll { name -> name instanceof String }.toSet()
+        def required = ['templenihility:nihility_dust', 'templenihility:nihility_stone'] as Set
+        if (!itemNames.containsAll(required)) {
+            throw new GradleException("Nihility shrine cache is missing starter entries: ${required - itemNames}")
+        }
+
+        def temple = parser.parseText(templeLoot.getText('UTF-8')) as Map
+        def templeItems = temple.pools instanceof List ? temple.pools.collectMany { pool ->
+            pool.entries instanceof List ? pool.entries : []
+        }.collect { entry -> entry.name }.findAll { name -> name instanceof String }.toSet() : [] as Set
+        def templeRequired = ['templenihility:nihility_dust', 'templenihility:nihility_shard'] as Set
+        if (temple.type != 'minecraft:chest' || !templeItems.containsAll(templeRequired)) {
+            throw new GradleException("Nihility temple supplies are missing core entries: ${templeRequired - templeItems}")
+        }
+
+        def complex = parser.parseText(complexLoot.getText('UTF-8')) as Map
+        def complexItems = complex.pools instanceof List ? complex.pools.collectMany { pool ->
+            pool.entries instanceof List ? pool.entries : []
+        }.collect { entry -> entry.name }.findAll { name -> name instanceof String }.toSet() : [] as Set
+        def complexRequired = ['templenihility:nihility_crystal', 'templenihility:nihility_relic_fragment'] as Set
+        if (complex.type != 'minecraft:chest' || !complexItems.containsAll(complexRequired)) {
+            throw new GradleException("Nihility complex relic cache is missing progression entries: ${complexRequired - complexItems}")
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn(verifyNoGameplayCommandRouting, verifyResourcesAndLanguages,
+        verifyRitualDefinitions, verifyExplorationDefinitions)
 }

@@ -1,0 +1,11 @@
+{
+  "type": "templenihility:nihility_ritual",
+  "input": "templenihility:nihility_relic_fragment",
+  "input_count": 8,
+  "result": {
+    "id": "templenihility:temple_seal",
+    "count": 1
+  },
+  "min_tier": 3,
+  "energy_cost": 20
+}

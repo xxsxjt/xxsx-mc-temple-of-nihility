@@ -1,7 +1,6 @@
 package com.templenihility.item;
 
 import java.util.function.Consumer;
-import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -26,13 +25,13 @@ public class NihilityTooltipItem extends Item {
 
     @Override
     public boolean isFoil(ItemStack stack) {
-        return foil || super.isFoil(stack);
+        return (foil && aspect.usesFoil()) || super.isFoil(stack);
     }
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
                                 Consumer<Component> tooltip, TooltipFlag flag) {
         tooltip.accept(aspect.line());
-        tooltip.accept(Component.translatable(tooltipKey).withStyle(ChatFormatting.DARK_AQUA));
+        tooltip.accept(Component.translatable(tooltipKey).withStyle(aspect.detailStyle()));
     }
 }

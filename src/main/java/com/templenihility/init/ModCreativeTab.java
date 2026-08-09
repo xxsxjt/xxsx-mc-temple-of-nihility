@@ -18,6 +18,7 @@ public class ModCreativeTab {
             .title(Component.translatable("itemGroup.templenihility"))
             .icon(() -> new ItemStack(ModItems.NIHILITY_SHARD.get()))
             .displayItems((params, output) -> {
+                output.accept(ModItems.NIHILITY_GUIDE.get());
                 output.accept(ModItems.NIHILITY_SHARD.get());
                 output.accept(ModItems.NIHILITY_CRYSTAL.get());
                 output.accept(ModItems.NIHILITY_DUST.get());

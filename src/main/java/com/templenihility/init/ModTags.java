@@ -4,6 +4,7 @@ import com.templenihility.TempleNihilityMod;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 
@@ -30,6 +31,18 @@ public final class ModTags {
 
         private static TagKey<Block> tag(String name) {
             return TagKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(TempleNihilityMod.MOD_ID, name));
+        }
+    }
+
+    public static final class EntityTypes {
+        public static final TagKey<EntityType<?>> ACTION_INTERRUPT_IMMUNE = tag("action_interrupt_immune");
+
+        private EntityTypes() {
+        }
+
+        private static TagKey<EntityType<?>> tag(String name) {
+            return TagKey.create(Registries.ENTITY_TYPE,
+                Identifier.fromNamespaceAndPath(TempleNihilityMod.MOD_ID, name));
         }
     }
 }

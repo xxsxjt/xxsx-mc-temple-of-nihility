@@ -1,7 +1,10 @@
 package com.templenihility.compat.jei;
 
 import com.templenihility.TempleNihilityMod;
+import com.templenihility.client.NihilityClientRecipes;
 import com.templenihility.client.screen.NihilityTerminalScreen;
+import com.templenihility.init.ModBlocks;
+import com.templenihility.init.ModItems;
 import java.util.List;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
@@ -9,6 +12,11 @@ import mezz.jei.api.gui.handlers.IGhostIngredientHandler;
 import mezz.jei.api.gui.handlers.IGuiContainerHandler;
 import mezz.jei.api.ingredients.ITypedIngredient;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
+import mezz.jei.api.registration.IRecipeCategoryRegistration;
+import mezz.jei.api.registration.IRecipeCatalystRegistration;
+import mezz.jei.api.registration.IRecipeRegistration;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
@@ -20,6 +28,29 @@ public class NihilityJeiPlugin implements IModPlugin {
     @Override
     public Identifier getPluginUid() {
         return UID;
+    }
+
+    @Override
+    public void registerCategories(IRecipeCategoryRegistration registration) {
+        registration.addRecipeCategories(new NihilityRitualCategory(registration.getJeiHelpers().getGuiHelper()));
+    }
+
+    @Override
+    public void registerRecipes(IRecipeRegistration registration) {
+        registration.addItemStackInfo(new ItemStack(ModItems.NIHILITY_GUIDE.get()),
+            Component.translatable("jei.templenihility.guide.0").withStyle(ChatFormatting.DARK_AQUA),
+            Component.translatable("jei.templenihility.guide.1").withStyle(ChatFormatting.GRAY),
+            Component.translatable("jei.templenihility.guide.2").withStyle(ChatFormatting.AQUA));
+        registration.addItemStackInfo(new ItemStack(ModBlocks.NIHILITY_TRANSPORT_CORE.get()),
+            Component.translatable("jei.templenihility.transport.0").withStyle(ChatFormatting.DARK_AQUA),
+            Component.translatable("jei.templenihility.transport.1").withStyle(ChatFormatting.GRAY),
+            Component.translatable("jei.templenihility.transport.2").withStyle(ChatFormatting.AQUA));
+        registration.addRecipes(NihilityRitualCategory.TYPE.get(), NihilityClientRecipes.rituals());
+    }
+
+    @Override
+    public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
+        registration.addCraftingStation(NihilityRitualCategory.TYPE.get(), ModBlocks.NIHILITY_ALTAR.get());
     }
 
     @Override

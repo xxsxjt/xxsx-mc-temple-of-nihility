@@ -1,21 +1,16 @@
 package com.templenihility.world;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.templenihility.compat.CuriosCompat;
-import com.templenihility.init.ModItems;
-import com.templenihility.item.NihilityTerminalItem;
-import java.util.Optional;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.item.ItemStack;
-import net.neoforged.fml.ModList;
 
-/** 手动生成圣殿的指令 */
+/**
+ * 管理员调试入口。正常玩法不得依赖聊天命令，玩家功能由物品、菜单、网络包和服务端动作服务触发。
+ */
 public class TempleCommand {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("temple")
@@ -33,13 +28,6 @@ public class TempleCommand {
             })
         );
 
-        dispatcher.register(Commands.literal("nihility")
-            .then(Commands.literal("help")
-                .executes(ctx -> help(ctx.getSource())))
-            .then(Commands.literal("terminal")
-                .executes(ctx -> openTerminal(ctx.getSource())))
-            .executes(ctx -> help(ctx.getSource()))
-        );
     }
 
     private static int spawn(CommandSourceStack src, TempleType type) {
@@ -55,41 +43,4 @@ public class TempleCommand {
         return 1;
     }
 
-    private static int openTerminal(CommandSourceStack src) {
-        ServerPlayer player = src.getPlayer();
-        if (player == null) {
-            src.sendFailure(Component.literal("Only players can open a Void Terminal."));
-            return 0;
-        }
-
-        Optional<ItemStack> terminal = findTerminal(player);
-        if (terminal.isEmpty()) {
-            src.sendFailure(Component.translatable("message.templenihility.terminal_missing"));
-            return 0;
-        }
-
-        return NihilityTerminalItem.openBoundVault(player, terminal.get()) ? 1 : 0;
-    }
-
-    private static int help(CommandSourceStack src) {
-        src.sendSuccess(() -> Component.translatable("message.templenihility.help_title"), false);
-        src.sendSuccess(() -> Component.translatable("message.templenihility.help_vault"), false);
-        src.sendSuccess(() -> Component.translatable("message.templenihility.help_terminal"), false);
-        src.sendSuccess(() -> Component.translatable("message.templenihility.help_chunkload"), false);
-        return 1;
-    }
-
-    private static Optional<ItemStack> findTerminal(ServerPlayer player) {
-        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
-            ItemStack stack = player.getInventory().getItem(slot);
-            if (stack.is(ModItems.NIHILITY_TERMINAL.get())) {
-                return Optional.of(stack);
-            }
-        }
-
-        if (ModList.get().isLoaded("curios")) {
-            return CuriosCompat.findTerminal(player);
-        }
-        return Optional.empty();
-    }
 }

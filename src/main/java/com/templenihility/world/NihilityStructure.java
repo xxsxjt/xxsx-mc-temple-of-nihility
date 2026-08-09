@@ -2,6 +2,7 @@ package com.templenihility.world;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import com.templenihility.config.ModConfig;
 import com.templenihility.init.ModStructures;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.ChunkPos;
@@ -33,10 +34,14 @@ public class NihilityStructure extends Structure {
 
         if (pos.getY() < 60) return Optional.empty();
 
+        int shrineWeight = ModConfig.SHRINE_WEIGHT.get();
+        int templeWeight = ModConfig.TEMPLE_WEIGHT.get();
+        int complexWeight = ModConfig.COMPLEX_WEIGHT.get();
+        int totalWeight = shrineWeight + templeWeight + complexWeight;
         final TempleType type;
-        int r = ctx.random().nextInt(100);
-        if (r < 10) type = TempleType.TEMPLE_COMPLEX;
-        else if (r < 35) type = TempleType.TEMPLE;
+        int r = ctx.random().nextInt(totalWeight);
+        if (r < complexWeight) type = TempleType.TEMPLE_COMPLEX;
+        else if (r < complexWeight + templeWeight) type = TempleType.TEMPLE;
         else type = TempleType.SHRINE;
 
         return Optional.of(new GenerationStub(pos, builder ->

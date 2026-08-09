@@ -14,11 +14,6 @@ public class NihilityShard extends Item {
     }
 
     @Override
-    public boolean isFoil(ItemStack stack) {
-        return true; // 发光效果
-    }
-
-    @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
                                 Consumer<Component> tooltip, TooltipFlag flag) {
         tooltip.accept(NihilityAspect.NIHILITY.line());

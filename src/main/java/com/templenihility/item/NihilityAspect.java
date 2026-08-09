@@ -5,10 +5,10 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 
 public enum NihilityAspect {
-    NIHILITY("tooltip.templenihility.aspect.nihility", ChatFormatting.WHITE),
-    VOID("tooltip.templenihility.aspect.void", ChatFormatting.DARK_AQUA),
-    CHAOS("tooltip.templenihility.aspect.chaos", ChatFormatting.LIGHT_PURPLE),
-    ABYSS("tooltip.templenihility.aspect.abyss", ChatFormatting.DARK_PURPLE);
+    NIHILITY("tooltip.templenihility.aspect.nihility", ChatFormatting.WHITE, ChatFormatting.GRAY, false),
+    VOID("tooltip.templenihility.aspect.void", ChatFormatting.AQUA, ChatFormatting.DARK_AQUA, false),
+    CHAOS("tooltip.templenihility.aspect.chaos", ChatFormatting.LIGHT_PURPLE, ChatFormatting.DARK_PURPLE, true),
+    ABYSS("tooltip.templenihility.aspect.abyss", ChatFormatting.DARK_RED, ChatFormatting.RED, false);
 
     private static final Map<String, NihilityAspect> BY_TOOLTIP = Map.ofEntries(
         Map.entry("tooltip.templenihility.nihility_vault_expansion", VOID),
@@ -58,14 +58,26 @@ public enum NihilityAspect {
 
     private final String translationKey;
     private final ChatFormatting style;
+    private final ChatFormatting detailStyle;
+    private final boolean usesFoil;
 
-    NihilityAspect(String translationKey, ChatFormatting style) {
+    NihilityAspect(String translationKey, ChatFormatting style, ChatFormatting detailStyle, boolean usesFoil) {
         this.translationKey = translationKey;
         this.style = style;
+        this.detailStyle = detailStyle;
+        this.usesFoil = usesFoil;
     }
 
     public Component line() {
         return Component.translatable(translationKey).withStyle(style);
+    }
+
+    public ChatFormatting detailStyle() {
+        return detailStyle;
+    }
+
+    public boolean usesFoil() {
+        return usesFoil;
     }
 
     public static NihilityAspect fromTooltip(String tooltipKey) {

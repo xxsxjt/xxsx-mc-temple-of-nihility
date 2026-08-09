@@ -4,11 +4,11 @@ import com.mojang.serialization.MapCodec;
 import com.templenihility.TempleNihilityMod;
 import com.templenihility.blockentity.NihilityVaultBlockEntity;
 import com.templenihility.init.ModItems;
+import com.templenihility.init.ModParticles;
 import com.templenihility.storage.NihilityVaultNetwork;
 import com.templenihility.world.NihilityVisualEffects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
@@ -16,6 +16,7 @@ import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
@@ -38,6 +39,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import org.jspecify.annotations.Nullable;
 
 public class NihilityVaultBlock extends BaseEntityBlock {
     public static final MapCodec<NihilityVaultBlock> CODEC = simpleCodec(NihilityVaultBlock::new);
@@ -74,13 +76,26 @@ public class NihilityVaultBlock extends BaseEntityBlock {
     }
 
     @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (!level.isClientSide() && placer instanceof Player player
+            && level.getBlockEntity(pos) instanceof NihilityVaultBlockEntity vault) {
+            vault.claimOwner(player.getUUID());
+            refreshConnections(level, pos);
+        }
+    }
+
+    @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
 
     @Override
     protected boolean skipRendering(BlockState state, BlockState adjacentState, Direction side) {
-        return adjacentState.getBlock() instanceof NihilityVaultBlock || super.skipRendering(state, adjacentState, side);
+        return (adjacentState.getBlock() instanceof NihilityVaultBlock
+            && hasConnection(state, side)
+            && hasConnection(adjacentState, side.getOpposite()))
+            || super.skipRendering(state, adjacentState, side);
     }
 
     @Override
@@ -107,14 +122,14 @@ public class NihilityVaultBlock extends BaseEntityBlock {
         double x = pos.getX() + 0.5;
         double y = pos.getY() + 0.72 + random.nextDouble() * 0.32;
         double z = pos.getZ() + 0.5;
-        level.addParticle(ParticleTypes.REVERSE_PORTAL,
+        level.addParticle(ModParticles.NIHILITY_MOTE.get(),
             x + (random.nextDouble() - 0.5) * 0.55,
             y,
             z + (random.nextDouble() - 0.5) * 0.55,
             0.0, 0.018 + random.nextDouble() * 0.018, 0.0);
 
         if (random.nextInt(3) == 0) {
-            level.addParticle(ParticleTypes.ELECTRIC_SPARK, x, y + 0.08, z, 0.0, 0.006, 0.0);
+            level.addParticle(ModParticles.NIHILITY_RIPPLE.get(), x, y + 0.08, z, 0.0, 0.006, 0.0);
         }
 
         if (state.getValue(NORTH)) {
@@ -191,6 +206,10 @@ public class NihilityVaultBlock extends BaseEntityBlock {
             return InteractionResult.SUCCESS;
         }
 
+        if (!NihilityVaultNetwork.prepareAccess((ServerLevel) level, pos, player)) {
+            return InteractionResult.SUCCESS;
+        }
+
         if (level.getBlockEntity(pos) instanceof NihilityVaultBlockEntity vault && vault.addCapacityUpgrade()) {
             if (!player.getAbilities().instabuild) {
                 stack.shrink(1);
@@ -239,12 +258,29 @@ public class NihilityVaultBlock extends BaseEntityBlock {
 
     private static BlockState withConnections(LevelReader level, BlockPos pos, BlockState state) {
         return setConnections(state,
-            isVault(level, pos.north()),
-            isVault(level, pos.east()),
-            isVault(level, pos.south()),
-            isVault(level, pos.west()),
-            isVault(level, pos.above()),
-            isVault(level, pos.below()));
+            isCompatibleVault(level, pos, pos.north()),
+            isCompatibleVault(level, pos, pos.east()),
+            isCompatibleVault(level, pos, pos.south()),
+            isCompatibleVault(level, pos, pos.west()),
+            isCompatibleVault(level, pos, pos.above()),
+            isCompatibleVault(level, pos, pos.below()));
+    }
+
+    public static void refreshConnections(Level level, BlockPos pos) {
+        refreshConnectionAt(level, pos);
+        for (Direction direction : Direction.values()) {
+            refreshConnectionAt(level, pos.relative(direction));
+        }
+    }
+
+    private static void refreshConnectionAt(Level level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        if (state.getBlock() instanceof NihilityVaultBlock) {
+            BlockState connected = withConnections(level, pos, state);
+            if (connected != state) {
+                level.setBlock(pos, connected, 2);
+            }
+        }
     }
 
     private static BlockState setConnections(BlockState state, boolean north, boolean east, boolean south, boolean west,
@@ -259,8 +295,17 @@ public class NihilityVaultBlock extends BaseEntityBlock {
             .setValue(CONNECTED, north || east || south || west || up || down);
     }
 
-    private static boolean isVault(LevelReader level, BlockPos pos) {
-        return level.getBlockState(pos).getBlock() instanceof NihilityVaultBlock;
+    private static boolean isCompatibleVault(LevelReader level, BlockPos origin, BlockPos adjacent) {
+        if (!(level.getBlockState(adjacent).getBlock() instanceof NihilityVaultBlock)) {
+            return false;
+        }
+        if (!(level.getBlockEntity(origin) instanceof NihilityVaultBlockEntity current)
+            || !(level.getBlockEntity(adjacent) instanceof NihilityVaultBlockEntity neighbor)) {
+            return true;
+        }
+        var currentOwner = current.getOwner();
+        var neighborOwner = neighbor.getOwner();
+        return currentOwner.isEmpty() || neighborOwner.isEmpty() || currentOwner.equals(neighborOwner);
     }
 
     private static void addConnectionSpark(Level level, RandomSource random, BlockPos pos, Direction direction) {
@@ -271,7 +316,7 @@ public class NihilityVaultBlock extends BaseEntityBlock {
             double x = pos.getX() + 0.26 + random.nextDouble() * 0.48;
             double y = pos.getY() + (direction == Direction.UP ? 1.02 : -0.02);
             double z = pos.getZ() + 0.26 + random.nextDouble() * 0.48;
-            level.addParticle(ParticleTypes.END_ROD, x, y, z, 0.0, direction.getStepY() * 0.012, 0.0);
+            level.addParticle(ModParticles.NIHILITY_SHARD.get(), x, y, z, 0.0, direction.getStepY() * 0.012, 0.0);
             return;
         }
         double along = 0.18 + random.nextDouble() * 0.64;
@@ -282,7 +327,7 @@ public class NihilityVaultBlock extends BaseEntityBlock {
         } else {
             x = pos.getX() + along;
         }
-        level.addParticle(ParticleTypes.END_ROD, x, pos.getY() + 0.58 + random.nextDouble() * 0.24, z,
+        level.addParticle(ModParticles.NIHILITY_MOTE.get(), x, pos.getY() + 0.58 + random.nextDouble() * 0.24, z,
             direction.getStepX() * 0.01, 0.002, direction.getStepZ() * 0.01);
     }
 

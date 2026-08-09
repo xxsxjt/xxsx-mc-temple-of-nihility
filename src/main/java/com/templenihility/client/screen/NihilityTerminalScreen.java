@@ -3,6 +3,7 @@ package com.templenihility.client.screen;
 import com.templenihility.TempleNihilityMod;
 import com.templenihility.menu.NihilityTerminalLayout;
 import com.templenihility.menu.NihilityTerminalMenu;
+import com.templenihility.network.VaultSearchPayload;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -17,6 +18,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +37,8 @@ public class NihilityTerminalScreen extends AbstractContainerScreen<NihilityTerm
     private Button cancelDisableButton;
     private final List<Button> mainButtons = new ArrayList<>();
     private boolean syncingSearch;
+    private String pendingSearch = "";
+    private int searchSyncDelay = -1;
     private boolean confirmingDisableChunkload;
     private int animationTicks;
 
@@ -56,6 +60,7 @@ public class NihilityTerminalScreen extends AbstractContainerScreen<NihilityTerm
             Component.translatable("screen.templenihility.search"));
         searchBox.setMaxLength(64);
         searchBox.setHint(Component.translatable("screen.templenihility.search_hint"));
+        searchBox.setValue(pendingSearch);
         searchBox.setResponder(this::syncSearch);
         addRenderableWidget(searchBox);
 
@@ -66,8 +71,12 @@ public class NihilityTerminalScreen extends AbstractContainerScreen<NihilityTerm
             .tooltip(Tooltip.create(Component.translatable("screen.templenihility.sort_tip")))
             .build());
         clearSearchButton = addMainButton(Button.builder(Component.literal("X"), button -> {
+                syncingSearch = true;
                 searchBox.setValue("");
-                sendButton(NihilityTerminalMenu.BUTTON_CLEAR_SEARCH);
+                syncingSearch = false;
+                pendingSearch = "";
+                searchSyncDelay = -1;
+                sendSearch("");
             })
             .bounds(leftPos + NihilityTerminalLayout.CLEAR_SEARCH_X, topPos + NihilityTerminalLayout.CLEAR_SEARCH_Y,
                 NihilityTerminalLayout.CLEAR_SEARCH_SIZE, NihilityTerminalLayout.CLEAR_SEARCH_SIZE)
@@ -84,7 +93,8 @@ public class NihilityTerminalScreen extends AbstractContainerScreen<NihilityTerm
                 NihilityTerminalLayout.PROTECTION_BUTTON_WIDTH, NihilityTerminalLayout.PROTECTION_BUTTON_HEIGHT)
             .tooltip(Tooltip.create(Component.translatable("screen.templenihility.protection_tip")))
             .build());
-        addMainButton(Button.builder(Component.literal("?"), button -> {})
+        addMainButton(Button.builder(Component.literal("?"),
+                button -> sendButton(NihilityTerminalMenu.BUTTON_HELP))
             .bounds(leftPos + NihilityTerminalLayout.HELP_BUTTON_X, topPos + NihilityTerminalLayout.HELP_BUTTON_Y,
                 NihilityTerminalLayout.HELP_BUTTON_WIDTH, NihilityTerminalLayout.HELP_BUTTON_HEIGHT)
             .tooltip(Tooltip.create(Component.translatable("screen.templenihility.terminal_help_tip")))
@@ -115,19 +125,24 @@ public class NihilityTerminalScreen extends AbstractContainerScreen<NihilityTerm
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         graphics.text(font, Component.translatable("screen.templenihility.terminal_title_short"),
-            titleLabelX, titleLabelY, 0xFF3F314D, false);
+            titleLabelX, titleLabelY, 0xFF404040, false);
+        graphics.text(font, Component.translatable("screen.templenihility.settings_label"),
+            NihilityTerminalLayout.SETTINGS_LABEL_X, NihilityTerminalLayout.SETTINGS_LABEL_Y, 0xFF566064, false);
         graphics.text(font, Component.translatable("screen.templenihility.vault_status_line",
             formatCount(menu.getVaultCount()), formatCount(menu.getFilteredSlotCount()), formatCount(menu.getStoredItemCount())),
-            NihilityTerminalLayout.VAULT_STATUS_X, NihilityTerminalLayout.VAULT_STATUS_Y, 0xFF5A4B68, false);
+            NihilityTerminalLayout.VAULT_STATUS_X, NihilityTerminalLayout.VAULT_STATUS_Y, 0xFF566064, false);
         graphics.text(font, Component.translatable("screen.templenihility.vault_stats_compact",
             formatCount(menu.getUsedSlots()), formatCount(menu.getTotalSlots())),
-            NihilityTerminalLayout.STATS_TEXT_X, NihilityTerminalLayout.STATS_TEXT_Y, 0xFF5A4B68, false);
-        graphics.text(font, Component.translatable(menu.getSortLabelKey()),
+            NihilityTerminalLayout.STATS_TEXT_X, NihilityTerminalLayout.STATS_TEXT_Y, 0xFF566064, false);
+        graphics.text(font, Component.translatable("screen.templenihility.sort_state",
+                Component.translatable(menu.getSortLabelKey())),
             NihilityTerminalLayout.SORT_TEXT_X, NihilityTerminalLayout.SORT_TEXT_Y, 0xFF396E78, false);
+        graphics.text(font, Component.translatable("screen.templenihility.crafting_label"),
+            NihilityTerminalLayout.CRAFTING_LABEL_X, NihilityTerminalLayout.CRAFTING_LABEL_Y, 0xFF566064, false);
         drawCapacityBar(graphics);
         drawStorageScrollbar(graphics);
         drawStorageEmptyHint(graphics);
-        graphics.text(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0xFF3F314D, false);
+        graphics.text(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0xFF404040, false);
         addPanelTooltips(graphics, mouseX, mouseY);
 
         if (confirmingDisableChunkload) {
@@ -139,6 +154,10 @@ public class NihilityTerminalScreen extends AbstractContainerScreen<NihilityTerm
     protected void containerTick() {
         super.containerTick();
         animationTicks++;
+        if (searchSyncDelay >= 0 && --searchSyncDelay <= 0) {
+            searchSyncDelay = -1;
+            sendSearch(pendingSearch);
+        }
         if (chunkloadButton != null) {
             chunkloadButton.setMessage(chunkloadButtonText());
         }
@@ -223,15 +242,15 @@ public class NihilityTerminalScreen extends AbstractContainerScreen<NihilityTerm
     }
 
     private void syncSearch(String value) {
-        if (syncingSearch || minecraft == null || minecraft.gameMode == null) {
+        if (syncingSearch) {
             return;
         }
-        syncingSearch = true;
-        sendButton(NihilityTerminalMenu.BUTTON_CLEAR_SEARCH);
-        for (int i = 0; i < value.length(); i++) {
-            sendButton(NihilityTerminalMenu.BUTTON_CHAR_BASE + value.charAt(i));
-        }
-        syncingSearch = false;
+        pendingSearch = value;
+        searchSyncDelay = 4;
+    }
+
+    private void sendSearch(String value) {
+        ClientPacketDistributor.sendToServer(new VaultSearchPayload(menu.containerId, value));
     }
 
     private Button addMainButton(Button button) {
@@ -409,17 +428,17 @@ public class NihilityTerminalScreen extends AbstractContainerScreen<NihilityTerm
         graphics.fill(0, 0, imageWidth, imageHeight, 0xB8000000);
         graphics.fill(NihilityTerminalLayout.CONFIRM_PANEL_X, NihilityTerminalLayout.CONFIRM_PANEL_Y,
             NihilityTerminalLayout.CONFIRM_PANEL_X + NihilityTerminalLayout.CONFIRM_PANEL_WIDTH,
-            NihilityTerminalLayout.CONFIRM_PANEL_Y + NihilityTerminalLayout.CONFIRM_PANEL_HEIGHT, 0xF21B1426);
+            NihilityTerminalLayout.CONFIRM_PANEL_Y + NihilityTerminalLayout.CONFIRM_PANEL_HEIGHT, 0xF21A2426);
         graphics.outline(NihilityTerminalLayout.CONFIRM_PANEL_X, NihilityTerminalLayout.CONFIRM_PANEL_Y,
             NihilityTerminalLayout.CONFIRM_PANEL_WIDTH, NihilityTerminalLayout.CONFIRM_PANEL_HEIGHT, 0xFF7EEBFF);
         graphics.outline(NihilityTerminalLayout.CONFIRM_PANEL_X + 3, NihilityTerminalLayout.CONFIRM_PANEL_Y + 3,
-            NihilityTerminalLayout.CONFIRM_PANEL_WIDTH - 6, NihilityTerminalLayout.CONFIRM_PANEL_HEIGHT - 6, 0xFF493560);
+            NihilityTerminalLayout.CONFIRM_PANEL_WIDTH - 6, NihilityTerminalLayout.CONFIRM_PANEL_HEIGHT - 6, 0xFF3B555A);
         graphics.centeredText(font, Component.translatable("screen.templenihility.confirm_disable_chunkload_title"),
-            imageWidth / 2, NihilityTerminalLayout.CONFIRM_TITLE_Y, 0xFFE9D8FF);
+            imageWidth / 2, NihilityTerminalLayout.CONFIRM_TITLE_Y, 0xFFEAFBFF);
         graphics.textWithWordWrap(font,
             Component.translatable("screen.templenihility.confirm_disable_chunkload_message"),
             NihilityTerminalLayout.CONFIRM_MESSAGE_X, NihilityTerminalLayout.CONFIRM_MESSAGE_Y,
-            NihilityTerminalLayout.CONFIRM_MESSAGE_WIDTH, 0xFFB9A8D6);
+            NihilityTerminalLayout.CONFIRM_MESSAGE_WIDTH, 0xFFB7CED2);
     }
 
     private void extractVoidShards(GuiGraphicsExtractor graphics, float partialTick) {
@@ -472,7 +491,9 @@ public class NihilityTerminalScreen extends AbstractContainerScreen<NihilityTerm
                                    float speed, float drift) {
         int x = leftPos + baseX + Math.round((float) Math.sin(time * speed + baseX * 0.11F) * drift);
         int y = topPos + baseY + Math.round((float) Math.cos(time * speed + baseY * 0.07F) * drift);
-        graphics.blit(RenderPipelines.GUI_TEXTURED, VOID_SHARDS, x, y, sourceX, sourceY, width, height,
+        int atlasX = Math.max(0, Math.min(sourceX, NihilityTerminalLayout.SHARD_ATLAS_WIDTH - width));
+        int atlasY = Math.max(0, Math.min(sourceY, NihilityTerminalLayout.SHARD_ATLAS_HEIGHT - height));
+        graphics.blit(RenderPipelines.GUI_TEXTURED, VOID_SHARDS, x, y, atlasX, atlasY, width, height,
             NihilityTerminalLayout.SHARD_ATLAS_WIDTH, NihilityTerminalLayout.SHARD_ATLAS_HEIGHT);
     }
 

@@ -39,14 +39,11 @@ public class ModBlocks {
 
     // 虚空水晶块
     public static final DeferredBlock<Block> NIHILITY_CRYSTAL_BLOCK = registerBlock("nihility_crystal_block",
-        id -> new TransparentBlock(blockProperties(id)
+        id -> new Block(blockProperties(id)
             .strength(2.0f, 3.0f)
             .sound(SoundType.AMETHYST)
             .lightLevel(state -> 10)
-            .noOcclusion()
             .isRedstoneConductor((state, level, pos) -> false)
-            .isSuffocating((state, level, pos) -> false)
-            .isViewBlocking((state, level, pos) -> false)
             .requiresCorrectToolForDrops()));
 
     // 圣殿砖
@@ -111,7 +108,7 @@ public class ModBlocks {
             .isSuffocating((state, level, pos) -> false)
             .isViewBlocking((state, level, pos) -> false)));
 
-    // 无相祭坛
+    // 归零祭坛
     public static final DeferredBlock<Block> NIHILITY_ALTAR = registerBlock("nihility_altar",
         id -> new NihilityAltarBlock(blockProperties(id)
             .strength(5.0f, 1200.0f)
@@ -124,13 +121,10 @@ public class ModBlocks {
             .strength(6.0f, 1200.0f)
             .sound(SoundType.AMETHYST)
             .lightLevel(state -> 8)
-            .noOcclusion()
             .isRedstoneConductor((state, level, pos) -> false)
-            .isSuffocating((state, level, pos) -> false)
-            .isViewBlocking((state, level, pos) -> false)
             .requiresCorrectToolForDrops()));
 
-    // 无相汲能棱柱 - 无相能量产出核心
+    // 虚无汲能棱柱 - 虚无能量产出核心
     public static final DeferredBlock<Block> NIHILITY_ENERGY_PRISM = registerBlock("nihility_energy_prism",
         id -> new NihilityEnergyPrismBlock(blockProperties(id)
             .strength(4.0f, 12.0f)
@@ -138,7 +132,7 @@ public class ModBlocks {
             .lightLevel(state -> 10)
             .requiresCorrectToolForDrops()));
 
-    // 无相能量容器 - 世界内无相能量缓冲
+    // 虚无能量容器 - 世界内虚无能量缓冲
     public static final DeferredBlock<Block> NIHILITY_ENERGY_CELL = registerBlock("nihility_energy_cell",
         id -> new NihilityEnergyCellBlock(blockProperties(id)
             .strength(4.5f, 18.0f)

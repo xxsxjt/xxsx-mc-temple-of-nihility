@@ -3,9 +3,9 @@ package com.templenihility.blockentity;
 import com.templenihility.energy.VoidEnergyBlockHandler;
 import com.templenihility.energy.VoidPower;
 import com.templenihility.init.ModBlockEntities;
+import com.templenihility.init.ModParticles;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -20,7 +20,7 @@ import net.neoforged.neoforge.transfer.energy.EnergyHandler;
 public class NihilityEnergyPrismBlockEntity extends BlockEntity {
     public static final int MAX_BUFFER = 1_200;
     public static final int MAX_TRANSFER = 128;
-    private static final int GENERATE_PER_SECOND = 8;
+    private static final int ENERGY_PER_OPEN_FACE = 2;
     private static final int CELL_TRANSFER_PER_SECOND = 32;
     private static final int PLAYER_CHARGE_PER_SECOND = 2;
     private static final double PLAYER_CHARGE_RANGE = 8.0;
@@ -45,15 +45,16 @@ public class NihilityEnergyPrismBlockEntity extends BlockEntity {
         }
 
         int before = prism.energy;
-        prism.energy = Math.min(MAX_BUFFER, prism.energy + GENERATE_PER_SECOND);
+        int generation = prism.getGenerationPerSecond(level, pos);
+        prism.energy = Math.min(MAX_BUFFER, prism.energy + generation);
         prism.pushToAdjacentCells(level, pos);
         prism.chargeNearbyPlayers(level, pos);
 
         if (prism.energy != before) {
             prism.setChanged();
         }
-        if (level instanceof ServerLevel serverLevel && level.getGameTime() % 40 == 0) {
-            serverLevel.sendParticles(ParticleTypes.END_ROD,
+        if (generation > 0 && level instanceof ServerLevel serverLevel && level.getGameTime() % 40 == 0) {
+            serverLevel.sendParticles(ModParticles.NIHILITY_MOTE.get(),
                 pos.getX() + 0.5, pos.getY() + 1.08, pos.getZ() + 0.5,
                 6, 0.26, 0.18, 0.26, 0.025);
             level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 0.18F, 1.35F);
@@ -66,6 +67,20 @@ public class NihilityEnergyPrismBlockEntity extends BlockEntity {
 
     public EnergyHandler getEnergyHandler() {
         return energyHandler;
+    }
+
+    public int getOpenFaceCount(Level level, BlockPos pos) {
+        int openFaces = 0;
+        for (Direction direction : Direction.values()) {
+            if (level.getBlockState(pos.relative(direction)).isAir()) {
+                openFaces++;
+            }
+        }
+        return openFaces;
+    }
+
+    public int getGenerationPerSecond(Level level, BlockPos pos) {
+        return getOpenFaceCount(level, pos) * ENERGY_PER_OPEN_FACE;
     }
 
     private void pushToAdjacentCells(Level level, BlockPos pos) {
