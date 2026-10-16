@@ -14,7 +14,7 @@
 ## Verification
 
 - Clean Gradle build completed successfully.
-- 74 automated tests passed with no failures.
+- 79 automated tests passed with no failures.
 - Resource, language, ritual, exploration, command, and packaged-jar validation passed.
 
 Runtime verification is still incomplete for multiplayer behavior, every UI scale, all particle and rendering paths, natural structure generation, optional mod integrations, and migration from older test worlds.
