@@ -14,7 +14,6 @@
 - Target: Minecraft 26.2 / NeoForge 26.2.0.7-beta / Java 25
 - Historical uploaded artifact SHA256: `499C5A505D0DC4FF20DE6C61674B6A34D94C70F350D88CC9F5A5936C899BEF77`
 - Current local clean-build SHA256: `8C2709D15D863044A39FBB138392B89A957E1E15CC1794D18D720F172584DB92`
-- **2026-10-19 复核**：该 `8C2709D1...` 是 2026-09-14 的构建。之后 2026-09-15 06:12 又构建过一次，当前 `build/libs` 与实例部署的 jar 为 `83600A5F4D8CFEABBF6D0F843F900FC4765D05021851B82763B050CA9F02C166`（1,553,528 字节）。**三者互不相同**：线上 `499C5A50...` / 09-14 构建 `8C2709D1...` / 当前本地 `83600A5F...`。未做替换上传，远端二进制哈希仍未复核。
 - The current local build differs from the recorded uploaded artifact. No replacement upload was performed during this closeout; the remote binary hash has not been reverified.
 - Changelog source: `docs/curseforge-changelog-1.0.0-beta.3.md`
 
