@@ -10,7 +10,7 @@ This release provides two parallel builds for different NeoForge versions:
 ### NeoForge 26.1.2 (Stable)
 - **File**: `temple-of-nihility-neoforge-26.1.2-1.0.0-beta.4.jar`
 - **Size**: 1.7 MB
-- **SHA-256**: `0e96a873464099d9321356c1278714c75a28180615ee563a45151071d84b007d`
+- **SHA-256**: `25dbce8952acb5d062d0c00eb44337d1ddcd7685fb43dde2350266b621e8a3a8`
 - **NeoForge**: 26.1.2.124
 - **Minecraft**: 26.1.2
 - **Target**: Stable compatibility with established mod ecosystem
@@ -18,7 +18,7 @@ This release provides two parallel builds for different NeoForge versions:
 ### NeoForge 26.2 (Latest)
 - **File**: `temple-of-nihility-neoforge-26.2-1.0.0-beta.4.jar`
 - **Size**: 1.7 MB
-- **SHA-256**: `e0e00e9a50d83d3db135a7bc9560e11d3eedb3966963facb185d71388628a225`
+- **SHA-256**: `172bcb4ccb590be70783c8e58757b033e49cb7a1f37db5dd971e63aaba21f70f`
 - **NeoForge**: 26.2.0.93
 - **Minecraft**: 26.2
 - **Target**: Latest NeoForge features and API improvements
