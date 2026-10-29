@@ -16,7 +16,7 @@ import net.neoforged.fml.ModList;
 
 public final class NihilityGuideClient {
     public static void open() {
-        Minecraft.getInstance().gui.setScreen(new BookViewScreen(
+        Minecraft.getInstance().setScreen(new BookViewScreen(
             new BookViewScreen.BookAccess(createPages())));
     }
 

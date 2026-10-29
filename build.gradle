@@ -1,16 +1,16 @@
 plugins {
     id 'java-library'
-    id 'net.neoforged.moddev' version '2.0.140'
+    id 'net.neoforged.moddev' version '2.0.148'
 }
 
 version = '1.0.0-beta.3'
 group = 'com.templenihility'
-base.archivesName = 'temple-of-nihility-neoforge-26.2'
+base.archivesName = 'temple-of-nihility-neoforge-26.1.2'
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
 neoForge {
-    version = '26.2.0.7-beta'
+    version = '26.1.2.124'
 
     runs {
         client {
@@ -48,19 +48,17 @@ repositories {
 }
 
 dependencies {
-    // Curios has not published its 26.2 API artifact yet. The API signatures used by this
-    // project are identical in beta.1+26.1; runtime metadata still requires the 26.2 build.
-    compileOnly('top.theillusivec4.curios:curios-neoforge:15.0.0-beta.1+26.1') {
+    compileOnly('top.theillusivec4.curios:curios-neoforge:15.0.0+26.1.2') {
         transitive = false
     }
-    compileOnly 'mezz.jei:jei-26.2-neoforge-api:30.7.0.40'
-    compileOnly('maven.modrinth:waystones:26.2.0.3+neoforge-26.2') {
+    compileOnly 'mezz.jei:jei-26.1.2-neoforge-api:29.53.0.112'
+    compileOnly('maven.modrinth:waystones:26.1.2.16+neoforge-26.1.2') {
         transitive = false
     }
-    compileOnly('maven.modrinth:balm:26.2.0.2+neoforge-26.2') {
+    compileOnly('maven.modrinth:balm:26.1.2.15+neoforge-26.1.2') {
         transitive = false
     }
-    compileOnly('maven.modrinth:shogi:26.2.0.2+neoforge-26.2') {
+    compileOnly('maven.modrinth:shogi:26.1.2.12+neoforge-26.1.2') {
         transitive = false
     }
     testImplementation 'org.junit.jupiter:junit-jupiter:6.1.2'
