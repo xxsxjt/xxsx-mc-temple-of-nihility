@@ -1,5 +1,16 @@
 $ErrorActionPreference = 'Stop'
 
+function Get-Sha256Hex([string]$Path) {
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+        return (($sha.ComputeHash($stream) | ForEach-Object { $_.ToString('x2') }) -join '')
+    } finally {
+        $stream.Dispose()
+        $sha.Dispose()
+    }
+}
+
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $SourceJar = Get-ChildItem -LiteralPath (Join-Path $ProjectRoot 'build\libs') -File |
     Where-Object { $_.Name -like 'temple-of-nihility-neoforge-26.2-*.jar' } |
@@ -9,7 +20,7 @@ if (-not $SourceJar) {
     throw 'Build output not found. Run .\gradlew.bat build first.'
 }
 $JarName = $SourceJar.Name
-$ModsDir = 'D:\_dx\_Games\MC\xxxxxx\.minecraft\versions\26.2-NeoForge_26.2.0.7-beta\mods'
+$ModsDir = 'E:\_dx\_Games\MC\xxxxxx\.minecraft\versions\26.2-NeoForge_26.2.0.7-beta\mods'
 $TargetJar = Join-Path $ModsDir $JarName
 $DisabledDir = Join-Path $ModsDir 'disabled-templenihility'
 $Stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
@@ -38,7 +49,7 @@ try {
 } catch {
     $Pending = Join-Path $ModsDir "$JarName.pending-$Stamp"
     Copy-Item -LiteralPath $SourceJar.FullName -Destination $Pending
-    Get-FileHash -Algorithm SHA256 -LiteralPath $Pending | Format-List
+    Write-Host ("SHA256: " + (Get-Sha256Hex $Pending))
     Write-Host "Active jar appears locked; active jar was NOT overwritten. Pending jar written to: $Pending"
     exit 2
 }
@@ -59,5 +70,5 @@ if ($loadable.Count -ne 1) {
     throw "Expected exactly one active Temple of Nihility jar, found $($loadable.Count)"
 }
 
-Get-FileHash -Algorithm SHA256 -LiteralPath $TargetJar | Format-List
+Write-Host ("SHA256: " + (Get-Sha256Hex $TargetJar))
 Write-Host "Deployed: $TargetJar"
