@@ -13,7 +13,8 @@
 - File: `temple-of-nihility-neoforge-26.2-1.0.0-beta.3.jar`
 - Target: Minecraft 26.2 / NeoForge 26.2.0.7-beta / Java 25
 - Historical uploaded artifact SHA256: `499C5A505D0DC4FF20DE6C61674B6A34D94C70F350D88CC9F5A5936C899BEF77`
-- Current local clean-build SHA256: `8C2709D15D863044A39FBB138392B89A957E1E15CC1794D18D720F172584DB92`
+- Current local clean-build SHA256: `8C2709D15D863044A39FBB138392B89A957E1E15CC1794D18D720F172584DB92` (2026-09-14 historical build, NeoForge 26.2.0.7-beta)
+- 2026-10-28: Upgraded to NeoForge 26.2.0.93 and ported to NeoForge 26.1.2.124; both versions pass 79 tests.
 - The current local build differs from the recorded uploaded artifact. No replacement upload was performed during this closeout; the remote binary hash has not been reverified.
 - Changelog source: `docs/curseforge-changelog-1.0.0-beta.3.md`
 
@@ -46,6 +47,6 @@
 
 - Instance: `26.2-NeoForge_26.2.0.7-beta`
 - Active Temple jar count: `1`
-- Deployed SHA256: `8C2709D15D863044A39FBB138392B89A957E1E15CC1794D18D720F172584DB92`
-- Previous build backup: `mods/disabled-templenihility/old-20260914-123546-1.jar.bak`
+- Deployed SHA256: `8C2709D15D863044A39FBB138392B89A957E1E15CC1794D18D720F172584DB92` (2026-09-14 build)
+- Previous build backup: `mods/disabled-templenihility/old-20260914-123546-1.jar.bak` (historical backup, superseded by later builds)
 - Verification: one active Temple jar; source and deployed hashes match; no game launch was performed.
