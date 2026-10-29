@@ -2,16 +2,27 @@
 
 ## Status
 
-**Not uploaded.** The upload attempt is blocked by a rejected credential, not by the artifact.
+**Not uploaded.** The Upload API token now works for reads, but every write path is blocked.
 
-Checked 2026-10-29:
+Checked 2026-10-29 with the replacement token stored in the shared vault (alias `curseforge_codex_api_token`):
 
 | Check | Endpoint | Result |
 |---|---|---|
-| Upload API token | `GET https://minecraft.curseforge.com/api/game/versions` with `X-Api-Token` | `403 {"errorCode":403,"errorMessage":"Invalid API token provided."}` |
+| Token read capability | `GET https://minecraft.curseforge.com/api/game/versions` with `X-Api-Token` | `200`, 7,629 version entries |
+| Write capability | `POST` to any `minecraft.curseforge.com` endpoint, including `POST /api/game/versions` | `403` Cloudflare "Just a moment..." JS challenge |
 | Authors form data | `GET https://authors.curseforge.com/_api/project-files/1616748/create-project-file-form-data` | `401 Unauthorized` |
+| Studios API | `GET https://api.curseforge.com/v1/mods/1616748` with `x-api-key` | `403` |
 
-The token stored in the shared local vault (alias `curseforge_codex_api_token`, `D:/Users/xxsx/AppData/Local/RuntimeData`) is a 36-character UUID-shaped value. CurseForge does not accept it. Regenerate the token at the Authors API-token settings page and re-store it in the vault; the value must never be printed, logged, or written into this repository.
+The Authors `_api` 401 is a token-capability boundary, not a project-permission problem: the same 401 reproduces on an unrelated project that uploaded successfully months earlier. The Authors upload token is not a Studios `/v1` key.
+
+Diagnostic codes are distinguishable and must not be collapsed:
+
+| Response | Meaning |
+|---|---|
+| `400 {"errorCode":3,"errorMessage":"API token is malformed..."}` | the value itself is malformed |
+| `403 {"errorCode":403,"errorMessage":"Invalid API token provided."}` | authenticated but rejected for this method |
+| `401` with "You must provide an API token" | no token was sent |
+| `403` HTML titled "Just a moment..." | Cloudflare challenge, not a CurseForge verdict |
 
 ## Artifacts ready to upload
 
@@ -28,26 +39,21 @@ Both hashes were recomputed from `build/libs` on 2026-10-29 and match the values
 - Previous file: `8466225` (1.0.0-beta.3, Minecraft 26.2)
 - Changelog source: `docs/RELEASE-1.0.0-beta.4.md`
 
-## Upload command (after the token is replaced)
+## How to upload
 
-```powershell
-node scripts/publish-curseforge.cjs --dry-run
-```
+The API path is closed by the Cloudflare challenge, so use the authenticated browser session. The full procedure is in `D:/Codex/WORKSPACES/Projects/mc-agent/memory/curseforge-authors-upload.md`, section "Working fallback: drive the authenticated Authors page".
 
-`--dry-run` validates the token and prints the current project-form version IDs without uploading anything. Do not reuse the IDs from the beta.3 record blindly: the memory card requires reading the IDs from the Authors form data, because global catalog IDs and project-form IDs are not interchangeable.
+Short version:
 
-Then:
+1. Open `https://authors.curseforge.com/#/projects/1616748/files/create` in a browser session where the account shows **Manage Project**.
+2. Feed the jar to the React `onFilesDropped` handler; the visible control is a `<button>`, not a file input, and the native picker cannot be driven.
+3. Set Environment / Modloader / Minecraft through the native input value setter plus a real click on the `[role=option]`, then read `gameVersions` back from the fiber state before submitting.
+4. Submit via the `Add File` button's `__reactProps.onClick` if the DOM button stays disabled.
+5. Re-open `#/projects/1616748/files/{fileId}` afterwards to verify the tags; a stale chip from a previous form is the usual cause of wrong MC tags.
 
-```powershell
-node scripts/publish-curseforge.cjs `
-  --jar build/libs/temple-of-nihility-neoforge-26.2-1.0.0-beta.4.jar `
-  --changelog docs/RELEASE-1.0.0-beta.4.md `
-  --display-name "Temple of Nihility 1.0.0-beta.4 - MC 26.2 NeoForge" `
-  --release-type beta `
-  --game-version-id <26.2 id> --mod-loader-id <NeoForge id> --client-id <client id>
-```
+Do not reuse the beta.3 version IDs (`16498` / `14454` / `10150` / `9638` / `9639`) blindly. The memory card requires reading the current project-form IDs, because global catalog IDs and project-form IDs are not interchangeable.
 
-The script reads the token from the vault at call time, sends it only in the `X-Api-Token` header, and prints the returned file ID plus the verified Authors record.
+`node scripts/publish-curseforge.cjs --dry-run` still works and confirms the token is live; it exits 5 if the upload POST is Cloudflare-challenged.
 
 ## Verification still required after upload
 

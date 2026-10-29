@@ -22,23 +22,31 @@
 
 ## 二、时间线
 
-### 2026-10-29 — beta.4 发布尝试：被失效 token 阻断
+### 2026-10-29 — beta.4 发布尝试：读通了，写不通
 
-**结果：未上传。** 阻断原因是凭据被拒，不是产物问题。
+**结果：未上传。** 阻断点不在凭据，在写入通道。
 
-探测记录：
+第一轮（旧 token）确实是被拒：`GET /api/game/versions` 返回 `403 Invalid API token provided`。但随后 token 被换新，状态改变：
 
 | 检查 | 请求 | 结果 |
 |---|---|---|
-| Upload API token | `GET https://minecraft.curseforge.com/api/game/versions`，带 `X-Api-Token` | `403 {"errorCode":403,"errorMessage":"Invalid API token provided."}` |
+| 读能力 | `GET https://minecraft.curseforge.com/api/game/versions`，带 `X-Api-Token` | `200`，7,629 条版本记录 |
+| 写能力 | 任意 `POST` 到 `minecraft.curseforge.com`（含 `POST /api/game/versions`） | `403`，Cloudflare "Just a moment..." JS 挑战页 |
 | Authors 表单数据 | `GET https://authors.curseforge.com/_api/project-files/1616748/create-project-file-form-data?gameId=432&classId=6` | `401 Unauthorized` |
-| Core API | `GET https://api.curseforge.com/v1/mods/1616748`，带 `x-api-key` | `403` |
+| Studios API | `GET https://api.curseforge.com/v1/mods/1616748`，带 `x-api-key` | `403` |
 
-补充排查：
+Authors `_api` 的 401 是**凭据能力边界，不是项目权限问题**：对一个几个月前上传成功过的无关项目请求同一端点，同样返回 401。Authors 的上传 token 不是 Studios `/v1` 的 key。
 
-- 不带 token 请求同一端点返回 `401` 并提示需要 `X-Api-Token`，说明端点本身正常，问题在 token 值。
-- 尝试了原值、去连字符、全小写、全大写四种变体，全部 `403`。
-- 尝试了 `Authorization: Bearer` 与 `?token=` 查询参数两种传法，分别返回 `400 Malformed Authorization header` 与 `403`。
+响应码必须区分，不能一律归成"token 无效"：
+
+| 响应 | 含义 |
+|---|---|
+| `400 {"errorCode":3,"errorMessage":"API token is malformed..."}` | 值本身格式不对 |
+| `403 {"errorCode":403,"errorMessage":"Invalid API token provided."}` | 已认证，但该方法被拒 |
+| `401` 且提示必须提供 `X-Api-Token` | 根本没带 token |
+| `403` 且正文是 "Just a moment..." | Cloudflare 挑战，不是 CurseForge 的判定 |
+
+因为 POST 被 Cloudflare 拦，实际可行的路径是**驱动已登录的 Authors 网页会话**，流程见 `D:/Codex/WORKSPACES/Projects/mc-agent/memory/curseforge-authors-upload.md` 的 "Working fallback" 一节。
 
 产物已就绪（哈希为 2026-10-29 重新计算）：
 
@@ -95,15 +103,15 @@
 
 ---
 
-## 三、凭据状况（当前阻断点）
+## 三、凭据状况
 
-token **不在** Windows 凭据管理器里（`cmdkey /list` 与 `CredRead` 都查不到 `curseforge_codex_api_token`）。上一轮排查曾按"Windows Credential Manager"方向找，是找错了地方。
+token **不在** Windows 凭据管理器里（`cmdkey /list` 与 `CredRead` 都查不到 `curseforge_codex_api_token`）。曾按"Windows Credential Manager"方向排查，是找错了地方。
 
 实际位置：
 
 - 共享加密凭据库：`D:/Users/xxsx/AppData/Local/RuntimeData`
 - 别名：`curseforge_codex_api_token`
-- 元数据：`D:/Users/xxsx/AppData/Local/RuntimeData/metadata/curseforge_codex_api_token.json`（只含别名、用途、状态，不含值）
+- 元数据：`D:/Users/xxsx/AppData/Local/RuntimeData/metadata/curseforge_codex_api_token.json`（只含别名、用途、状态、允许的操作，不含值）
 - 密文：`D:/Users/xxsx/AppData/Local/RuntimeData/vault/credentials.enc.json`（AES-256-GCM，数据密钥由当前用户 DPAPI 包装）
 
 读取方式（只在本机 resolver 内部使用，禁止打印值）：
@@ -112,9 +120,9 @@ token **不在** Windows 凭据管理器里（`cmdkey /list` 与 `CredRead` 都�
 node D:/Users/xxsx/AppData/Local/RuntimeData/tools/vault-runtime.cjs resolve curseforge_codex_api_token
 ```
 
-当前状态：库里的值是 36 字符、UUID 形状（8-4-4-4-12，仅十六进制与连字符）。CurseForge 明确拒绝它。**需要到 Authors 的 API Token 设置页重新生成，再存回同一别名**，然后重新验证。
+当前状态（2026-10-29 复核）：token 已被换新，`GET /api/game/versions` 返回 `200`，**读能力正常**。元数据里记为 `validated-authors-readonly`，允许的操作仅四条只读 GET。写入通道被 Cloudflare 拦（见第二节），因此仍不能完成上传。
 
-凭据库元数据里 `status` 仍写着 `stored-unused`、`remoteRequestAttempted: false`——这两项在 2026-10-29 的探测后已经过时，尚未回写。
+操作边界：不要把 `resolve` 的输出导进 shell 变量、日志或任何模型可读的流——那样等于让凭据库失效。
 
 ---
 
@@ -144,14 +152,14 @@ node D:/Users/xxsx/AppData/Local/RuntimeData/tools/vault-runtime.cjs resolve cur
 | `docs/curseforge-publication-1.0.0-beta.4.md` | beta.4 上传受阻记录与待执行的命令 |
 | `docs/curseforge-changelog-1.0.0-beta.3.md` | beta.3 上传用的 changelog 正文 |
 | `scripts/publish-curseforge.cjs` | 上传脚本：调用时从凭据库取 token，`--dry-run` 只验证不上传 |
-| `D:/Codex/WORKSPACES/Projects/mc-agent/memory/curseforge-authors-upload.md` | 跨项目经验卡片（含 token 存储位置与 2026-10-29 失效状态） |
+| `D:/Codex/WORKSPACES/Projects/mc-agent/memory/curseforge-authors-upload.md` | 跨项目经验卡片（含 token 存储位置、Cloudflare 写阻断、浏览器 fallback 完整步骤） |
 
 ---
 
 ## 六、待办
 
-1. 重新生成 CurseForge API token，存回别名 `curseforge_codex_api_token`。
-2. 跑 `node scripts/publish-curseforge.cjs --dry-run`，确认 token 可用并取到当前项目表单版本 ID。
-3. 用新 ID 上传 beta.4（26.2 与 26.1.2 各一次，或先只发 26.2）。
-4. 上传后复核文件 ID、状态、手动发布标记、已选版本、公开可见性。
-5. 回写 `D:/Users/xxsx/AppData/Local/RuntimeData/metadata/curseforge_codex_api_token.json` 里过时的 `status` 与 `remoteRequestAttempted`。
+1. 用已登录的 Authors 网页会话上传 beta.4（走 `memory/curseforge-authors-upload.md` 的浏览器 fallback；POST API 被 Cloudflare 拦，不要再试）。
+2. 上传前从表单当前选项取 Environment / Modloader / Minecraft 的项目表单 ID，不要复用 beta.3 的 `16498 / 14454 / 10150 / 9638 / 9639`。
+3. 上传后复核文件 ID、状态、手动发布标记、已选版本、公开可见性；特别检查有没有上一份表单残留的 MC 标签。
+4. 决定是否也给 26.1.2 版本建一个文件条目（CurseForge 一个文件只能挂一组版本）。
+5. 凭据库元数据已更新为 `validated-authors-readonly`，若之后开通写权限再同步更新允许操作列表。

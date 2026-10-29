@@ -106,15 +106,36 @@ function resolveToken() {
   return token;
 }
 
+async function probeToken(token) {
+  const res = await fetch("https://minecraft.curseforge.com/api/game/versions", {
+    headers: { "X-Api-Token": token, Accept: "application/json" },
+  });
+  const text = await res.text();
+  if (res.status === 200) return { ok: true, entries: text.length };
+  if (res.status === 400) {
+    fail(`stored token is malformed, not merely unauthorized: HTTP 400 ${text.slice(0, 200)}`, 2);
+  }
+  if (res.status === 401) fail("no token was sent (vault returned an empty value)", 2);
+  if (res.status === 403) {
+    fail(
+      `stored token is authenticated but lacks permission for this method: HTTP 403 ${text.slice(0, 200)}. ` +
+        "This is a token-capability boundary, not a malformed value.",
+      2
+    );
+  }
+  fail(`token probe returned HTTP ${res.status} ${text.slice(0, 200)}`, 2);
+}
+
 async function fetchFormData(token, projectId) {
   const url = `${AUTHORS_API}/project-files/${projectId}/create-project-file-form-data?gameId=${GAME_ID}&classId=${CLASS_ID}`;
   const res = await fetch(url, { headers: { "X-Api-Token": token, Accept: "application/json" } });
   const text = await res.text();
-  if (res.status === 401 || res.status === 403) {
+  if (res.status === 401) {
     fail(
-      `CurseForge rejected the stored token (HTTP ${res.status}). ` +
-        "Regenerate it at https://authors.curseforge.com/#/settings/api-tokens and re-store it in the vault.",
-      2
+      "the Authors `_api` form-data endpoint returns 401 even for a valid upload token " +
+        "(reproduced against a project that uploaded successfully months earlier). " +
+        "That endpoint is a browser-session surface, not an API surface. Use the browser fallback instead.",
+      4
     );
   }
   if (!res.ok) fail(`form-data request failed: HTTP ${res.status} ${text.slice(0, 300)}`, 3);
@@ -150,6 +171,14 @@ async function upload(token, opts, metadata, jarBytes, jarName) {
     body: form,
   });
   const text = await res.text();
+  if (/Just a moment|cf-browser-verification|challenge-platform/i.test(text)) {
+    fail(
+      "the upload POST was answered by a Cloudflare JS challenge, not by CurseForge. " +
+        "GET survives the challenge but every POST to minecraft.curseforge.com is blocked. " +
+        "Use the authenticated browser-session fallback (see memory/curseforge-authors-upload.md).",
+      5
+    );
+  }
   if (!res.ok) fail(`upload rejected: HTTP ${res.status} ${text.slice(0, 600)}`, 3);
   let body;
   try {
@@ -181,12 +210,16 @@ async function main() {
   const opts = parseArgs(process.argv.slice(2));
   const token = resolveToken();
 
-  const formData = await fetchFormData(token, opts.projectId);
+  await probeToken(token);
+
   if (opts.dryRun) {
-    process.stdout.write("dry run: token accepted, form data retrieved\n\n");
-    printVersionChoices(formData);
+    process.stdout.write("dry run: token accepted by the Upload API version lookup\n");
+    process.stdout.write("note: the Authors _api form-data endpoint is expected to return 401 here; it is a browser-session surface.\n");
     return;
   }
+
+  const formData = await fetchFormData(token, opts.projectId);
+  printVersionChoices(formData);
 
   if (!opts.jar) fail("--jar is required unless --dry-run is used");
   const jarPath = path.resolve(opts.jar);
