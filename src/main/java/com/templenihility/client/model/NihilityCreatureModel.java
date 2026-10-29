@@ -189,7 +189,7 @@ public class NihilityCreatureModel extends EntityModel<NihilityRenderState> {
             PartPose.offset(0.0f, 0.0f, 0.0f)
         );
 
-        return LayerDefinition.create(mesh, 64, 64);
+        return LayerDefinition.create(mesh, 128, 128);
     }
 
     @Override

@@ -67,7 +67,7 @@ public class NihilityFlowModel extends EntityModel<NihilityRenderState> {
         root.addOrReplaceChild("crown_top", CubeListBuilder.create()
                 .texOffs(32, 32).addBox(-0.55f, -12.0f, -0.3f, 1.1f, 2.6f, 0.6f, edge),
             PartPose.ZERO);
-        return LayerDefinition.create(mesh, 64, 64);
+        return LayerDefinition.create(mesh, 128, 128);
     }
 
     @Override
