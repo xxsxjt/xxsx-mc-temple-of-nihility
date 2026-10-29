@@ -1,63 +1,59 @@
 # CurseForge publication record: Temple of Nihility 1.0.0-beta.4
 
-## Status
+## Status: published
 
-**Not uploaded.** The Upload API token now works for reads, but every write path is blocked.
-
-Checked 2026-10-29 with the replacement token stored in the shared vault (alias `curseforge_codex_api_token`):
-
-| Check | Endpoint | Result |
-|---|---|---|
-| Token read capability | `GET https://minecraft.curseforge.com/api/game/versions` with `X-Api-Token` | `200`, 7,629 version entries |
-| Write capability | `POST` to any `minecraft.curseforge.com` endpoint, including `POST /api/game/versions` | `403` Cloudflare "Just a moment..." JS challenge |
-| Authors form data | `GET https://authors.curseforge.com/_api/project-files/1616748/create-project-file-form-data` | `401 Unauthorized` |
-| Studios API | `GET https://api.curseforge.com/v1/mods/1616748` with `x-api-key` | `403` |
-
-The Authors `_api` 401 is a token-capability boundary, not a project-permission problem: the same 401 reproduces on an unrelated project that uploaded successfully months earlier. The Authors upload token is not a Studios `/v1` key.
-
-Diagnostic codes are distinguishable and must not be collapsed:
-
-| Response | Meaning |
+| Item | Value |
 |---|---|
-| `400 {"errorCode":3,"errorMessage":"API token is malformed..."}` | the value itself is malformed |
-| `403 {"errorCode":403,"errorMessage":"Invalid API token provided."}` | authenticated but rejected for this method |
-| `401` with "You must provide an API token" | no token was sent |
-| `403` HTML titled "Just a moment..." | Cloudflare challenge, not a CurseForge verdict |
+| Project ID | `1616748` |
+| File ID | `9363296` |
+| Display name | `Temple of Nihility 1.0.0-beta.4 - MC 26.2 NeoForge` |
+| Release type | Beta |
+| Status | Approved |
+| Uploaded | 2026-10-29 |
+| Public page | `https://www.curseforge.com/minecraft/mc-mods/temple-of-nihility/files/9363296` |
+| CDN download | `https://edge.forgecdn.net/files/9363/296/temple-of-nihility-neoforge-26.2-1.0.0-beta.4.jar` |
 
-## Artifacts ready to upload
+## Artifact
 
-| Target | File | Size | SHA-256 |
-|---|---|---:|---|
-| Minecraft 26.1.2 / NeoForge 26.1.2.124 | `temple-of-nihility-neoforge-26.1.2-1.0.0-beta.4.jar` | 1,753,399 B | `25dbce8952acb5d062d0c00eb44337d1ddcd7685fb43dde2350266b621e8a3a8` |
-| Minecraft 26.2 / NeoForge 26.2.0.93 | `temple-of-nihility-neoforge-26.2-1.0.0-beta.4.jar` | 1,753,277 B | `f7e142661a8b7b77d9a4015a3296f278715379edac38484ff1dd31a855c0d31b` |
+- File: `temple-of-nihility-neoforge-26.2-1.0.0-beta.4.jar`
+- Size: 1,753,277 B
+- SHA-256: `f7e142661a8b7b77d9a4015a3296f278715379edac38484ff1dd31a855c0d31b`
+- Target: Minecraft 26.2 / NeoForge 26.2.0.93 / Java 25
 
-Both hashes were recomputed from `build/libs` on 2026-10-29 and match the values published in the GitHub releases and in `docs/RELEASE-1.0.0-beta.4.md`.
+The published binary was downloaded back from the CDN after upload and its SHA-256 matches the local build exactly, so the remote artifact is verified, not assumed.
 
-## Project identity
+## Submitted metadata
 
-- Project ID: `1616748`
-- Previous file: `8466225` (1.0.0-beta.3, Minecraft 26.2)
-- Changelog source: `docs/RELEASE-1.0.0-beta.4.md`
+- Environment: Client
+- Modloader: NeoForge
+- Java: 25
+- Minecraft: 26.2
+- Release type: Beta
+- Changelog: `docs/RELEASE-1.0.0-beta.4.md`, converted to HTML and pasted into the Authors rich-text editor (7954 characters)
 
-## How to upload
+Dependencies carried over from the project defaults:
 
-The API path is closed by the Cloudflare challenge, so use the authenticated browser session. The full procedure is in `D:/Codex/WORKSPACES/Projects/mc-agent/memory/curseforge-authors-upload.md`, section "Working fallback: drive the authenticated Authors page".
+| Project | Type |
+|---|---|
+| Curios API | Required |
+| Waystones | Optional |
+| Just Enough Items (JEI) | Optional |
 
-Short version:
+## Why the API path could not be used
 
-1. Open `https://authors.curseforge.com/#/projects/1616748/files/create` in a browser session where the account shows **Manage Project**.
-2. Feed the jar to the React `onFilesDropped` handler; the visible control is a `<button>`, not a file input, and the native picker cannot be driven.
-3. Set Environment / Modloader / Minecraft through the native input value setter plus a real click on the `[role=option]`, then read `gameVersions` back from the fiber state before submitting.
-4. Submit via the `Add File` button's `__reactProps.onClick` if the DOM button stays disabled.
-5. Re-open `#/projects/1616748/files/{fileId}` afterwards to verify the tags; a stale chip from a previous form is the usual cause of wrong MC tags.
+The Upload API token is valid for reads (`GET /api/game/versions` returns `200`), but every `POST` to `minecraft.curseforge.com` is answered by a Cloudflare JS challenge, and the Authors `_api` endpoints return `401` for a token. The working path is the authenticated browser session.
 
-Do not reuse the beta.3 version IDs (`16498` / `14454` / `10150` / `9638` / `9639`) blindly. The memory card requires reading the current project-form IDs, because global catalog IDs and project-form IDs are not interchangeable.
+Upload mechanics that actually worked, for reuse:
 
-`node scripts/publish-curseforge.cjs --dry-run` still works and confirms the token is live; it exits 5 if the upload POST is Cloudflare-challenged.
+1. Open `#/projects/1616748/files/create` in a signed-in Authors session.
+2. The "Choose File" control is a `<button>`; there is no usable `input[type=file]`. Walk the React fiber from that button up to depth 14 to reach `memoizedProps.onFilesDropped`, then call it with a real `File` built from an `arrayBuffer` fetched off `127.0.0.1` (a `file://` URL will not work).
+3. `onFilesDropped` fills the display name and sets Environment / Modloader / Java / Minecraft chips automatically from the jar's metadata. Read them back rather than trusting the chips blindly.
+4. Release Type defaults to `Release`; switch it to `Beta` via the combobox.
+5. Submit through the `Add File` button's `__reactProps.onClick`. The upload posts to `/_api/project-files/{projectId}/upload-file-details` and `/_api/project-files/upload-file-chunk`, not to `/api/projects/{id}/uploadFile`.
+6. Wait for status to move from `Uploading` to `Under Review` to `Approved`.
+7. Edit the file afterwards (`#/projects/1616748/files/{fileId}`) to fix the display name and add the changelog. Set the changelog through `window.tinymce.get(0).setContent(html)`; that marks the form dirty so `Submit` becomes enabled.
 
-## Verification still required after upload
+## Not yet done
 
-- Returned file ID and `fileStatus`
-- `isMarkedForManualRelease` flag
-- Selected game versions on the Authors file record
-- Public listing visibility (a manual-release file stays non-public until approval plus manual release; a public `404` in that window is expected)
+- The 26.1.2 build (`temple-of-nihility-neoforge-26.1.2-1.0.0-beta.4.jar`, SHA-256 `25dbce8952acb5d062d0c00eb44337d1ddcd7685fb43dde2350266b621e8a3a8`) has no CurseForge file entry yet. A file can only carry one set of game versions, so it needs a separate upload if it should be published there too.
+- The project is currently unlisted ("only viewable for anyone who has the link"), per the Authors files page notice. Changing that is a project-level setting, not a file-level one.

@@ -22,11 +22,24 @@
 
 ## 二、时间线
 
-### 2026-10-29 — beta.4 发布尝试：读通了，写不通
+### 2026-10-29 — beta.4 发布成功（走浏览器会话）
 
-**结果：未上传。** 阻断点不在凭据，在写入通道。
+**结果：已上传并审核通过。** File ID `9363296`，状态 `Approved`，公开页可访问。
 
-第一轮（旧 token）确实是被拒：`GET /api/game/versions` 返回 `403 Invalid API token provided`。但随后 token 被换新，状态改变：
+| 项目 | 值 |
+|---|---|
+| File ID | `9363296` |
+| 显示名 | `Temple of Nihility 1.0.0-beta.4 - MC 26.2 NeoForge` |
+| 公开页 | `https://www.curseforge.com/minecraft/mc-mods/temple-of-nihility/files/9363296` |
+| CDN 直链 | `https://edge.forgecdn.net/files/9363/296/temple-of-nihility-neoforge-26.2-1.0.0-beta.4.jar` |
+| 状态 | `Approved` |
+| 发布类型 | Beta |
+
+上传后从 CDN 把文件下载回来重新算哈希，与本地构建逐字节一致（1,753,277 B，`f7e142661a8b7b77d9a4015a3296f278715379edac38484ff1dd31a855c0d31b`），所以远端产物是**实测验证**过的，不是推断。
+
+#### 为什么没走 API
+
+第一轮（旧 token）确实是被拒：`GET /api/game/versions` 返回 `403 Invalid API token provided`。token 换新后读能力恢复，但写通道仍然不通：
 
 | 检查 | 请求 | 结果 |
 |---|---|---|
@@ -46,14 +59,36 @@ Authors `_api` 的 401 是**凭据能力边界，不是项目权限问题**：�
 | `401` 且提示必须提供 `X-Api-Token` | 根本没带 token |
 | `403` 且正文是 "Just a moment..." | Cloudflare 挑战，不是 CurseForge 的判定 |
 
-因为 POST 被 Cloudflare 拦，实际可行的路径是**驱动已登录的 Authors 网页会话**，流程见 `D:/Codex/WORKSPACES/Projects/mc-agent/memory/curseforge-authors-upload.md` 的 "Working fallback" 一节。
+#### 实际可用的上传路径
 
-产物已就绪（哈希为 2026-10-29 重新计算）：
+驱动已登录的 Authors 网页会话。要点（完整版见 `D:/Codex/WORKSPACES/Projects/mc-agent/memory/curseforge-authors-upload.md`）：
 
-| 目标 | 文件 | 大小 | SHA-256 |
-|---|---|---:|---|
-| MC 26.1.2 / NeoForge 26.1.2.124 | `temple-of-nihility-neoforge-26.1.2-1.0.0-beta.4.jar` | 1,753,399 B | `25dbce8952acb5d062d0c00eb44337d1ddcd7685fb43dde2350266b621e8a3a8` |
-| MC 26.2 / NeoForge 26.2.0.93 | `temple-of-nihility-neoforge-26.2-1.0.0-beta.4.jar` | 1,753,277 B | `f7e142661a8b7b77d9a4015a3296f278715379edac38484ff1dd31a855c0d31b` |
+1. 打开 `#/projects/1616748/files/create`，确认账号显示 Manage Project。
+2. "Choose File" 是个 `<button>`，页面里没有可用的 `input[type=file]`。从该按钮沿 React fiber 的 `.return` 向上走到第 14 层，拿到 `memoizedProps.onFilesDropped`，用真实 `File` 调用它。文件内容必须从 `127.0.0.1` 上的本地 HTTP 服务 `fetch` 出来，`file://` 不行。
+3. `onFilesDropped` 会自动填显示名，并从 jar 元数据自动带出 Environment / Modloader / Java / Minecraft 标签。**要读回来核对，不要只看芯片**。
+4. Release Type 默认是 `Release`，需手动切到 `Beta`。
+5. 提交走 `Add File` 按钮的 `__reactProps.onClick`。真实请求打到 `/_api/project-files/{projectId}/upload-file-details` 和 `/_api/project-files/upload-file-chunk`，**不是** `/api/projects/{id}/uploadFile`。
+6. 等状态从 `Uploading` → `Under Review` → `Approved`。
+7. 传完再进 `#/projects/1616748/files/{fileId}` 补 changelog 和改显示名。changelog 用 `window.tinymce.get(0).setContent(html)` 写入，这样表单才会变脏、`Submit` 才会从禁用变可用。
+
+#### 本次提交的元数据
+
+- Environment: Client
+- Modloader: NeoForge
+- Java: 25
+- Minecraft: 26.2
+- Release Type: Beta
+- Changelog: `docs/RELEASE-1.0.0-beta.4.md` 转 HTML 后粘贴（7,954 字符）
+- 依赖：Curios API（必需）、Waystones（可选）、JEI（可选）
+
+#### 两个 jar 的状态
+
+| 目标 | 文件 | 大小 | SHA-256 | CurseForge |
+|---|---|---:|---|---|
+| MC 26.2 / NeoForge 26.2.0.93 | `temple-of-nihility-neoforge-26.2-1.0.0-beta.4.jar` | 1,753,277 B | `f7e142661a8b7b77d9a4015a3296f278715379edac38484ff1dd31a855c0d31b` | 已上传（`9363296`） |
+| MC 26.1.2 / NeoForge 26.1.2.124 | `temple-of-nihility-neoforge-26.1.2-1.0.0-beta.4.jar` | 1,753,399 B | `25dbce8952acb5d062d0c00eb44337d1ddcd7685fb43dde2350266b621e8a3a8` | **未上传** |
+
+一个 CurseForge 文件只能挂一组游戏版本，26.1.2 若要上架需单独再传一次。
 
 详细记录见 `docs/curseforge-publication-1.0.0-beta.4.md`。
 
@@ -149,17 +184,15 @@ node D:/Users/xxsx/AppData/Local/RuntimeData/tools/vault-runtime.cjs resolve cur
 | 文件 | 用途 |
 |---|---|
 | `docs/curseforge-publication-1.0.0-beta.3.md` | beta.3 上传记录（文件 ID `8466225`） |
-| `docs/curseforge-publication-1.0.0-beta.4.md` | beta.4 上传受阻记录与待执行的命令 |
+| `docs/curseforge-publication-1.0.0-beta.4.md` | beta.4 上传成功记录（文件 ID `9363296`，含浏览器上传的实操细节） |
 | `docs/curseforge-changelog-1.0.0-beta.3.md` | beta.3 上传用的 changelog 正文 |
-| `scripts/publish-curseforge.cjs` | 上传脚本：调用时从凭据库取 token，`--dry-run` 只验证不上传 |
+| `scripts/publish-curseforge.cjs` | 上传脚本：调用时从凭据库取 token，`--dry-run` 只验证 token 读能力；API 写路径被 Cloudflare 拦时退出码 5 |
 | `D:/Codex/WORKSPACES/Projects/mc-agent/memory/curseforge-authors-upload.md` | 跨项目经验卡片（含 token 存储位置、Cloudflare 写阻断、浏览器 fallback 完整步骤） |
 
 ---
 
 ## 六、待办
 
-1. 用已登录的 Authors 网页会话上传 beta.4（走 `memory/curseforge-authors-upload.md` 的浏览器 fallback；POST API 被 Cloudflare 拦，不要再试）。
-2. 上传前从表单当前选项取 Environment / Modloader / Minecraft 的项目表单 ID，不要复用 beta.3 的 `16498 / 14454 / 10150 / 9638 / 9639`。
-3. 上传后复核文件 ID、状态、手动发布标记、已选版本、公开可见性；特别检查有没有上一份表单残留的 MC 标签。
-4. 决定是否也给 26.1.2 版本建一个文件条目（CurseForge 一个文件只能挂一组版本）。
-5. 凭据库元数据已更新为 `validated-authors-readonly`，若之后开通写权限再同步更新允许操作列表。
+1. 决定是否也给 26.1.2 版本建一个文件条目（CurseForge 一个文件只能挂一组版本）。若需要，重复本次浏览器上传流程，只是换 jar。
+2. 项目当前处于 unlisted（只有拿到链接的人可见）。是否公开是项目级 General 设置，不是文件级设置，需要单独决定。
+3. 凭据库元数据已更新为 `validated-authors-readonly`，若之后开通写权限再同步更新允许操作列表。
