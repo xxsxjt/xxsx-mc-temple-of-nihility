@@ -107,7 +107,6 @@ public class TempleNihilityMod {
         NeoForge.EVENT_BUS.addListener(VoidPhaseEvents::targetChange);
         NeoForge.EVENT_BUS.addListener(VoidPhaseEvents::attackEntity);
         NeoForge.EVENT_BUS.addListener(VoidPhaseEvents::entityInteract);
-        NeoForge.EVENT_BUS.addListener(VoidPhaseEvents::entityInteractSpecific);
         NeoForge.EVENT_BUS.addListener(VoidPhaseEvents::projectileImpact);
         NeoForge.EVENT_BUS.addListener(VoidPhaseEvents::playerLoggedIn);
         NeoForge.EVENT_BUS.addListener(VoidPhaseEvents::playerLoggedOut);

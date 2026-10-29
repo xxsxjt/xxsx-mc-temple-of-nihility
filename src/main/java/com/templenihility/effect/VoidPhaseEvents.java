@@ -123,13 +123,6 @@ public final class VoidPhaseEvents {
         }
     }
 
-    public static void entityInteractSpecific(PlayerInteractEvent.EntityInteractSpecific event) {
-        if (event.getTarget() instanceof Player target && hasFullPhase(target)) {
-            event.setCanceled(true);
-            event.setCancellationResult(InteractionResult.FAIL);
-        }
-    }
-
     public static void projectileImpact(ProjectileImpactEvent event) {
         if (event.getRayTraceResult() instanceof EntityHitResult hit
             && hit.getEntity() instanceof Player player
