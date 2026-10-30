@@ -69,127 +69,125 @@ public class NihilityCreatureModel extends EntityModel<NihilityRenderState> {
     public static LayerDefinition createBodyLayer() {
         MeshDefinition mesh = new MeshDefinition();
         PartDefinition root = mesh.getRoot();
-        CubeDeformation fluid = new CubeDeformation(0.10f);
+        CubeDeformation fluid = new CubeDeformation(0.02f);
 
-        root.addOrReplaceChild(
-            "head",
-            CubeListBuilder.create()
-                .texOffs(0, 0).addBox(-3.0f, -7.0f, -3.0f, 6.0f, 7.0f, 6.0f),
-            PartPose.offset(0.0f, 0.0f, 0.0f)
-        );
-        root.addOrReplaceChild(
-            "head_sheen",
-            CubeListBuilder.create()
-                .texOffs(24, 0).addBox(-3.25f, -7.25f, -3.25f, 6.5f, 7.5f, 6.5f, fluid),
-            PartPose.offset(0.0f, 0.0f, 0.0f)
+        root.addOrReplaceChild("head", CubeListBuilder.create()
+                .texOffs(0, 0).addBox(-3.0f, 0.0f, -3.0f, 6f, 4.4f, 6f, fluid)
+                .texOffs(0, 32).addBox(-2.6f, 4.4f, -2.8f, 5.2f, 1.6f, 5.6f, fluid)
+                .texOffs(40, 0).addBox(-2.4f, 0.6f, -3.5f, 4.8f, 3.4f, 1.0f, fluid)
+            , PartPose.offset(0f, 3.0f, 0f)
         );
 
-        root.addOrReplaceChild(
-            "body",
-            CubeListBuilder.create()
-                .texOffs(16, 16).addBox(-3.0f, 0.0f, -1.5f, 6.0f, 11.0f, 3.0f)
-                .texOffs(40, 16).addBox(-3.25f, 1.0f, -1.75f, 6.5f, 9.0f, 3.5f, fluid),
-            PartPose.offset(0.0f, 0.0f, 0.0f)
+        root.addOrReplaceChild("head_sheen", CubeListBuilder.create()
+                .texOffs(24, 0).addBox(-3.3f, -0.3f, -3.3f, 6.6f, 5.0f, 6.6f, fluid)
+            , PartPose.offset(0f, 3.0f, 0f)
         );
 
-        root.addOrReplaceChild(
-            "right_arm",
-            CubeListBuilder.create()
-                .texOffs(0, 20).addBox(-1.5f, -1.0f, -1.5f, 3.0f, 11.0f, 3.0f, fluid),
-            PartPose.offset(-4.75f, 1.5f, 0.0f)
-        );
-        root.addOrReplaceChild(
-            "left_arm",
-            CubeListBuilder.create()
-                .texOffs(0, 20).mirror().addBox(-1.5f, -1.0f, -1.5f, 3.0f, 11.0f, 3.0f, fluid),
-            PartPose.offset(4.75f, 1.5f, 0.0f)
-        );
-        root.addOrReplaceChild(
-            "right_leg",
-            CubeListBuilder.create()
-                .texOffs(32, 32).addBox(-1.5f, 0.0f, -1.35f, 3.0f, 11.0f, 3.0f, fluid),
-            PartPose.offset(-1.65f, 11.0f, 0.0f)
-        );
-        root.addOrReplaceChild(
-            "left_leg",
-            CubeListBuilder.create()
-                .texOffs(32, 32).mirror().addBox(-1.5f, 0.0f, -1.35f, 3.0f, 11.0f, 3.0f, fluid),
-            PartPose.offset(1.65f, 11.0f, 0.0f)
+        root.addOrReplaceChild("body", CubeListBuilder.create()
+                .texOffs(16, 24).addBox(-4.0f, -6.0f, -2.2f, 8.0f, 6.0f, 4.4f, fluid)
+                .texOffs(16, 48).addBox(-2.8f, 0.0f, -1.7f, 5.6f, 5.0f, 3.4f, fluid)
+                .texOffs(44, 48).addBox(-3.4f, 5.0f, -1.8f, 6.8f, 3.0f, 3.6f, fluid)
+                .texOffs(48, 24).addBox(-2.8f, 0.0f, 1.7f, 5.6f, 12.0f, 1.0f, fluid)
+            , PartPose.offset(0f, 15.0f, 0f)
         );
 
-        root.addOrReplaceChild(
-            "left_shoulder",
-            CubeListBuilder.create()
-                .texOffs(8, 36).addBox(-1.0f, -0.8f, -2.1f, 3.0f, 2.0f, 4.2f, fluid),
-            PartPose.offset(-4.25f, 1.3f, 0.0f)
-        );
-        root.addOrReplaceChild(
-            "right_shoulder",
-            CubeListBuilder.create()
-                .texOffs(8, 36).mirror().addBox(-2.0f, -0.8f, -2.1f, 3.0f, 2.0f, 4.2f, fluid),
-            PartPose.offset(4.25f, 1.3f, 0.0f)
+        root.addOrReplaceChild("right_arm", CubeListBuilder.create()
+                .texOffs(0, 64).addBox(-3.2f, 0.0f, -1.7f, 3.2f, 5.0f, 3.4f, fluid)
+                .texOffs(16, 64).addBox(-3.0f, 5.0f, -1.5f, 3.0f, 5.0f, 3.0f, fluid)
+                .texOffs(32, 64).addBox(-2.8f, 10.0f, -1.2f, 2.4f, 2.6f, 2.4f, fluid)
+            , PartPose.offset(-5.2f, 10.0f, 0f)
         );
 
-        // Long transparent bands preserve a humanoid outline while making the motion readable.
-        root.addOrReplaceChild(
-            "left_flow",
-            CubeListBuilder.create()
-                .texOffs(48, 32).addBox(-0.8f, -1.0f, -0.35f, 1.6f, 15.0f, 0.7f, new CubeDeformation(0.04f)),
-            PartPose.offset(-4.0f, 2.0f, 2.0f)
-        );
-        root.addOrReplaceChild(
-            "right_flow",
-            CubeListBuilder.create()
-                .texOffs(54, 32).addBox(-0.8f, -1.0f, -0.35f, 1.6f, 15.0f, 0.7f, new CubeDeformation(0.04f)),
-            PartPose.offset(4.0f, 2.0f, 2.0f)
-        );
-        root.addOrReplaceChild(
-            "lower_flow_left",
-            CubeListBuilder.create()
-                .texOffs(0, 48).addBox(-0.75f, -1.0f, -0.4f, 1.5f, 12.0f, 0.8f, new CubeDeformation(0.04f)),
-            PartPose.offset(-2.8f, 11.0f, 1.65f)
-        );
-        root.addOrReplaceChild(
-            "lower_flow_right",
-            CubeListBuilder.create()
-                .texOffs(4, 48).addBox(-0.75f, -1.0f, -0.4f, 1.5f, 12.0f, 0.8f, new CubeDeformation(0.04f)),
-            PartPose.offset(2.8f, 11.0f, 1.65f)
+        root.addOrReplaceChild("left_arm", CubeListBuilder.create()
+                .texOffs(48, 64).addBox(0.0f, 0.0f, -1.7f, 3.2f, 5.0f, 3.4f, fluid)
+                .texOffs(64, 64).addBox(0.0f, 5.0f, -1.5f, 3.0f, 5.0f, 3.0f, fluid)
+                .texOffs(80, 64).addBox(0.4f, 10.0f, -1.2f, 2.4f, 2.6f, 2.4f, fluid)
+            , PartPose.offset(5.2f, 10.0f, 0f)
         );
 
-        root.addOrReplaceChild(
-            "seal_left",
-            CubeListBuilder.create()
-                .texOffs(16, 48).addBox(-0.75f, -2.0f, -0.3f, 1.5f, 5.0f, 0.6f, new CubeDeformation(0.04f)),
-            PartPose.offset(-6.0f, 4.0f, 1.8f)
-        );
-        root.addOrReplaceChild(
-            "seal_right",
-            CubeListBuilder.create()
-                .texOffs(20, 48).addBox(-0.75f, -2.0f, -0.3f, 1.5f, 5.0f, 0.6f, new CubeDeformation(0.04f)),
-            PartPose.offset(6.0f, 4.0f, 1.8f)
+        root.addOrReplaceChild("right_leg", CubeListBuilder.create()
+                .texOffs(0, 96).addBox(-1.6f, 0.0f, -1.7f, 3.2f, 10.0f, 3.4f, fluid)
+                .texOffs(16, 96).addBox(-1.5f, 10.0f, -1.5f, 3.0f, 5.0f, 3.0f, fluid)
+                .texOffs(32, 96).addBox(-1.6f, 15.0f, -2.4f, 3.2f, 2.0f, 4.8f, fluid)
+            , PartPose.offset(-1.8f, 23.0f, 0f)
         );
 
-        // A broken crown replaces the old solid halo at the two highest tiers.
-        root.addOrReplaceChild(
-            "crown_left",
-            CubeListBuilder.create()
-                .texOffs(28, 48).addBox(-4.5f, -9.5f, -0.35f, 3.0f, 0.8f, 0.7f, new CubeDeformation(0.03f)),
-            PartPose.offset(0.0f, 0.0f, 0.0f)
-        );
-        root.addOrReplaceChild(
-            "crown_right",
-            CubeListBuilder.create()
-                .texOffs(36, 48).addBox(1.5f, -9.5f, -0.35f, 3.0f, 0.8f, 0.7f, new CubeDeformation(0.03f)),
-            PartPose.offset(0.0f, 0.0f, 0.0f)
-        );
-        root.addOrReplaceChild(
-            "crown_top",
-            CubeListBuilder.create()
-                .texOffs(44, 48).addBox(-0.6f, -12.0f, -0.35f, 1.2f, 2.6f, 0.7f, new CubeDeformation(0.03f)),
-            PartPose.offset(0.0f, 0.0f, 0.0f)
+        root.addOrReplaceChild("left_leg", CubeListBuilder.create()
+                .texOffs(48, 96).addBox(-1.6f, 0.0f, -1.7f, 3.2f, 10.0f, 3.4f, fluid)
+                .texOffs(64, 96).addBox(-1.5f, 10.0f, -1.5f, 3.0f, 5.0f, 3.0f, fluid)
+                .texOffs(80, 96).addBox(-1.6f, 15.0f, -2.4f, 3.2f, 2.0f, 4.8f, fluid)
+            , PartPose.offset(1.8f, 23.0f, 0f)
         );
 
-        return LayerDefinition.create(mesh, 128, 128);
+        root.addOrReplaceChild("left_shoulder", CubeListBuilder.create()
+                .texOffs(0, 128).addBox(-0.8f, -0.6f, -3.0f, 4.8f, 2.2f, 6.0f, fluid)
+                .texOffs(24, 128).addBox(-0.2f, 1.6f, -2.4f, 3.6f, 1.8f, 4.8f, fluid)
+            , PartPose.offset(5.2f, 9.0f, 0f)
+        );
+
+        root.addOrReplaceChild("right_shoulder", CubeListBuilder.create()
+                .texOffs(48, 128).addBox(-4.0f, -0.6f, -3.0f, 4.8f, 2.2f, 6.0f, fluid)
+                .texOffs(72, 128).addBox(-3.4f, 1.6f, -2.4f, 3.6f, 1.8f, 4.8f, fluid)
+            , PartPose.offset(-5.2f, 9.0f, 0f)
+        );
+
+        root.addOrReplaceChild("left_flow", CubeListBuilder.create()
+                .texOffs(0, 160).addBox(-1.1f, 0.0f, -0.4f, 2.2f, 5.0f, 1.0f, fluid)
+                .texOffs(16, 160).addBox(-1.0f, 5.0f, -0.35f, 2.2f, 5.0f, 1.0f, fluid)
+                .texOffs(32, 160).addBox(-0.9f, 10.0f, -0.3f, 2.2f, 5.0f, 1.0f, fluid)
+            , PartPose.offset(-5.2f, 9.0f, 2.6f)
+        );
+
+        root.addOrReplaceChild("right_flow", CubeListBuilder.create()
+                .texOffs(48, 160).addBox(-1.1f, 0.0f, -0.4f, 2.2f, 5.0f, 1.0f, fluid)
+                .texOffs(64, 160).addBox(-1.0f, 5.0f, -0.35f, 2.2f, 5.0f, 1.0f, fluid)
+                .texOffs(80, 160).addBox(-0.9f, 10.0f, -0.3f, 2.2f, 5.0f, 1.0f, fluid)
+            , PartPose.offset(5.2f, 9.0f, 2.6f)
+        );
+
+        root.addOrReplaceChild("lower_flow_left", CubeListBuilder.create()
+                .texOffs(0, 192).addBox(-1.0f, 0.0f, -0.4f, 2.0f, 4.4f, 1.0f, fluid)
+                .texOffs(16, 192).addBox(-0.9f, 4.4f, -0.35f, 2.0f, 4.4f, 1.0f, fluid)
+                .texOffs(32, 192).addBox(-0.8f, 8.8f, -0.3f, 2.0f, 4.4f, 1.0f, fluid)
+            , PartPose.offset(-1.8f, 23.0f, 2.2f)
+        );
+
+        root.addOrReplaceChild("lower_flow_right", CubeListBuilder.create()
+                .texOffs(48, 192).addBox(-1.0f, 0.0f, -0.4f, 2.0f, 4.4f, 1.0f, fluid)
+                .texOffs(64, 192).addBox(-0.9f, 4.4f, -0.35f, 2.0f, 4.4f, 1.0f, fluid)
+                .texOffs(80, 192).addBox(-0.8f, 8.8f, -0.3f, 2.0f, 4.4f, 1.0f, fluid)
+            , PartPose.offset(1.8f, 23.0f, 2.2f)
+        );
+
+        root.addOrReplaceChild("seal_left", CubeListBuilder.create()
+                .texOffs(0, 224).addBox(-0.5f, -1.5f, -0.5f, 1.2f, 3.2f, 1.2f, fluid)
+                .texOffs(8, 224).addBox(-0.5f, 1.7f, -0.5f, 1.2f, 2.2f, 1.2f, fluid)
+            , PartPose.offset(-7.6f, 15.0f, 1.2f)
+        );
+
+        root.addOrReplaceChild("seal_right", CubeListBuilder.create()
+                .texOffs(16, 224).addBox(-0.7f, -1.5f, -0.5f, 1.2f, 3.2f, 1.2f, fluid)
+                .texOffs(24, 224).addBox(-0.7f, 1.7f, -0.5f, 1.2f, 2.2f, 1.2f, fluid)
+            , PartPose.offset(7.6f, 15.0f, 1.2f)
+        );
+
+        root.addOrReplaceChild("crown_left", CubeListBuilder.create()
+                .texOffs(32, 224).addBox(-5.2f, -1.4f, -0.6f, 3.2f, 1.2f, 1.2f, fluid)
+                .texOffs(48, 224).addBox(-6.0f, -3.4f, -0.6f, 1.2f, 2.0f, 1.2f, fluid)
+            , PartPose.offset(0f, 3.0f, 0f)
+        );
+
+        root.addOrReplaceChild("crown_right", CubeListBuilder.create()
+                .texOffs(56, 224).addBox(2.0f, -1.4f, -0.6f, 3.2f, 1.2f, 1.2f, fluid)
+                .texOffs(72, 224).addBox(4.8f, -3.4f, -0.6f, 1.2f, 2.0f, 1.2f, fluid)
+            , PartPose.offset(0f, 3.0f, 0f)
+        );
+
+        root.addOrReplaceChild("crown_top", CubeListBuilder.create()
+                .texOffs(80, 224).addBox(-0.6f, -4.2f, -0.6f, 1.2f, 2.8f, 1.2f, fluid)
+            , PartPose.offset(0f, 3.0f, 0f)
+        );
+        return LayerDefinition.create(mesh, 256, 256);
     }
 
     @Override
@@ -386,6 +384,58 @@ public class NihilityCreatureModel extends EntityModel<NihilityRenderState> {
             this.rightArm.zRot = -0.55f - charge * 0.22f;
             this.leftArm.zRot = 0.55f + charge * 0.22f;
             this.body.yRot += Mth.sin(age * 0.18f) * 0.08f;
+        } else if (state.action == ActionType.SAINT_VOID_TERMINUS) {
+            // The Saint folds inward, then drives both arms down and opens the
+            // crown wide as the terminus resolves.
+            float windup = Math.min(1.0F,
+                state.actionElapsed / ActionType.SAINT_VOID_TERMINUS.windupTicks());
+            if (state.actionPhase == Phase.WINDUP) {
+                this.body.xRot -= 0.30f * windup;
+                this.body.yScale = 1.0f - 0.10f * windup;
+                this.rightArm.xRot = -1.55f - windup * 0.35f;
+                this.leftArm.xRot = -1.55f - windup * 0.35f;
+                this.rightArm.zRot = -0.30f - windup * 0.45f;
+                this.leftArm.zRot = 0.30f + windup * 0.45f;
+                this.crownLeft.yRot += windup * 0.55f;
+                this.crownRight.yRot -= windup * 0.55f;
+                this.crownTop.xRot -= windup * 0.55f;
+            } else if (state.actionPhase == Phase.ACTIVE) {
+                float settle = Mth.sin(age * 0.55f) * 0.06f;
+                this.body.xRot = 0.18f + settle;
+                this.body.yScale = 1.10f;
+                this.rightArm.xRot = 0.42f;
+                this.leftArm.xRot = 0.42f;
+                this.rightArm.zRot = -0.95f;
+                this.leftArm.zRot = 0.95f;
+                this.crownLeft.yRot += 0.95f;
+                this.crownRight.yRot -= 0.95f;
+                this.crownTop.xRot -= 0.85f;
+                this.sealLeft.zRot = Mth.sin(age * 0.5f) * 0.5f;
+                this.sealRight.zRot = -Mth.sin(age * 0.5f) * 0.5f;
+            } else if (state.actionPhase == Phase.RECOVERY) {
+                float back = Math.min(1.0F, (state.actionElapsed
+                    - ActionType.SAINT_VOID_TERMINUS.windupTicks()
+                    - ActionType.SAINT_VOID_TERMINUS.activeTicks())
+                    / ActionType.SAINT_VOID_TERMINUS.recoveryTicks());
+                this.body.xRot = 0.18f * (1.0f - back);
+                this.body.yScale = 1.10f - 0.10f * back;
+                this.rightArm.xRot = 0.42f * (1.0f - back);
+                this.leftArm.xRot = 0.42f * (1.0f - back);
+                this.rightArm.zRot = -0.95f * (1.0f - back);
+                this.leftArm.zRot = 0.95f * (1.0f - back);
+            }
+        }
+
+        // Recovery for every other action: relax the pose instead of snapping.
+        if (state.action != ActionType.NONE
+            && state.action != ActionType.SAINT_VOID_TERMINUS
+            && state.actionPhase == Phase.RECOVERY) {
+            float relax = Math.min(1.0F, state.actionElapsed
+                / Math.max(1, state.action.totalTicks()));
+            this.body.xRot *= 1.0f - relax;
+            this.body.yRot *= 1.0f - relax;
+            this.rightArm.zRot *= 1.0f - relax;
+            this.leftArm.zRot *= 1.0f - relax;
         }
     }
 }

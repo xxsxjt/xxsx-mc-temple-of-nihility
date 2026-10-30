@@ -44,30 +44,56 @@ public class NihilityFlowModel extends EntityModel<NihilityRenderState> {
     public static LayerDefinition createBodyLayer() {
         MeshDefinition mesh = new MeshDefinition();
         PartDefinition root = mesh.getRoot();
-        CubeDeformation edge = new CubeDeformation(0.045f);
+        CubeDeformation edge = new CubeDeformation(0.035f);
 
         root.addOrReplaceChild("left_flow", CubeListBuilder.create()
-                .texOffs(0, 0).addBox(-0.75f, -1.0f, -0.3f, 1.5f, 15.0f, 0.6f, edge),
-            PartPose.offset(-4.0f, 2.0f, 2.0f));
+                .texOffs(0, 160).addBox(-1.1f, 0.0f, -0.4f, 2.2f, 5.0f, 1.0f, edge)
+                .texOffs(16, 160).addBox(-1.0f, 5.0f, -0.35f, 2.2f, 5.0f, 1.0f, edge)
+                .texOffs(32, 160).addBox(-0.9f, 10.0f, -0.3f, 2.2f, 5.0f, 1.0f, edge)
+            , PartPose.offset(-5.2f, 9.0f, 2.6f));
+
         root.addOrReplaceChild("right_flow", CubeListBuilder.create()
-                .texOffs(16, 0).addBox(-0.75f, -1.0f, -0.3f, 1.5f, 15.0f, 0.6f, edge),
-            PartPose.offset(4.0f, 2.0f, 2.0f));
+                .texOffs(48, 160).addBox(-1.1f, 0.0f, -0.4f, 2.2f, 5.0f, 1.0f, edge)
+                .texOffs(64, 160).addBox(-1.0f, 5.0f, -0.35f, 2.2f, 5.0f, 1.0f, edge)
+                .texOffs(80, 160).addBox(-0.9f, 10.0f, -0.3f, 2.2f, 5.0f, 1.0f, edge)
+            , PartPose.offset(5.2f, 9.0f, 2.6f));
+
         root.addOrReplaceChild("lower_left", CubeListBuilder.create()
-                .texOffs(32, 0).addBox(-0.7f, -1.0f, -0.35f, 1.4f, 12.0f, 0.7f, edge),
-            PartPose.offset(-2.8f, 11.0f, 1.65f));
+                .texOffs(0, 192).addBox(-1.0f, 0.0f, -0.4f, 2.0f, 4.4f, 1.0f, edge)
+                .texOffs(16, 192).addBox(-0.9f, 4.4f, -0.35f, 2.0f, 4.4f, 1.0f, edge)
+                .texOffs(32, 192).addBox(-0.8f, 8.8f, -0.3f, 2.0f, 4.4f, 1.0f, edge)
+            , PartPose.offset(-1.8f, 23.0f, 2.2f));
+
         root.addOrReplaceChild("lower_right", CubeListBuilder.create()
-                .texOffs(48, 0).addBox(-0.7f, -1.0f, -0.35f, 1.4f, 12.0f, 0.7f, edge),
-            PartPose.offset(2.8f, 11.0f, 1.65f));
+                .texOffs(48, 192).addBox(-1.0f, 0.0f, -0.4f, 2.0f, 4.4f, 1.0f, edge)
+                .texOffs(64, 192).addBox(-0.9f, 4.4f, -0.35f, 2.0f, 4.4f, 1.0f, edge)
+                .texOffs(80, 192).addBox(-0.8f, 8.8f, -0.3f, 2.0f, 4.4f, 1.0f, edge)
+            , PartPose.offset(1.8f, 23.0f, 2.2f));
+
+        root.addOrReplaceChild("seal_left", CubeListBuilder.create()
+                .texOffs(0, 224).addBox(-0.5f, -1.5f, -0.5f, 1.2f, 3.2f, 1.2f, edge)
+                .texOffs(8, 224).addBox(-0.5f, 1.7f, -0.5f, 1.2f, 2.2f, 1.2f, edge)
+            , PartPose.offset(-7.6f, 15.0f, 1.2f));
+
+        root.addOrReplaceChild("seal_right", CubeListBuilder.create()
+                .texOffs(16, 224).addBox(-0.7f, -1.5f, -0.5f, 1.2f, 3.2f, 1.2f, edge)
+                .texOffs(24, 224).addBox(-0.7f, 1.7f, -0.5f, 1.2f, 2.2f, 1.2f, edge)
+            , PartPose.offset(7.6f, 15.0f, 1.2f));
+
         root.addOrReplaceChild("crown_left", CubeListBuilder.create()
-                .texOffs(0, 32).addBox(-4.5f, -9.5f, -0.3f, 3.0f, 0.7f, 0.6f, edge),
-            PartPose.ZERO);
+                .texOffs(32, 224).addBox(-5.2f, -1.4f, -0.6f, 3.2f, 1.2f, 1.2f, edge)
+                .texOffs(48, 224).addBox(-6.0f, -3.4f, -0.6f, 1.2f, 2.0f, 1.2f, edge)
+            , PartPose.offset(0f, 3.0f, 0f));
+
         root.addOrReplaceChild("crown_right", CubeListBuilder.create()
-                .texOffs(16, 32).addBox(1.5f, -9.5f, -0.3f, 3.0f, 0.7f, 0.6f, edge),
-            PartPose.ZERO);
+                .texOffs(56, 224).addBox(2.0f, -1.4f, -0.6f, 3.2f, 1.2f, 1.2f, edge)
+                .texOffs(72, 224).addBox(4.8f, -3.4f, -0.6f, 1.2f, 2.0f, 1.2f, edge)
+            , PartPose.offset(0f, 3.0f, 0f));
+
         root.addOrReplaceChild("crown_top", CubeListBuilder.create()
-                .texOffs(32, 32).addBox(-0.55f, -12.0f, -0.3f, 1.1f, 2.6f, 0.6f, edge),
-            PartPose.ZERO);
-        return LayerDefinition.create(mesh, 128, 128);
+                .texOffs(80, 224).addBox(-0.6f, -4.2f, -0.6f, 1.2f, 2.8f, 1.2f, edge)
+            , PartPose.offset(0f, 3.0f, 0f));
+        return LayerDefinition.create(mesh, 256, 256);
     }
 
     @Override
