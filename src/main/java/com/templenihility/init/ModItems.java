@@ -5,15 +5,34 @@ import com.templenihility.item.*;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
+import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.item.equipment.ArmorType;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 public class ModItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(TempleNihilityMod.MOD_ID);
+
+    // 刷怪蛋 - 五级虚无生物
+    public static final DeferredItem<SpawnEggItem> NIHILITY_BELIEVER_SPAWN_EGG =
+        spawnEgg("nihility_believer_spawn_egg", ModEntities.NIHILITY_BELIEVER);
+
+    public static final DeferredItem<SpawnEggItem> NIHILITY_FOLLOWER_SPAWN_EGG =
+        spawnEgg("nihility_follower_spawn_egg", ModEntities.NIHILITY_FOLLOWER);
+
+    public static final DeferredItem<SpawnEggItem> NIHILITY_ENVOY_SPAWN_EGG =
+        spawnEgg("nihility_envoy_spawn_egg", ModEntities.NIHILITY_ENVOY);
+
+    public static final DeferredItem<SpawnEggItem> NIHILITY_GRAND_ENVOY_SPAWN_EGG =
+        spawnEgg("nihility_grand_envoy_spawn_egg", ModEntities.NIHILITY_GRAND_ENVOY);
+
+    public static final DeferredItem<SpawnEggItem> NIHILITY_SAINT_SPAWN_EGG =
+        spawnEgg("nihility_saint_spawn_egg", ModEntities.NIHILITY_SAINT);
 
     // 游戏内指导书 - 低阶材料即可制作
     public static final DeferredItem<Item> NIHILITY_GUIDE = ITEMS.register("nihility_guide",
@@ -285,6 +304,12 @@ public class ModItems {
 
     static Item.Properties itemProperties(Identifier id) {
         return new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id));
+    }
+
+    private static DeferredItem<SpawnEggItem> spawnEgg(
+            String name, DeferredHolder<EntityType<?>, ? extends EntityType<?>> entityType) {
+        return ITEMS.register(name,
+            id -> new SpawnEggItem(itemProperties(id).spawnEgg(entityType.get())));
     }
 
     public static void register(IEventBus eventBus) {

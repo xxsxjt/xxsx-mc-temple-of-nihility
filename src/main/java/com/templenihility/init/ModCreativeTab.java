@@ -82,6 +82,11 @@ public class ModCreativeTab {
                 output.accept(ModItems.NIHILITY_WAYSTONE.get());
                 output.accept(ModItems.NIHILITY_POWER_CHARM.get());
                 output.accept(ModItems.NIHILITY_CONDUIT_CHARM.get());
+                output.accept(ModItems.NIHILITY_BELIEVER_SPAWN_EGG.get());
+                output.accept(ModItems.NIHILITY_FOLLOWER_SPAWN_EGG.get());
+                output.accept(ModItems.NIHILITY_ENVOY_SPAWN_EGG.get());
+                output.accept(ModItems.NIHILITY_GRAND_ENVOY_SPAWN_EGG.get());
+                output.accept(ModItems.NIHILITY_SAINT_SPAWN_EGG.get());
                 output.accept(ModBlocks.NIHILITY_STONE.get());
                 output.accept(ModBlocks.NIHILITY_CRYSTAL_BLOCK.get());
                 output.accept(ModBlocks.NIHILITY_BRICKS.get());

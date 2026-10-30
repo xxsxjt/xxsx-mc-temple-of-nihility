@@ -480,5 +480,10 @@
     "guide.templenihility.page.14.title": "依赖与联动",
     "guide.templenihility.page.14.body": "JEI：%s。可查看普通配方，并与终端搜索联动。\n\nWaystones：%s。安装后虚空传送石无长按、无冷却，以虚无能量支付。\n\nCurios：%s。它是必需前置，提供饰品栏、终端和能量饰品支持。",
     "guide.templenihility.page.15.title": "常见问题",
-    "guide.templenihility.page.15.body": "祭坛没反应：查看界面下方的材料、等级、能量和输出提示。\n\n终端打不开：潜行用终端右键宝库重新绑定，并确认维度相同。\n\n宝库挖不动：先在宝库界面关闭破坏保护。\n\n棱柱不产能：至少留一个面直接接触空气。\n\n传输不动：右键核心，核对输入/输出面、资源模式、筛选和红石；顶部会给出具体阻塞原因。"
+    "guide.templenihility.page.15.body": "祭坛没反应：查看界面下方的材料、等级、能量和输出提示。\n\n终端打不开：潜行用终端右键宝库重新绑定，并确认维度相同。\n\n宝库挖不动：先在宝库界面关闭破坏保护。\n\n棱柱不产能：至少留一个面直接接触空气。\n\n传输不动：右键核心，核对输入/输出面、资源模式、筛选和红石；顶部会给出具体阻塞原因。",
+    "item.templenihility.nihility_believer_spawn_egg": "归尘信徒刷怪蛋",
+    "item.templenihility.nihility_follower_spawn_egg": "归尘侍从刷怪蛋",
+    "item.templenihility.nihility_envoy_spawn_egg": "归尘使者刷怪蛋",
+    "item.templenihility.nihility_grand_envoy_spawn_egg": "归尘大使者刷怪蛋",
+    "item.templenihility.nihility_saint_spawn_egg": "归尘圣者刷怪蛋"
 }
