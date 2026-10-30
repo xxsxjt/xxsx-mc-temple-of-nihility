@@ -32,3 +32,6 @@ Thumbs.db
 
 # Minecraft runtime dirs (local, not versioned)
 runs/
+
+__pycache__/
+*.pyc
