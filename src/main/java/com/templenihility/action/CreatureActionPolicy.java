@@ -37,6 +37,10 @@ public final class CreatureActionPolicy {
             return windupTicks + activeTicks + recoveryTicks;
         }
 
+        public int recoveryTicks() {
+            return recoveryTicks;
+        }
+
         public int cooldownTicks() {
             return cooldownTicks;
         }
