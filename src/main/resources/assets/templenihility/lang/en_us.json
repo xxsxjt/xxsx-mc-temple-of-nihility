@@ -480,5 +480,10 @@
     "guide.templenihility.page.14.title": "Dependencies",
     "guide.templenihility.page.14.body": "JEI: %s. It shows normal recipes and integrates with terminal search.\n\nWaystones: %s. When present, the Void Warp Stone removes hold time and cooldown and spends Nihility Energy.\n\nCurios: %s. It is required and provides accessory slots, the terminal, and energy accessories.",
     "guide.templenihility.page.15.title": "Troubleshooting",
-    "guide.templenihility.page.15.body": "Altar inactive: read the material, tier, energy, and output status line.\n\nTerminal will not open: sneak-use it on the vault again and stay in the same dimension.\n\nVault cannot be mined: disable break protection in its screen.\n\nPrism has no output: expose at least one face directly to air.\n\nTransport stopped: right-click the core and verify input/output faces, resource mode, filter, and redstone. The top line reports the exact blockage."
+    "guide.templenihility.page.15.body": "Altar inactive: read the material, tier, energy, and output status line.\n\nTerminal will not open: sneak-use it on the vault again and stay in the same dimension.\n\nVault cannot be mined: disable break protection in its screen.\n\nPrism has no output: expose at least one face directly to air.\n\nTransport stopped: right-click the core and verify input/output faces, resource mode, filter, and redstone. The top line reports the exact blockage.",
+    "item.templenihility.nihility_believer_spawn_egg": "Nihility Believer Spawn Egg",
+    "item.templenihility.nihility_follower_spawn_egg": "Nihility Follower Spawn Egg",
+    "item.templenihility.nihility_envoy_spawn_egg": "Nihility Envoy Spawn Egg",
+    "item.templenihility.nihility_grand_envoy_spawn_egg": "Nihility Grand Envoy Spawn Egg",
+    "item.templenihility.nihility_saint_spawn_egg": "Nihility Saint Spawn Egg"
 }
