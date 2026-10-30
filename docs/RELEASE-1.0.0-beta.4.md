@@ -9,21 +9,44 @@ This release provides two parallel builds for different NeoForge versions:
 
 ### NeoForge 26.1.2 (Stable)
 - **File**: `temple-of-nihility-neoforge-26.1.2-1.0.0-beta.4.jar`
-- **Size**: 1.7 MB
-- **SHA-256**: `25dbce8952acb5d062d0c00eb44337d1ddcd7685fb43dde2350266b621e8a3a8`
+- **Size**: 1.5 MB
+- **SHA-256**: `dfa32ab5c91b09a4b4c15dc07735407cae7803cf0396d9705e80078e4fd43ae4`
 - **NeoForge**: 26.1.2.124
 - **Minecraft**: 26.1.2
 - **Target**: Stable compatibility with established mod ecosystem
 
 ### NeoForge 26.2 (Latest)
 - **File**: `temple-of-nihility-neoforge-26.2-1.0.0-beta.4.jar`
-- **Size**: 1.7 MB
-- **SHA-256**: `f7e142661a8b7b77d9a4015a3296f278715379edac38484ff1dd31a855c0d31b`
+- **Size**: 1.5 MB
+- **SHA-256**: `a3f51653503bd00c370c26cedff5f54f196260325169e3a3741a19ea2e3d51d4`
 - **NeoForge**: 26.2.0.93
 - **Minecraft**: 26.2
 - **Target**: Latest NeoForge features and API improvements
 
 ## Major Changes from Beta.3
+
+### 0. Spawn Eggs, Rebuilt Models and Pixel-Art Textures
+
+**Spawn eggs**: all five creatures now have spawn eggs in the creative tab,
+with their own 16x16 icons. The item definitions needed for 26.2 were missing
+in the first build of this release, which is why the icons rendered as the
+missing-texture checkerboard.
+
+**Creature model rebuilt**: 45 boxes across 18 parts, up from 15 boxes in 15
+parts. Layered skull with a recessed mask, tapered torso, double-layer
+pauldrons, segmented trailing ribbons, floating seals and a broken crown. The
+five tiers still share one skeleton, but the silhouette now reads as a body
+instead of a stack of blocks.
+
+**Textures repainted**: the atlas moved to 256x256 and every UV slot is painted
+deliberately in hard-edged pixel art -- five-step palettes per tier, cloth
+folds, armour plate seams and rivets, void streaks, and two lit eye slits on the
+mask. The previous sheets were uniform noise with no UV layout, so any geometry
+mapped onto them turned into mottled patches.
+
+**Animation gaps filled**: `SAINT_VOID_TERMINUS` had no animation at all and now
+has a full windup / active / recovery arc. Every action now relaxes during its
+recovery phase instead of snapping back to the idle pose.
 
 ### 1. Creature Model and Texture Upgrade (Task B)
 
