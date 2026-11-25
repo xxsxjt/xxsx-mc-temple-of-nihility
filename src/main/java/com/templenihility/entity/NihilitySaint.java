@@ -80,6 +80,7 @@ public class NihilitySaint extends NihilityCreature {
             tickSaintActionTelegraph();
             tickMissingZones(serverLevel);
             tickVoidTerminus(serverLevel);
+            com.templenihility.world.TempleCommand.tickShowcaseDirector(serverLevel, this);
         }
     }
 

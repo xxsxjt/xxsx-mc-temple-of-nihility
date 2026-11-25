@@ -22,8 +22,10 @@ public class NihilityDagger extends Item {
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         if (level.isClientSide()) {
-            player.startUsingItem(hand);
-            return InteractionResult.CONSUME;
+            if (!player.getCooldowns().isOnCooldown(player.getItemInHand(hand))) {
+                PlayerWeaponActions.notifyClientSkillStart(player, hand, "MISSING_STEP");
+            }
+            return InteractionResult.SUCCESS;
         }
         return PlayerWeaponActions.startMissingStep(player, hand)
             ? InteractionResult.SUCCESS_SERVER

@@ -34,57 +34,57 @@ public final class NihilityParticle extends SingleQuadParticle {
 
         switch (style) {
             case MOTE -> {
-                this.lifetime = 22 + random.nextInt(18);
-                this.baseSize = 0.09F + random.nextFloat() * 0.08F;
-                this.spin = (random.nextFloat() - 0.5F) * 0.10F;
-                this.friction = 0.94F;
-                setColor(0.62F + random.nextFloat() * 0.25F,
-                    0.90F + random.nextFloat() * 0.10F, 0.94F + random.nextFloat() * 0.06F);
+                this.lifetime = 24 + random.nextInt(12);
+                this.baseSize = 0.19F + random.nextFloat() * 0.08F;
+                this.spin = (random.nextFloat() - 0.5F) * 0.14F;
+                this.friction = 0.93F;
+                setColor(0.76F + random.nextFloat() * 0.22F,
+                    0.94F + random.nextFloat() * 0.06F, 1.0F);
             }
             case RIPPLE -> {
-                this.lifetime = 18 + random.nextInt(8);
-                this.baseSize = 0.22F + random.nextFloat() * 0.12F;
-                this.spin = (random.nextFloat() - 0.5F) * 0.035F;
+                this.lifetime = 22 + random.nextInt(8);
+                this.baseSize = 0.21F + random.nextFloat() * 0.08F;
+                this.spin = (random.nextFloat() - 0.5F) * 0.06F;
                 this.friction = 0.88F;
-                setColor(0.70F, 0.96F, 1.0F);
+                setColor(0.68F, 0.95F, 1.0F);
             }
             case SHARD -> {
-                this.lifetime = 16 + random.nextInt(14);
-                this.baseSize = 0.12F + random.nextFloat() * 0.10F;
-                this.spin = (random.nextBoolean() ? 1.0F : -1.0F) * (0.12F + random.nextFloat() * 0.08F);
+                this.lifetime = 22 + random.nextInt(10);
+                this.baseSize = 0.23F + random.nextFloat() * 0.09F;
+                this.spin = (random.nextBoolean() ? 1.0F : -1.0F) * (0.14F + random.nextFloat() * 0.09F);
                 this.friction = 0.91F;
-                setColor(0.78F + random.nextFloat() * 0.18F,
-                    0.88F + random.nextFloat() * 0.12F, 1.0F);
+                setColor(0.86F + random.nextFloat() * 0.14F,
+                    0.95F + random.nextFloat() * 0.05F, 1.0F);
             }
             case ABYSS -> {
-                this.lifetime = 24 + random.nextInt(18);
-                this.baseSize = 0.11F + random.nextFloat() * 0.11F;
-                this.spin = (random.nextBoolean() ? 1.0F : -1.0F) * (0.06F + random.nextFloat() * 0.08F);
+                this.lifetime = 26 + random.nextInt(14);
+                this.baseSize = 0.21F + random.nextFloat() * 0.09F;
+                this.spin = (random.nextBoolean() ? 1.0F : -1.0F) * (0.08F + random.nextFloat() * 0.08F);
                 this.friction = 0.92F;
-                if (random.nextBoolean()) {
-                    setColor(0.42F + random.nextFloat() * 0.20F, 0.035F, 0.07F);
+                if (random.nextFloat() < 0.55F) {
+                    setColor(0.92F, 0.22F + random.nextFloat() * 0.12F, 0.34F);
                 } else {
-                    setColor(0.12F, 0.72F + random.nextFloat() * 0.22F, 0.78F + random.nextFloat() * 0.18F);
+                    setColor(0.98F, 0.82F + random.nextFloat() * 0.14F, 0.44F);
                 }
             }
             case CHAOS -> {
-                this.lifetime = 18 + random.nextInt(20);
-                this.baseSize = 0.10F + random.nextFloat() * 0.13F;
-                this.spin = (random.nextFloat() - 0.5F) * 0.22F;
+                this.lifetime = 24 + random.nextInt(12);
+                this.baseSize = 0.21F + random.nextFloat() * 0.09F;
+                this.spin = (random.nextFloat() - 0.5F) * 0.24F;
                 this.friction = 0.90F;
                 float selector = random.nextFloat();
-                if (selector < 0.33F) {
-                    setColor(0.82F, 0.30F, 1.0F);
-                } else if (selector < 0.66F) {
-                    setColor(0.22F, 0.88F, 1.0F);
+                if (selector < 0.35F) {
+                    setColor(0.96F, 0.86F, 0.52F);
+                } else if (selector < 0.70F) {
+                    setColor(0.45F, 0.94F, 1.0F);
                 } else {
-                    setColor(1.0F, 0.48F, 0.78F);
+                    setColor(0.92F, 0.58F, 1.0F);
                 }
             }
-            default -> throw new IllegalStateException("Unhandled particle style " + style);
+            default -> throw new IllegalStateException("Unhandled style " + style);
         }
         this.quadSize = this.baseSize;
-        this.alpha = style == Style.RIPPLE ? 0.72F : 0.90F;
+        this.alpha = style == Style.RIPPLE ? 0.86F : 0.95F;
     }
 
     @Override
@@ -97,46 +97,45 @@ public final class NihilityParticle extends SingleQuadParticle {
             remove();
             return;
         }
-
         float progress = this.age / (float) this.lifetime;
         switch (style) {
             case MOTE -> {
                 double angle = driftPhase + this.age * 0.22;
-                this.xd += Math.cos(angle) * 0.0018;
-                this.zd += Math.sin(angle) * 0.0018;
-                this.yd += 0.0012;
-                this.quadSize = baseSize * (0.72F + (float) Math.sin(progress * Math.PI) * 0.55F);
+                this.xd += Math.cos(angle) * 0.0014;
+                this.zd += Math.sin(angle) * 0.0014;
+                this.yd += 0.0016;
+                this.quadSize = baseSize * (0.78F + (float) Math.sin(progress * Math.PI) * 0.42F);
             }
             case RIPPLE -> {
-                this.xd *= 0.55;
-                this.yd *= 0.55;
-                this.zd *= 0.55;
-                this.quadSize = baseSize * (0.55F + progress * 2.5F);
+                this.xd *= 0.62;
+                this.yd *= 0.62;
+                this.zd *= 0.62;
+                this.quadSize = baseSize * (0.65F + progress * 1.45F);
             }
             case SHARD -> {
-                this.yd += 0.0025;
-                this.quadSize = baseSize * (1.0F - progress * 0.35F);
+                this.yd += 0.0018;
+                this.quadSize = baseSize * (1.08F - progress * 0.45F);
             }
             case ABYSS -> {
-                this.yd += 0.0035;
-                this.xd += Math.sin(driftPhase + age * 0.18) * 0.0015;
-                this.zd += Math.cos(driftPhase + age * 0.18) * 0.0015;
-                this.quadSize = baseSize * (0.7F + (float) Math.sin(progress * Math.PI) * 0.75F);
+                this.yd += 0.0042;
+                this.xd += Math.sin(driftPhase + age * 0.2) * 0.0018;
+                this.zd += Math.cos(driftPhase + age * 0.2) * 0.0018;
+                this.quadSize = baseSize * (0.75F + (float) Math.sin(progress * Math.PI) * 0.55F);
             }
             case CHAOS -> {
-                this.xd += Math.sin(driftPhase + age * 0.65) * 0.004;
+                this.xd += Math.sin(driftPhase + age * 0.65) * 0.003;
                 this.yd += Math.cos(driftPhase + age * 0.47) * 0.002;
-                this.zd += Math.sin(driftPhase * 0.7 + age * 0.53) * 0.004;
-                this.quadSize = baseSize * (0.8F + (float) Math.sin(age * 0.9) * 0.22F);
+                this.zd += Math.sin(driftPhase * 0.7 + age * 0.53) * 0.003;
+                this.quadSize = baseSize * (0.85F + (float) Math.sin(age * 0.9) * 0.2F);
             }
         }
-
         move(this.xd, this.yd, this.zd);
         this.xd *= this.friction;
         this.yd *= this.friction;
         this.zd *= this.friction;
         this.roll += spin;
-        setAlpha((1.0F - progress) * (style == Style.RIPPLE ? 0.72F : 0.92F));
+        float fade = (1.0F - progress) * (1.0F - progress * 0.35F);
+        setAlpha(fade * (style == Style.RIPPLE ? 0.85F : 0.95F));
         setSpriteFromAge(sprites);
     }
 

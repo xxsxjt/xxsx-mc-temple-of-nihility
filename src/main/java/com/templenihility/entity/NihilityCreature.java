@@ -273,6 +273,16 @@ public abstract class NihilityCreature extends PathfinderMob {
         return hurt;
     }
 
+    @Override
+    public boolean doHurtTarget(ServerLevel level, Entity target) {
+        this.swing(InteractionHand.MAIN_HAND);
+        boolean hit = super.doHurtTarget(level, target);
+        if (hit && target != null) {
+            NihilityVisualEffects.creatureMeleeStrike(this, target);
+        }
+        return hit;
+    }
+
     public abstract int getTier();
 
     protected ActionType selectCreatureAction(LivingEntity target, long gameTime) {
@@ -441,6 +451,13 @@ public abstract class NihilityCreature extends PathfinderMob {
         entityData.set(DATA_ACTION_PHASE, (byte) Phase.IDLE.ordinal());
         entityData.set(DATA_ACTION_START, 0L);
         entityData.set(DATA_ACTION_TARGET, -1);
+    }
+
+    public void triggerShowcaseAction(ActionType action, LivingEntity target) {
+        if (!(level() instanceof ServerLevel serverLevel) || target == null) return;
+        setTarget(target);
+        setAggressive(true);
+        startCreatureAction(action, target, serverLevel.getGameTime());
     }
 
     protected final void cancelCreatureAction() {

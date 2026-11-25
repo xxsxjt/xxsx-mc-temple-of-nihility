@@ -69,30 +69,67 @@ public final class NihilityVisualEffects {
     }
 
     public static void zeroSlash(ServerLevel level, Vec3 start, Vec3 direction, double reach, int chargeTier) {
-        Vec3 end = start.add(direction.scale(reach));
-        line(level, start, end, mote(), 0.28);
-        line(level, start.add(0.0, -0.08, 0.0), end.add(0.0, -0.08, 0.0), shard(), 0.22);
-        cloud(level, end, ripple(), 9 + chargeTier * 4, 0.14, 0.14, 0.14, 0.015);
-        sound(level, BlockPos.containing(start), SoundEvents.PLAYER_ATTACK_SWEEP, 0.75F, 0.72F + chargeTier * 0.08F);
-        sound(level, BlockPos.containing(end), SoundEvents.AMETHYST_BLOCK_BREAK, 0.45F, 1.35F);
+        Vec3 fwd = direction.normalize();
+        Vec3 right = new Vec3(-fwd.z, 0.0, fwd.x);
+        if (right.lengthSqr() < 1.0E-4) right = new Vec3(1.0, 0.0, 0.0);
+        else right = right.normalize();
+        Vec3 up = right.cross(fwd).normalize();
+
+        // Piercing linear void-core rift
+        Vec3 end = start.add(fwd.scale(reach));
+        line(level, start.add(fwd.scale(1.1)), end, mote(), 0.22);
+
+        // 3 sweeping 3D tilted crescent scythe waves advancing along the slash corridor!
+        int waves = 2 + chargeTier;
+        for (int w = 0; w < waves; w++) {
+            double dist = 2.2 + w * (reach - 2.4) / Math.max(1, waves);
+            double arcRadius = 1.65 + chargeTier * 0.35 + w * 0.22;
+            double tilt = (w % 2 == 0 ? 0.32 : -0.26);
+            Vec3 center = start.add(fwd.scale(dist)).add(0.0, -0.22, 0.0);
+            int segs = 28;
+            for (int i = 0; i <= segs; i++) {
+                double t = i / (double) segs * 2.0 - 1.0; // -1..1
+                double ang = t * 1.18;
+                double bulge = Math.cos(ang) * arcRadius * 0.62;
+                double lateral = Math.sin(ang) * arcRadius;
+                double vertical = lateral * tilt;
+                Vec3 pt = center.add(fwd.scale(bulge)).add(right.scale(lateral)).add(up.scale(vertical));
+                ParticleOptions p = (i % 4 == 0) ? mote() : shard();
+                level.sendParticles(p, pt.x, pt.y, pt.z, 1,
+                    fwd.x * 0.06, 0.008, fwd.z * 0.06, 0.015);
+            }
+        }
+        ring(level, end, 0.95 + chargeTier * 0.25, ripple(), 18, 0.02);
+        sound(level, BlockPos.containing(start), SoundEvents.PLAYER_ATTACK_SWEEP, 0.85F, 0.72F + chargeTier * 0.08F);
+        sound(level, BlockPos.containing(end), SoundEvents.AMETHYST_BLOCK_BREAK, 0.55F, 1.35F);
     }
 
     public static void boundaryBreakWave(ServerLevel level, Vec3 origin, Vec3 direction, int wave) {
         Vec3 side = new Vec3(-direction.z, 0.0, direction.x);
-        double distance = 2.25 + wave * 2.45;
-        double halfWidth = 2.0 + wave * 0.8;
-        int points = 24 + wave * 6;
+        double distance = 2.3 + wave * 2.55;
+        double halfWidth = 2.25 + wave * 0.85;
+        int points = 32 + wave * 8;
         for (int i = 0; i <= points; i++) {
             double t = i / (double) points * 2.0 - 1.0;
-            double forwardOffset = distance - Math.abs(t) * (0.65 + wave * 0.2);
+            double forwardOffset = distance - (t * t) * (1.1 + wave * 0.3);
             Vec3 point = origin.add(direction.scale(forwardOffset))
                 .add(side.scale(t * halfWidth))
-                .add(0.0, 0.12 + (1.0 - Math.abs(t)) * 0.14, 0.0);
-            cloud(level, point, i % 3 == 0 ? ripple() : shard(),
-                1, 0.025, 0.025, 0.025, 0.005);
+                .add(0.0, 0.14 + (1.0 - Math.abs(t)) * 0.28, 0.0);
+            level.sendParticles(i % 4 == 0 ? mote() : shard(),
+                point.x, point.y, point.z, 1, 0.0, 0.045, 0.0, 0.01);
+            // Rising vertical void fissure pillars along 5 crest points
+            if (i % 7 == 0) {
+                for (int h = 0; h < 7 + wave * 2; h++) {
+                    Vec3 col = point.add(0.0, h * 0.28, 0.0);
+                    level.sendParticles(h % 2 == 0 ? shard() : abyss(),
+                        col.x, col.y, col.z, 1, 0.02, 0.03, 0.02, 0.005);
+                }
+            }
         }
-        sound(level, BlockPos.containing(origin.add(direction.scale(distance))),
-            SoundEvents.GENERIC_EXPLODE.value(), 0.42F + wave * 0.08F, 0.82F - wave * 0.08F);
+        Vec3 center = origin.add(direction.scale(distance)).add(0.0, 0.18, 0.0);
+        ring(level, center, 1.45 + wave * 0.45, ripple(), 20, 0.025);
+        sound(level, BlockPos.containing(center),
+            SoundEvents.GENERIC_EXPLODE.value(), 0.48F + wave * 0.08F, 0.82F - wave * 0.08F);
     }
 
     public static void itemUse(Player player, Burst burst) {
@@ -121,9 +158,15 @@ public final class NihilityVisualEffects {
                 sound(level, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_RESONATE, 0.65F, 1.45F);
             }
             case BARRIER -> {
-                ring(level, center, 1.25, ripple(), 32, 0.018);
-                ring(level, center, 1.85, shard(), 36, 0.018);
-                cloud(level, center, mote(), 12, 0.32, 0.22, 0.32, 0.015);
+                for (int i = 0; i < 28; i++) {
+                    double a = Math.PI * 2.0 * i / 28.0;
+                    double r = 1.15;
+                    Vec3 p1 = center.add(Math.cos(a) * r, Math.sin(a) * 0.36, Math.sin(a) * r);
+                    Vec3 p2 = center.add(Math.cos(a) * r, -Math.sin(a) * 0.36, Math.sin(a) * r);
+                    level.sendParticles(i % 3 == 0 ? mote() : shard(), p1.x, p1.y, p1.z, 1, 0.0, 0.005, 0.0, 0.0);
+                    level.sendParticles(i % 4 == 0 ? ripple() : mote(), p2.x, p2.y, p2.z, 1, 0.0, 0.005, 0.0, 0.0);
+                }
+                ring(level, player.position().add(0.0, 0.14, 0.0), 1.35, ripple(), 20, 0.012);
                 sound(level, player.blockPosition(), SoundEvents.BEACON_POWER_SELECT, 0.75F, 1.05F);
             }
             case PHASE -> {
@@ -281,16 +324,74 @@ public final class NihilityVisualEffects {
         }
     }
 
+    public static void weaponHitBurst(ServerLevel level, LivingEntity target, WeaponAction action) {
+        Vec3 c = target.position().add(0.0, target.getBbHeight() * 0.55, 0.0);
+        ParticleOptions primary = action == WeaponAction.BOUNDARY_BREAK ? abyss() : shard();
+        ParticleOptions secondary = action == WeaponAction.MISSING_STEP ? chaos() : mote();
+        cloud(level, c, primary, 18, 0.35, 0.42, 0.35, 0.065);
+        cloud(level, c, secondary, 12, 0.25, 0.3, 0.25, 0.045);
+        ring(level, c, 0.95, ripple(), 18, 0.045);
+        // Diagonal cross-slash flash on impact!
+        for (int i = -4; i <= 4; i++) {
+            double o = i * 0.22;
+            level.sendParticles(mote(), c.x + o, c.y + o * 0.75, c.z - o * 0.5, 1, 0.0, 0.01, 0.0, 0.0);
+            level.sendParticles(primary, c.x - o, c.y + o * 0.75, c.z + o * 0.5, 1, 0.0, 0.01, 0.0, 0.0);
+        }
+    }
+
+    public static void creatureMeleeStrike(NihilityCreature creature, net.minecraft.world.entity.Entity target) {
+        if (!(creature.level() instanceof ServerLevel level)) {
+            return;
+        }
+        int tier = creature.getTier();
+        Vec3 from = creature.position().add(0.0, creature.getBbHeight() * 0.58, 0.0);
+        Vec3 to = target.position().add(0.0, target.getBbHeight() * 0.55, 0.0);
+        Vec3 dir = to.subtract(from);
+        if (dir.lengthSqr() < 1.0E-5) dir = creature.getLookAngle();
+        dir = dir.normalize();
+        Vec3 side = new Vec3(-dir.z, 0.0, dir.x);
+        if (side.lengthSqr() < 1.0E-5) side = new Vec3(1.0, 0.0, 0.0);
+        else side = side.normalize();
+
+        ParticleOptions arcParticle = tier >= 5 ? abyss() : (tier >= 3 ? mote() : shard());
+        double radius = 1.15 + tier * 0.22;
+        int segs = 14 + tier * 3;
+        Vec3 center = from.add(dir.scale(1.1));
+        for (int i = 0; i <= segs; i++) {
+            double t = i / (double) segs * 2.0 - 1.0;
+            double ang = t * 1.15;
+            Vec3 pt = center
+                .add(dir.scale(Math.cos(ang) * radius * 0.65))
+                .add(side.scale(Math.sin(ang) * radius))
+                .add(0.0, t * 0.35, 0.0);
+            level.sendParticles(i % 3 == 0 ? mote() : arcParticle, pt.x, pt.y, pt.z, 1, 0.0, 0.015, 0.0, 0.0);
+        }
+        cloud(level, to, tier >= 4 ? abyss() : shard(), 10 + tier * 3, 0.28, 0.32, 0.28, 0.05);
+        ring(level, to, 0.65 + tier * 0.12, ripple(), 14, 0.03);
+        sound(level, target.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, 0.6F, 0.95F - tier * 0.06F);
+    }
+
     public static void creatureIntercept(NihilityCreature creature, LivingEntity target, boolean hit) {
         if (!(creature.level() instanceof ServerLevel level)) {
             return;
         }
         Vec3 from = creature.position().add(0.0, creature.getBbHeight() * 0.5, 0.0);
         Vec3 to = target.position().add(0.0, target.getBbHeight() * 0.5, 0.0);
-        line(level, from, to, hit ? mote() : shard(), hit ? 0.24 : 0.4);
+        line(level, from, to, hit ? mote() : shard(), 0.2);
+        Vec3 dir = to.subtract(from);
+        if (dir.lengthSqr() > 1.0E-5) {
+            dir = dir.normalize();
+            Vec3 side = new Vec3(-dir.z, 0.0, dir.x);
+            for (int i = -9; i <= 9; i++) {
+                double ang = (i / 9.0) * 1.2;
+                Vec3 pt = to.add(dir.scale(Math.cos(ang) * 0.8 - 0.5)).add(side.scale(Math.sin(ang) * 1.65)).add(0.0, i * 0.04, 0.0);
+                level.sendParticles(i % 2 == 0 ? mote() : shard(), pt.x, pt.y, pt.z, 1, 0.0, 0.02, 0.0, 0.0);
+            }
+        }
         if (hit) {
-            cloud(level, to, ripple(), 12, 0.22, 0.28, 0.22, 0.022);
-            sound(level, target.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, 0.65F, 0.82F);
+            cloud(level, to, shard(), 22, 0.32, 0.38, 0.32, 0.055);
+            ring(level, to, 1.35, ripple(), 24, 0.04);
+            sound(level, target.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, 0.8F, 0.78F);
         }
     }
 
@@ -374,16 +475,33 @@ public final class NihilityVisualEffects {
             return;
         }
         Vec3 forward = direction.multiply(1.0, 0.0, 1.0).normalize();
-        Vec3 start = origin.add(0.0, 0.16, 0.0);
-        Vec3 end = start.add(forward.scale(com.templenihility.action.SaintActionPolicy.ERASURE_LINE_LENGTH));
-        line(level, start, end, hit ? shard() : ripple(), 0.22);
-        for (int i = 2; i <= 18; i += 2) {
-            cloud(level, start.add(forward.scale(i)), hit ? mote() : shard(),
-                4, 0.16, 0.12, 0.16, 0.025);
+        Vec3 side = new Vec3(-forward.z, 0.0, forward.x);
+        Vec3 start = origin.add(0.0, 1.05, 0.0);
+        double len = com.templenihility.action.SaintActionPolicy.ERASURE_LINE_LENGTH;
+        Vec3 end = start.add(forward.scale(len));
+        // Razor-sharp core beam + twin helical shear ribbons
+        line(level, start, end, mote(), 0.18);
+        for (double d = 0.8; d <= len; d += 0.32) {
+            double ang = d * 1.45;
+            Vec3 spine = start.add(forward.scale(d));
+            Vec3 off = side.scale(Math.cos(ang) * 0.58).add(0.0, Math.sin(ang) * 0.48, 0.0);
+            Vec3 p1 = spine.add(off);
+            Vec3 p2 = spine.subtract(off);
+            level.sendParticles(shard(), p1.x, p1.y, p1.z, 1, 0.0, 0.01, 0.0, 0.0);
+            level.sendParticles(abyss(), p2.x, p2.y, p2.z, 1, 0.0, 0.01, 0.0, 0.0);
+        }
+        // Towering vertical fracture pillars every 3 blocks along erasure line
+        for (int i = 3; i <= 15; i += 3) {
+            Vec3 base = origin.add(forward.scale(i)).add(0.0, 0.15, 0.0);
+            ring(level, base, 0.95, ripple(), 14, 0.02);
+            for (int h = 0; h < 10; h++) {
+                Vec3 col = base.add(0.0, h * 0.34, 0.0);
+                level.sendParticles(h % 2 == 0 ? mote() : shard(), col.x, col.y, col.z, 1, 0.03, 0.02, 0.03, 0.005);
+            }
         }
         sound(level, saint.blockPosition(),
             hit ? SoundEvents.GENERIC_EXPLODE.value() : SoundEvents.AMETHYST_BLOCK_BREAK,
-            hit ? 0.65F : 0.45F, hit ? 1.45F : 0.82F);
+            hit ? 0.7F : 0.5F, hit ? 1.35F : 0.85F);
     }
 
     public static void saintMissingZonesTelegraph(NihilityCreature saint, Vec3[] centers) {
@@ -439,12 +557,27 @@ public final class NihilityVisualEffects {
         if (!(saint.level() instanceof ServerLevel level)) {
             return;
         }
-        Vec3 c = center.add(0.0, 0.1, 0.0);
-        ring(level, c, com.templenihility.action.SaintActionPolicy.TERMINUS_START_RADIUS,
-            shard(), 64, 0.03);
-        cloud(level, saint.position().add(0.0, saint.getBbHeight() * 0.5, 0.0),
-            abyss(), 40, 0.6, 0.9, 0.6, 0.05);
-        sound(level, saint.blockPosition(), SoundEvents.RESPAWN_ANCHOR_SET_SPAWN, 0.8F, 0.5F);
+        Vec3 c = center.add(0.0, 0.14, 0.0);
+        double outerR = Math.min(7.5, com.templenihility.action.SaintActionPolicy.TERMINUS_START_RADIUS);
+        ring(level, c, outerR, shard(), 56, 0.015);
+        ring(level, c, 3.2, ripple(), 36, 0.02);
+        ring(level, c.add(0.0, 2.2, 0.0), 2.4, mote(), 32, 0.015);
+        // 6 towering 9-block celestial-abyssal light pillars + radiant skyward crown ringing the Sovereign!
+        ring(level, c.add(0.0, 0.2, 0.0), 4.6, abyss(), 56, 0.02);
+        ring(level, c.add(0.0, 4.5, 0.0), 3.6, mote(), 44, 0.018);
+        for (int p = 0; p < 6; p++) {
+            double ang = Math.PI * 2.0 * p / 6.0;
+            Vec3 pillarBase = c.add(Math.cos(ang) * 3.8, 0.0, Math.sin(ang) * 3.8);
+            ring(level, pillarBase, 0.85, ripple(), 12, 0.015);
+            for (int h = 0; h < 26; h++) {
+                double spiral = ang + h * 0.28;
+                Vec3 pt = pillarBase.add(Math.cos(spiral) * 0.24, h * 0.32, Math.sin(spiral) * 0.24);
+                Vec3 pt2 = pillarBase.add(-Math.cos(spiral) * 0.24, h * 0.32, -Math.sin(spiral) * 0.24);
+                level.sendParticles(h % 2 == 0 ? shard() : mote(), pt.x, pt.y, pt.z, 1, 0.01, 0.035, 0.01, 0.005);
+                level.sendParticles(h % 3 == 0 ? abyss() : shard(), pt2.x, pt2.y, pt2.z, 1, 0.01, 0.035, 0.01, 0.005);
+            }
+        }
+        sound(level, saint.blockPosition(), SoundEvents.RESPAWN_ANCHOR_SET_SPAWN, 0.85F, 0.52F);
     }
 
     public static void saintVoidTerminusPulse(NihilityCreature saint, Vec3 center, double radius) {
@@ -462,10 +595,20 @@ public final class NihilityVisualEffects {
             return;
         }
         Vec3 center = Vec3.atCenterOf(origin).add(0.0, 0.08, 0.0);
-        ring(level, center, com.templenihility.action.GrandEnvoyActionPolicy.DOMAIN_RADIUS,
-            ripple(), 56, -0.012);
+        double r = Math.min(7.5, com.templenihility.action.GrandEnvoyActionPolicy.DOMAIN_RADIUS);
+        ring(level, center, r, ripple(), 56, -0.012);
+        ring(level, center.add(0.0, 0.35, 0.0), r * 0.6, mote(), 36, 0.015);
+        for (int p = 0; p < 6; p++) {
+            double a = Math.PI * 2.0 * p / 6.0;
+            Vec3 base = center.add(Math.cos(a) * r, 0.0, Math.sin(a) * r);
+            ring(level, base, 0.6, ripple(), 10, 0.01);
+            for (int h = 0; h < 14; h++) {
+                Vec3 pt = base.add(0.0, h * 0.32, 0.0);
+                level.sendParticles(h % 2 == 0 ? mote() : shard(), pt.x, pt.y, pt.z, 1, 0.02, 0.02, 0.02, 0.0);
+            }
+        }
         cloud(level, envoy.position().add(0.0, envoy.getBbHeight() * 0.5, 0.0),
-            shard(), 32, 0.48, 0.72, 0.48, 0.04);
+            shard(), 36, 0.55, 0.82, 0.55, 0.05);
         sound(level, origin, SoundEvents.RESPAWN_ANCHOR_CHARGE, 0.72F, 0.62F);
     }
 
@@ -629,9 +772,17 @@ public final class NihilityVisualEffects {
         if (!(player.level() instanceof ServerLevel level)) {
             return;
         }
-        Vec3 center = player.position().add(0.0, 1.0, 0.0);
-        double radius = 0.78 + Math.min(8, charges) * 0.025;
-        ring(level, center, radius, ripple(), 14 + Math.min(8, charges), 0.006);
+        Vec3 center = player.position().add(0.0, 0.95, 0.0);
+        double radius = 1.02;
+        double phase = player.tickCount * 0.18;
+        int nodes = Math.max(4, Math.min(8, charges));
+        for (int i = 0; i < nodes; i++) {
+            double a = phase + Math.PI * 2.0 * i / nodes;
+            double x = center.x + Math.cos(a) * radius;
+            double y = center.y + Math.sin(a * 2.0) * 0.22;
+            double z = center.z + Math.sin(a) * radius;
+            level.sendParticles(i % 2 == 0 ? mote() : shard(), x, y, z, 1, 0.0, 0.004, 0.0, 0.0);
+        }
     }
 
     public static void barrierImpact(Player player, Vec3 impact) {

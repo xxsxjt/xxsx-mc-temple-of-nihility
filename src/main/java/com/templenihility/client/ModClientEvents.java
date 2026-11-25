@@ -10,6 +10,7 @@ import com.templenihility.client.screen.NihilityTerminalScreen;
 import com.templenihility.client.screen.NihilityTransportCoreScreen;
 import com.templenihility.client.screen.NihilityTradeScreen;
 import com.templenihility.init.ModEntities;
+import com.templenihility.init.ModItems;
 import com.templenihility.init.ModMenus;
 import com.templenihility.init.ModParticles;
 import com.templenihility.network.OpenTerminalPayload;
@@ -23,6 +24,7 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
+import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.lwjgl.glfw.GLFW;
@@ -43,10 +45,23 @@ public class ModClientEvents {
         modEventBus.addListener(ModClientEvents::registerKeyMappings);
         modEventBus.addListener(ModClientEvents::registerMenuScreens);
         modEventBus.addListener(ModClientEvents::registerParticleProviders);
+        modEventBus.addListener(ModClientEvents::registerClientExtensions);
         NeoForge.EVENT_BUS.addListener(ModClientEvents::clientTick);
-        NeoForge.EVENT_BUS.addListener(NihilityWeaponAnimation::renderHand);
+        NeoForge.EVENT_BUS.addListener(NihilityWeaponAnimation::onRightClickItem);
+        NeoForge.EVENT_BUS.addListener(NihilityWeaponAnimation::onUseItemStop);
+        NeoForge.EVENT_BUS.addListener(NihilityWeaponAnimation::renderPlayerPre);
+        com.templenihility.action.PlayerWeaponActions.setClientSkillListener(NihilityWeaponAnimation::handleClientSkillCallback);
         NeoForge.EVENT_BUS.addListener(NihilityClientRecipes::recipesReceived);
         NeoForge.EVENT_BUS.addListener(NihilityClientRecipes::loggingOut);
+    }
+
+    private static void registerClientExtensions(RegisterClientExtensionsEvent event) {
+        event.registerItem(
+            NihilityWeaponAnimation.WEAPON_EXTENSIONS,
+            ModItems.NIHILITY_SWORD.get(),
+            ModItems.NIHILITY_GREATSWORD.get(),
+            ModItems.NIHILITY_DAGGER.get()
+        );
     }
 
     private static void registerKeyMappings(RegisterKeyMappingsEvent event) {

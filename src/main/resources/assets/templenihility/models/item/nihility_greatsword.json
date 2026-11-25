@@ -1,6 +1,76 @@
 {
-  "parent": "minecraft:item/handheld",
+  "parent": "minecraft:item/generated",
   "textures": {
     "layer0": "templenihility:item/nihility_greatsword"
+  },
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [
+        0,
+        -90,
+        -42
+      ],
+      "translation": [
+        0,
+        8.8,
+        2.2
+      ],
+      "scale": [
+        1.58,
+        1.58,
+        1
+      ]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [
+        0,
+        90,
+        42
+      ],
+      "translation": [
+        0,
+        8.8,
+        2.2
+      ],
+      "scale": [
+        1.58,
+        1.58,
+        1
+      ]
+    },
+    "firstperson_righthand": {
+      "rotation": [
+        0,
+        -90,
+        -15
+      ],
+      "translation": [
+        1.25,
+        4.4,
+        1.13
+      ],
+      "scale": [
+        1.12,
+        1.12,
+        0.92
+      ]
+    },
+    "firstperson_lefthand": {
+      "rotation": [
+        0,
+        90,
+        15
+      ],
+      "translation": [
+        1.25,
+        4.4,
+        1.13
+      ],
+      "scale": [
+        1.12,
+        1.12,
+        0.92
+      ]
+    }
   }
 }

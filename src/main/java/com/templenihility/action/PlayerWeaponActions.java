@@ -55,6 +55,24 @@ public final class PlayerWeaponActions {
     private static final String EXISTENCE_STACKS = TempleNihilityMod.MOD_ID + ".ExistenceReductionStacks";
     private static final String EXISTENCE_UNTIL = TempleNihilityMod.MOD_ID + ".ExistenceReductionUntil";
 
+    @FunctionalInterface
+    public interface ClientSkillListener {
+        void onSkillStart(Player player, InteractionHand hand, String skillName);
+    }
+
+    private static volatile ClientSkillListener clientSkillListener;
+
+    public static void setClientSkillListener(ClientSkillListener listener) {
+        clientSkillListener = listener;
+    }
+
+    public static void notifyClientSkillStart(Player player, InteractionHand hand, String skillName) {
+        ClientSkillListener listener = clientSkillListener;
+        if (listener != null) {
+            listener.onSkillStart(player, hand, skillName);
+        }
+    }
+
     private static final Map<UUID, ActiveAction> ACTIVE = new HashMap<>();
 
     public static boolean prepareZeroSlash(Player player, ItemStack stack) {
@@ -201,7 +219,7 @@ public final class PlayerWeaponActions {
             return false;
         }
 
-        Vec3 direction = type == ActionType.BOUNDARY_BREAK
+        Vec3 direction = (type == ActionType.BOUNDARY_BREAK || type == ActionType.MISSING_STEP)
             ? horizontalLook(player)
             : player.getLookAngle().normalize();
         ACTIVE.put(player.getUUID(), new ActiveAction(
@@ -353,6 +371,7 @@ public final class PlayerWeaponActions {
             float damage = (float) (player.getAttributeValue(Attributes.ATTACK_DAMAGE) * 1.15 + wave * 1.5);
             if (living.hurtServer(level, player.damageSources().playerAttack(player), damage)) {
                 action.hitEntityIds.add(living.getId());
+                NihilityVisualEffects.weaponHitBurst(level, living, action.type.visual);
                 boolean interruptImmune = level.registryAccess().lookupOrThrow(Registries.ENTITY_TYPE)
                     .wrapAsHolder(living.getType()).is(ModTags.EntityTypes.ACTION_INTERRUPT_IMMUNE);
                 if (living instanceof Mob mob && !interruptImmune) {
@@ -365,8 +384,8 @@ public final class PlayerWeaponActions {
             }
         }
 
+        player.swing(action.hand, true);
         if (wave == 0) {
-            player.swing(action.hand, true);
             damageActionItem(player, action);
         }
         NihilityVisualEffects.boundaryBreakWave(level, player.position(), action.direction, wave);
@@ -374,17 +393,29 @@ public final class PlayerWeaponActions {
 
     private static Vec3 findSafeDashDestination(Player player, ServerLevel level, Vec3 direction, double maxDistance) {
         Vec3 origin = player.position();
+        Vec3 flatDir = new Vec3(direction.x, 0.0, direction.z);
+        if (flatDir.lengthSqr() <= 1.0E-6) {
+            return origin;
+        }
+        flatDir = flatDir.normalize();
         AABB baseBox = player.getBoundingBox();
+        double[] stepOffsets = { 0.0, 0.5, 1.0 };
         for (double distance = maxDistance; distance >= 0.75; distance -= 0.25) {
-            Vec3 candidate = origin.add(direction.scale(distance));
-            BlockPos candidatePos = BlockPos.containing(candidate);
-            if (!level.hasChunk(SectionPos.blockToSectionCoord(candidatePos.getX()),
-                    SectionPos.blockToSectionCoord(candidatePos.getZ()))) {
-                continue;
-            }
-            AABB moved = baseBox.move(candidate.subtract(origin)).deflate(0.03);
-            if (level.noBlockCollision(player, moved) && level.noBorderCollision(player, moved)) {
-                return candidate;
+            for (double dy : stepOffsets) {
+                Vec3 candidate = new Vec3(
+                    origin.x + flatDir.x * distance,
+                    Math.max(origin.y, Math.floor(origin.y)) + dy,
+                    origin.z + flatDir.z * distance
+                );
+                BlockPos candidatePos = BlockPos.containing(candidate);
+                if (!level.hasChunk(SectionPos.blockToSectionCoord(candidatePos.getX()),
+                        SectionPos.blockToSectionCoord(candidatePos.getZ()))) {
+                    continue;
+                }
+                AABB moved = baseBox.move(candidate.subtract(origin));
+                if (level.noBlockCollision(player, moved) && level.noBorderCollision(player, moved)) {
+                    return candidate;
+                }
             }
         }
         return origin;

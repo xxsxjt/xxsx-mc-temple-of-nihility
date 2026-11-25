@@ -11,6 +11,7 @@ public class NihilityRenderState extends LivingEntityRenderState {
     public ActionType action = ActionType.NONE;
     public Phase actionPhase = Phase.IDLE;
     public float actionElapsed;
+    public float attackSwing;
     public boolean alert;
     public int ritualShieldCharges;
     public boolean projectileGuarding;

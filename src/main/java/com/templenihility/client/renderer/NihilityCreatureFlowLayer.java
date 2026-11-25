@@ -1,5 +1,6 @@
 package com.templenihility.client.renderer;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.templenihility.TempleNihilityMod;
 import com.templenihility.client.model.NihilityCreatureModel;
 import com.templenihility.client.model.NihilityFlowModel;
@@ -9,11 +10,9 @@ import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 
-/** Renders only the moving translucent bands with a separate emissive texture. */
 public class NihilityCreatureFlowLayer extends RenderLayer<NihilityRenderState, NihilityCreatureModel> {
     private static final Identifier FLOW_TEXTURE = Identifier.fromNamespaceAndPath(
         TempleNihilityMod.MOD_ID, "textures/entity/nihility_flow.png");
@@ -34,7 +33,7 @@ public class NihilityCreatureFlowLayer extends RenderLayer<NihilityRenderState, 
             state,
             poseStack,
             RenderTypes.entityTranslucentEmissive(FLOW_TEXTURE),
-            lightCoords,
+            0xF000F0,
             OverlayTexture.NO_OVERLAY,
             flowingTint(state),
             null
@@ -42,30 +41,27 @@ public class NihilityCreatureFlowLayer extends RenderLayer<NihilityRenderState, 
     }
 
     private static int flowingTint(NihilityRenderState state) {
-        float phase = state.ageInTicks * 0.045f + state.tier * 0.83f;
-        int red = Math.round(232.0f + Mth.sin(phase) * 18.0f);
-        int green = Math.round(238.0f + Mth.sin(phase + 2.1f) * 14.0f);
-        int blue = Math.round(242.0f + Mth.sin(phase + 4.2f) * 13.0f);
-        int alpha = Math.round(184.0f + Mth.sin(phase * 1.37f) * 28.0f)
-            + state.ritualShieldCharges * 7;
-
+        float pulse = 0.88f + 0.12f * Mth.sin(state.ageInTicks * 0.14f + state.tier);
+        int red = Math.round(188 * pulse);
+        int green = Math.round(244 * pulse);
+        int blue = Math.round(255 * pulse);
+        int alpha = 232;
         if (state.disposition == Disposition.ALERT) {
-            red += 12;
-            green += 7;
-            blue -= 15;
-            alpha += 12;
+            red = Math.round(255 * pulse);
+            green = Math.round(220 * pulse);
+            blue = Math.round(145 * pulse);
+            alpha = 245;
         } else if (state.disposition == Disposition.CHALLENGE) {
-            red += 18;
-            green += 16;
-            blue += 13;
-            alpha += 34;
+            red = 248;
+            green = 252;
+            blue = 255;
+            alpha = 255;
         } else if (state.disposition == Disposition.HOSTILE) {
-            red += 20;
-            green -= 10;
-            blue -= 18;
-            alpha += 22;
+            red = 255;
+            green = Math.round(132 * pulse);
+            blue = Math.round(168 * pulse);
+            alpha = 255;
         }
-
         return (clampByte(alpha) << 24)
             | (clampByte(red) << 16)
             | (clampByte(green) << 8)
