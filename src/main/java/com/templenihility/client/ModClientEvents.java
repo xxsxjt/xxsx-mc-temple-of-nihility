@@ -13,6 +13,10 @@ import com.templenihility.init.ModEntities;
 import com.templenihility.init.ModItems;
 import com.templenihility.init.ModMenus;
 import com.templenihility.init.ModParticles;
+import com.templenihility.item.NihilityAxe;
+import com.templenihility.item.NihilityDagger;
+import com.templenihility.item.NihilityGreatsword;
+import com.templenihility.item.NihilitySword;
 import com.templenihility.network.OpenTerminalPayload;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
@@ -60,7 +64,8 @@ public class ModClientEvents {
             NihilityWeaponAnimation.WEAPON_EXTENSIONS,
             ModItems.NIHILITY_SWORD.get(),
             ModItems.NIHILITY_GREATSWORD.get(),
-            ModItems.NIHILITY_DAGGER.get()
+            ModItems.NIHILITY_DAGGER.get(),
+            ModItems.NIHILITY_AXE.get()
         );
     }
 
@@ -90,10 +95,34 @@ public class ModClientEvents {
     }
 
     private static void clientTick(ClientTickEvent.Post event) {
+        Minecraft minecraft = Minecraft.getInstance();
         while (OPEN_TERMINAL.consumeClick()) {
-            Minecraft minecraft = Minecraft.getInstance();
             if (minecraft.getConnection() != null) {
                 ClientPacketDistributor.sendToServer(OpenTerminalPayload.INSTANCE);
+            }
+        }
+        // Subtle held-weapon Nihility erasure motes (restrained: 1 crisp mote flaking off weapon tip every 5 ticks)
+        if (!minecraft.isPaused() && minecraft.player != null && minecraft.level != null) {
+            var player = minecraft.player;
+            var mainItem = player.getMainHandItem().getItem();
+            boolean holdingNihilityWeapon = mainItem instanceof NihilitySword
+                || mainItem instanceof NihilityGreatsword
+                || mainItem instanceof NihilityDagger
+                || mainItem instanceof NihilityAxe;
+            long tick = minecraft.level.getGameTime();
+            if (holdingNihilityWeapon && tick % 5L == 0L) {
+                var look = player.getLookAngle();
+                double rightX = -look.z;
+                double rightZ = look.x;
+                double len = Math.max(0.001, Math.hypot(rightX, rightZ));
+                rightX /= len;
+                rightZ /= len;
+                double fwd = (mainItem instanceof NihilityGreatsword) ? 0.95 : 0.72;
+                double px = player.getX() + look.x * fwd + rightX * 0.42 + (minecraft.level.getRandom().nextDouble() - 0.5) * 0.14;
+                double py = player.getY() + 1.05 + (minecraft.level.getRandom().nextDouble() - 0.35) * 0.28;
+                double pz = player.getZ() + look.z * fwd + rightZ * 0.42 + (minecraft.level.getRandom().nextDouble() - 0.5) * 0.14;
+                var particle = (tick % 15L == 0L) ? ModParticles.NIHILITY_SHARD.get() : ModParticles.NIHILITY_MOTE.get();
+                minecraft.level.addParticle(particle, px, py, pz, 0.0, 0.018, 0.0);
             }
         }
     }

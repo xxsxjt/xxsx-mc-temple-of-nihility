@@ -5,6 +5,7 @@ import com.mojang.math.Axis;
 import com.templenihility.action.PlayerWeaponActions;
 import com.templenihility.item.NihilityDagger;
 import com.templenihility.item.NihilityGreatsword;
+import com.templenihility.item.NihilityAxe;
 import com.templenihility.item.NihilitySword;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.HumanoidModel;
@@ -186,7 +187,7 @@ public final class NihilityWeaponAnimation {
                                                      ItemStack stack, float partialTick,
                                                      float equipProcess, float swingProcess) {
         Item item = stack.getItem();
-        if (!(item instanceof NihilitySword || item instanceof NihilityGreatsword || item instanceof NihilityDagger)) {
+        if (!(item instanceof NihilitySword || item instanceof NihilityGreatsword || item instanceof NihilityDagger || item instanceof NihilityAxe)) {
             return false;
         }
 
