@@ -21,8 +21,10 @@ public class NihilityArmor extends Item {
                                 Consumer<Component> tooltip, TooltipFlag flag) {
         tooltip.accept(NihilityAspect.NIHILITY.line());
         tooltip.accept(Component.translatable("tooltip.templenihility.nihility_armor_set_1")
-            .withStyle(ChatFormatting.DARK_PURPLE));
+            .withStyle(ChatFormatting.WHITE));
         tooltip.accept(Component.translatable("tooltip.templenihility.nihility_armor_set_2")
+            .withStyle(ChatFormatting.GRAY));
+        tooltip.accept(Component.translatable("tooltip.templenihility.nihility_armor_set_3")
             .withStyle(ChatFormatting.GRAY));
         int power = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY)
             .copyTag()

@@ -2,7 +2,7 @@ package com.templenihility.energy;
 
 import com.templenihility.TempleNihilityMod;
 import com.templenihility.compat.CuriosCompat;
-import com.templenihility.init.ModItems;
+import com.templenihility.effect.RelicBuildPolicy;
 import com.templenihility.item.NihilityArmor;
 import com.templenihility.item.NihilityArmorEvents;
 import net.minecraft.core.component.DataComponents;
@@ -31,7 +31,8 @@ public final class VoidPower {
     }
 
     public static int getMax(Player player) {
-        int max = BASE_MAX;
+        int max = BASE_MAX
+            + RelicBuildPolicy.armorSetVoidPowerBonus(NihilityArmorEvents.countEquippedPieces(player));
         if (CuriosCompat.hasVoidPowerBattery(player)) {
             max += BATTERY_ACCESSORY_BONUS;
         }
@@ -60,16 +61,20 @@ public final class VoidPower {
         if (amount <= 0) {
             return true;
         }
+        int effectiveAmount = amount;
+        if (effectiveAmount > 1 && CuriosCompat.isChaosOverdriveActive(player)) {
+            effectiveAmount = Math.max(1, (effectiveAmount + 1) / 2);
+        }
         int power = get(player);
-        if (power < amount) {
+        if (power < effectiveAmount) {
             return false;
         }
-        set(player, power - amount);
+        set(player, power - effectiveAmount);
         return true;
     }
 
     public static boolean canStore(Player player) {
-        return NihilityArmorEvents.hasFullSet(player)
+        return NihilityArmorEvents.countEquippedPieces(player) >= 2
             || CuriosCompat.hasVoidPowerBattery(player)
             || CuriosCompat.hasVoidConduitCharm(player);
     }

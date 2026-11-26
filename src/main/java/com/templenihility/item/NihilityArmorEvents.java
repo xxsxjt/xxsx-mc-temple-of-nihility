@@ -1,19 +1,32 @@
 package com.templenihility.item;
 
-import com.templenihility.energy.VoidPower;
+import com.templenihility.TempleNihilityMod;
+import com.templenihility.action.PlayerWeaponActions;
 import com.templenihility.effect.VoidPhaseEvents;
+import com.templenihility.energy.VoidPower;
 import com.templenihility.init.ModItems;
+import com.templenihility.world.NihilityVisualEffects;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectCategory;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.damagesource.DamageContainer;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 public final class NihilityArmorEvents {
     public static final String STACK_VOID_POWER_KEY = VoidPower.STACK_POWER_KEY;
     public static final String STACK_VOID_POWER_MAX_KEY = VoidPower.STACK_MAX_POWER_KEY;
+    private static final String ZERO_COUNTER_UNTIL = TempleNihilityMod.MOD_ID + ".ZeroCounterUntil";
     private static final double DODGE_CHANCE = 0.25;
 
     public static void playerTick(PlayerTickEvent.Post event) {
@@ -22,8 +35,12 @@ public final class NihilityArmorEvents {
             return;
         }
 
-        if (hasFullSet(player)) {
-            VoidPower.add(player, 1);
+        int pieces = countEquippedPieces(player);
+        if (pieces >= 2) {
+            VoidPower.add(player, 2);
+            accelerateHarmfulEffectDecay(player);
+        }
+        if (pieces >= 4) {
             if (VoidPower.get(player) > 0 && repairFirstDamagedNihilityItem(player)) {
                 VoidPower.tryConsume(player, 1);
             }
@@ -32,10 +49,31 @@ public final class NihilityArmorEvents {
     }
 
     public static void incomingDamage(LivingIncomingDamageEvent event) {
-        if (!(event.getEntity() instanceof Player player)
-            || player.level().isClientSide()
-            || event.getAmount() <= 0.0F
-            || event.isCanceled()
+        if (event.isCanceled() || event.getAmount() <= 0.0F || event.getEntity().level().isClientSide()) {
+            return;
+        }
+
+        LivingEntity target = event.getEntity();
+        long now = target.level().getGameTime();
+
+        // 4pc Offensive Payoff: Zero Counter Strike primed by a phase dodge
+        if (event.getSource().getEntity() instanceof Player attacker && target != attacker) {
+            long counterUntil = attacker.getPersistentData().getLongOr(ZERO_COUNTER_UNTIL, 0L);
+            if (counterUntil >= now) {
+                attacker.getPersistentData().remove(ZERO_COUNTER_UNTIL);
+                event.setAmount(event.getAmount() * 1.55F);
+                event.addReductionModifier(DamageContainer.Reduction.ARMOR, (container, reduction) -> 0.0F);
+                PlayerWeaponActions.applyExistenceReductionStacks(target, now, 3);
+                if (target.level() instanceof ServerLevel level) {
+                    NihilityVisualEffects.weaponHitBurst(level, target, NihilityVisualEffects.WeaponAction.ZERO_SLASH);
+                }
+                attacker.sendOverlayMessage(Component.translatable("message.templenihility.zero_counter_triggered"));
+            } else if (counterUntil > 0L) {
+                attacker.getPersistentData().remove(ZERO_COUNTER_UNTIL);
+            }
+        }
+
+        if (!(target instanceof Player player)
             || VoidPhaseEvents.hasFullPhase(player)
             || !hasFullSet(player)
             || !isAttack(event.getSource())) {
@@ -46,13 +84,16 @@ public final class NihilityArmorEvents {
             return;
         }
 
-        int power = VoidPower.get(player);
         boolean dodged = player.getRandom().nextDouble() < DODGE_CHANCE;
         if (dodged) {
             event.setCanceled(true);
-            event.setInvulnerabilityTicks(10);
+            event.setInvulnerabilityTicks(12);
+            VoidPower.add(player, 12);
+            player.getPersistentData().putLong(ZERO_COUNTER_UNTIL, now + 80L);
+            emitPhaseShockwave(player);
+            NihilityVisualEffects.itemUse(player, NihilityVisualEffects.Burst.PHASE);
             player.sendOverlayMessage(Component.translatable(
-                "message.templenihility.void_power_dodge", power, VoidPower.getMax(player)));
+                "message.templenihility.void_power_dodge", VoidPower.get(player), VoidPower.getMax(player)));
         }
         VoidPower.syncArmorTooltipPower(player);
     }
@@ -69,11 +110,64 @@ public final class NihilityArmorEvents {
         return VoidPower.tryConsume(player, amount);
     }
 
+    public static int countEquippedPieces(Player player) {
+        int count = 0;
+        if (player.getItemBySlot(EquipmentSlot.HEAD).is(ModItems.NIHILITY_HELMET.get())) {
+            count++;
+        }
+        if (player.getItemBySlot(EquipmentSlot.CHEST).is(ModItems.NIHILITY_CHESTPLATE.get())) {
+            count++;
+        }
+        if (player.getItemBySlot(EquipmentSlot.LEGS).is(ModItems.NIHILITY_LEGGINGS.get())) {
+            count++;
+        }
+        if (player.getItemBySlot(EquipmentSlot.FEET).is(ModItems.NIHILITY_BOOTS.get())) {
+            count++;
+        }
+        return count;
+    }
+
+    public static boolean hasTwoPieceSet(Player player) {
+        return countEquippedPieces(player) >= 2;
+    }
+
     public static boolean hasFullSet(Player player) {
-        return player.getItemBySlot(EquipmentSlot.HEAD).is(ModItems.NIHILITY_HELMET.get())
-            && player.getItemBySlot(EquipmentSlot.CHEST).is(ModItems.NIHILITY_CHESTPLATE.get())
-            && player.getItemBySlot(EquipmentSlot.LEGS).is(ModItems.NIHILITY_LEGGINGS.get())
-            && player.getItemBySlot(EquipmentSlot.FEET).is(ModItems.NIHILITY_BOOTS.get());
+        return countEquippedPieces(player) >= 4;
+    }
+
+    private static void accelerateHarmfulEffectDecay(Player player) {
+        List<MobEffectInstance> harmful = new ArrayList<>();
+        for (MobEffectInstance effect : player.getActiveEffects()) {
+            if (effect.getEffect().value().getCategory() == MobEffectCategory.HARMFUL
+                && !effect.isInfiniteDuration()
+                && effect.getDuration() > 20) {
+                harmful.add(effect);
+            }
+        }
+        for (MobEffectInstance effect : harmful) {
+            int remaining = Math.max(1, effect.getDuration() - 20);
+            player.removeEffect(effect.getEffect());
+            player.addEffect(new MobEffectInstance(
+                effect.getEffect(),
+                remaining,
+                effect.getAmplifier(),
+                effect.isAmbient(),
+                effect.isVisible(),
+                effect.showIcon()));
+        }
+    }
+
+    private static void emitPhaseShockwave(Player player) {
+        for (Entity entity : player.level().getEntities(player, player.getBoundingBox().inflate(4.0),
+                candidate -> candidate instanceof LivingEntity && candidate.isAlive() && !candidate.isSpectator())) {
+            if (entity instanceof LivingEntity living && !player.isAlliedTo(living)) {
+                Vec3 away = living.position().subtract(player.position());
+                Vec3 flat = new Vec3(away.x, 0.0, away.z);
+                Vec3 dir = flat.lengthSqr() > 1.0E-4 ? flat.normalize() : new Vec3(1.0, 0.0, 0.0);
+                living.setDeltaMovement(living.getDeltaMovement().add(dir.scale(0.55).add(0.0, 0.20, 0.0)));
+                living.hurtMarked = true;
+            }
+        }
     }
 
     private static boolean isAttack(DamageSource source) {

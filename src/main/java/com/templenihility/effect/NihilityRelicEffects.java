@@ -20,6 +20,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.damagesource.DamageContainer;
 import net.neoforged.neoforge.event.entity.ProjectileImpactEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
@@ -40,8 +41,9 @@ public final class NihilityRelicEffects {
     private static final String BEACON_MARK_UNTIL = PREFIX + "BeaconMarkUntil";
     private static final String SUPPRESSED_UNTIL = PREFIX + "SuppressedUntil";
     private static final String STASIS_UNTIL = PREFIX + "StasisUntil";
-
+    private static final String ARMOR_SHATTER_UNTIL = PREFIX + "ArmorShatterUntil";
     private static final int MAX_FIELD_TARGETS = 32;
+
     private static final Map<UUID, RiftField> RIFT_FIELDS = new HashMap<>();
     private static final Map<UUID, DrumState> DRUM_STATES = new HashMap<>();
 
@@ -63,25 +65,72 @@ public final class NihilityRelicEffects {
     }
 
     public static void grantSoulShield(Player player, float points, int durationTicks) {
+        long now = player.level().getGameTime();
         var data = player.getPersistentData();
-        float current = getSoulShield(player);
+        float current = getActiveSoulShield(player);
         data.putInt(SOUL_SHIELD_TENTHS, Math.round(Math.max(current, points) * 10.0F));
-        data.putLong(SOUL_SHIELD_UNTIL, player.level().getGameTime() + durationTicks);
+        long existingUntil = data.getLongOr(SOUL_SHIELD_UNTIL, 0L);
+        data.putLong(SOUL_SHIELD_UNTIL, Math.max(existingUntil, now + durationTicks));
+    }
+
+    public static void addSoulShield(Player player, float delta, float cap, int durationTicks) {
+        if (delta <= 0.0F || cap <= 0.0F) {
+            return;
+        }
+        long now = player.level().getGameTime();
+        var data = player.getPersistentData();
+        float current = getActiveSoulShield(player);
+        float next = Math.min(cap, current + delta);
+        data.putInt(SOUL_SHIELD_TENTHS, Math.round(next * 10.0F));
+        long existingUntil = data.getLongOr(SOUL_SHIELD_UNTIL, 0L);
+        data.putLong(SOUL_SHIELD_UNTIL, Math.max(existingUntil, now + durationTicks));
+    }
+
+    public static float getActiveSoulShield(Player player) {
+        if (!isActive(player, SOUL_SHIELD_UNTIL, player.level().getGameTime())) {
+            return 0.0F;
+        }
+        return getSoulShield(player);
+    }
+
+    public static boolean hasSoulShield(Player player) {
+        return getActiveSoulShield(player) > 0.0F;
     }
 
     public static void markEcho(LivingEntity target, int durationTicks) {
-        target.getPersistentData().putLong(ECHO_MARK_UNTIL,
-            target.level().getGameTime() + durationTicks);
+        long now = target.level().getGameTime();
+        long existing = target.getPersistentData().getLongOr(ECHO_MARK_UNTIL, 0L);
+        target.getPersistentData().putLong(ECHO_MARK_UNTIL, Math.max(existing, now + durationTicks));
+    }
+
+    public static boolean isEchoed(LivingEntity target, long now) {
+        return isActive(target, ECHO_MARK_UNTIL, now);
     }
 
     public static void markBeacon(LivingEntity target, int durationTicks) {
-        target.getPersistentData().putLong(BEACON_MARK_UNTIL,
-            target.level().getGameTime() + durationTicks);
+        long now = target.level().getGameTime();
+        long existing = target.getPersistentData().getLongOr(BEACON_MARK_UNTIL, 0L);
+        target.getPersistentData().putLong(BEACON_MARK_UNTIL, Math.max(existing, now + durationTicks));
+    }
+
+    public static boolean isBeaconed(LivingEntity target, long now) {
+        return isActive(target, BEACON_MARK_UNTIL, now);
+    }
+
+    public static void applyArmorShatter(LivingEntity target, int durationTicks) {
+        long now = target.level().getGameTime();
+        long existing = target.getPersistentData().getLongOr(ARMOR_SHATTER_UNTIL, 0L);
+        target.getPersistentData().putLong(ARMOR_SHATTER_UNTIL, Math.max(existing, now + durationTicks));
+    }
+
+    public static boolean isArmorShattered(LivingEntity target, long now) {
+        return isActive(target, ARMOR_SHATTER_UNTIL, now);
     }
 
     public static void suppress(LivingEntity target, int durationTicks) {
-        target.getPersistentData().putLong(SUPPRESSED_UNTIL,
-            target.level().getGameTime() + durationTicks);
+        long now = target.level().getGameTime();
+        long existing = target.getPersistentData().getLongOr(SUPPRESSED_UNTIL, 0L);
+        target.getPersistentData().putLong(SUPPRESSED_UNTIL, Math.max(existing, now + durationTicks));
     }
 
     public static void applyStasis(LivingEntity target, int durationTicks) {
@@ -180,6 +229,10 @@ public final class NihilityRelicEffects {
         }
 
         long now = target.level().getGameTime();
+        if (isArmorShattered(target, now)) {
+            event.addReductionModifier(DamageContainer.Reduction.ARMOR, (container, reduction) -> reduction * 0.60F);
+        }
+
         Entity sourceEntity = event.getSource().getEntity();
         if (sourceEntity instanceof Player attacker) {
             float multiplier = 1.0F;
