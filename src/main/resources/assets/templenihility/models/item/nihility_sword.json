@@ -1,5 +1,5 @@
 {
-  "parent": "minecraft:item/generated",
+  "parent": "minecraft:item/handheld",
   "textures": {
     "layer0": "templenihility:item/nihility_sword"
   },
@@ -8,16 +8,16 @@
       "rotation": [
         0,
         -90,
-        -38
+        55
       ],
       "translation": [
         0,
-        6.2,
-        1.6
+        4.6,
+        0.7
       ],
       "scale": [
-        1.12,
-        1.12,
+        1.02,
+        1.02,
         0.9
       ]
     },
@@ -25,16 +25,16 @@
       "rotation": [
         0,
         90,
-        38
+        -55
       ],
       "translation": [
         0,
-        6.2,
-        1.6
+        4.6,
+        0.7
       ],
       "scale": [
-        1.12,
-        1.12,
+        1.02,
+        1.02,
         0.9
       ]
     },
@@ -42,34 +42,34 @@
       "rotation": [
         0,
         -90,
-        -18
+        25
       ],
       "translation": [
         1.13,
-        3.8,
+        3.4,
         1.13
       ],
       "scale": [
-        0.86,
-        0.86,
-        0.82
+        0.76,
+        0.76,
+        0.76
       ]
     },
     "firstperson_lefthand": {
       "rotation": [
         0,
         90,
-        18
+        -25
       ],
       "translation": [
         1.13,
-        3.8,
+        3.4,
         1.13
       ],
       "scale": [
-        0.86,
-        0.86,
-        0.82
+        0.76,
+        0.76,
+        0.76
       ]
     }
   }
