@@ -293,7 +293,15 @@ public final class PlayerWeaponActions {
 
         LivingEntity target = nearestLivingAlongLine(level, player,
             origin.add(0.0, player.getBoundingBox().getYsize() * 0.5, 0.0),
-            destination.add(0.0, player.getBoundingBox().getYsize() * 0.5, 0.0), 0.75);
+            destination.add(0.0, player.getBoundingBox().getYsize() * 0.5, 0.0), 0.9);
+        if (target != null) {
+            double distToTarget = origin.distanceTo(target.position());
+            double desiredDist = Math.min(5.5, Math.max(1.8, distToTarget + 1.9));
+            Vec3 tuned = findSafeDashDestination(player, level, action.direction, desiredDist);
+            if (tuned.distanceToSqr(origin) >= 0.25) {
+                destination = tuned;
+            }
+        }
         player.teleportTo(destination.x, destination.y, destination.z);
         player.setDeltaMovement(Vec3.ZERO);
         player.hurtMarked = true;
@@ -304,6 +312,10 @@ public final class PlayerWeaponActions {
             float damage = (float) Math.max(5.0, player.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.8);
             if (target.hurtServer(level, player.damageSources().playerAttack(player), damage)) {
                 applyMissingMark(target, player, level.getGameTime());
+                NihilityVisualEffects.weaponHitBurst(level, target, action.type.visual);
+                Vec3 push = action.direction.scale(0.28).add(0.0, 0.12, 0.0);
+                target.setDeltaMovement(target.getDeltaMovement().add(push));
+                target.hurtMarked = true;
                 player.sendOverlayMessage(Component.translatable("message.templenihility.missing_mark_applied"));
             }
         }
@@ -313,9 +325,10 @@ public final class PlayerWeaponActions {
 
     private static void executeZeroSlash(Player player, ServerLevel level, ActiveAction action) {
         double reach = 7.0 + action.chargeTier * 2.0;
+        double corridor = 1.15 + action.chargeTier * 0.22;
         Vec3 start = player.getEyePosition();
         Vec3 end = start.add(action.direction.scale(reach));
-        List<Entity> targets = entitiesAlongLine(level, player, start, end, 0.8);
+        List<Entity> targets = entitiesAlongLine(level, player, start, end, corridor);
         int processed = 0;
         for (Entity entity : targets) {
             if (processed >= MAX_ACTION_TARGETS) {
@@ -333,6 +346,16 @@ public final class PlayerWeaponActions {
                     + 2.0 + action.chargeTier * 2.0);
                 if (living.hurtServer(level, player.damageSources().playerAttack(player), damage)) {
                     applyExistenceReduction(living, level.getGameTime());
+                    NihilityVisualEffects.weaponHitBurst(level, living, action.type.visual);
+                    if (living instanceof Mob mob) {
+                        mob.getNavigation().stop();
+                    }
+                    Vec3 flatPush = new Vec3(action.direction.x, 0.0, action.direction.z);
+                    if (flatPush.lengthSqr() > 1.0E-4) {
+                        flatPush = flatPush.normalize().scale(0.58 + action.chargeTier * 0.14).add(0.0, 0.20, 0.0);
+                        living.setDeltaMovement(living.getDeltaMovement().add(flatPush));
+                        living.hurtMarked = true;
+                    }
                     processed++;
                 }
             }
@@ -343,7 +366,7 @@ public final class PlayerWeaponActions {
     }
 
     private static void executeBoundaryWave(Player player, ServerLevel level, ActiveAction action, int wave) {
-        double minForward = wave * 2.0;
+        double minForward = Math.max(-0.5, wave * 1.35 - 0.8);
         double maxForward = 3.5 + wave * 2.75;
         double maxLateral = 2.0 + wave * 0.7;
         AABB search = player.getBoundingBox().inflate(maxForward + 1.0, 2.5, maxForward + 1.0);
@@ -377,7 +400,7 @@ public final class PlayerWeaponActions {
                 if (living instanceof Mob mob && !interruptImmune) {
                     mob.getNavigation().stop();
                 }
-                Vec3 push = action.direction.scale(0.35 + wave * 0.08).add(0.0, 0.08, 0.0);
+                Vec3 push = action.direction.scale(0.62 + wave * 0.16).add(0.0, 0.22, 0.0);
                 living.setDeltaMovement(living.getDeltaMovement().add(push));
                 living.hurtMarked = true;
                 hits++;

@@ -35,7 +35,7 @@ public final class NihilityParticle extends SingleQuadParticle {
         switch (style) {
             case MOTE -> {
                 this.lifetime = 24 + random.nextInt(12);
-                this.baseSize = 0.19F + random.nextFloat() * 0.08F;
+                this.baseSize = 0.10F + random.nextFloat() * 0.04F;
                 this.spin = (random.nextFloat() - 0.5F) * 0.14F;
                 this.friction = 0.93F;
                 setColor(0.76F + random.nextFloat() * 0.22F,
@@ -43,14 +43,14 @@ public final class NihilityParticle extends SingleQuadParticle {
             }
             case RIPPLE -> {
                 this.lifetime = 22 + random.nextInt(8);
-                this.baseSize = 0.21F + random.nextFloat() * 0.08F;
+                this.baseSize = 0.115F + random.nextFloat() * 0.04F;
                 this.spin = (random.nextFloat() - 0.5F) * 0.06F;
                 this.friction = 0.88F;
                 setColor(0.68F, 0.95F, 1.0F);
             }
             case SHARD -> {
                 this.lifetime = 22 + random.nextInt(10);
-                this.baseSize = 0.23F + random.nextFloat() * 0.09F;
+                this.baseSize = 0.125F + random.nextFloat() * 0.045F;
                 this.spin = (random.nextBoolean() ? 1.0F : -1.0F) * (0.14F + random.nextFloat() * 0.09F);
                 this.friction = 0.91F;
                 setColor(0.86F + random.nextFloat() * 0.14F,
@@ -58,7 +58,7 @@ public final class NihilityParticle extends SingleQuadParticle {
             }
             case ABYSS -> {
                 this.lifetime = 26 + random.nextInt(14);
-                this.baseSize = 0.21F + random.nextFloat() * 0.09F;
+                this.baseSize = 0.115F + random.nextFloat() * 0.045F;
                 this.spin = (random.nextBoolean() ? 1.0F : -1.0F) * (0.08F + random.nextFloat() * 0.08F);
                 this.friction = 0.92F;
                 if (random.nextFloat() < 0.55F) {
@@ -69,7 +69,7 @@ public final class NihilityParticle extends SingleQuadParticle {
             }
             case CHAOS -> {
                 this.lifetime = 24 + random.nextInt(12);
-                this.baseSize = 0.21F + random.nextFloat() * 0.09F;
+                this.baseSize = 0.115F + random.nextFloat() * 0.045F;
                 this.spin = (random.nextFloat() - 0.5F) * 0.24F;
                 this.friction = 0.90F;
                 float selector = random.nextFloat();
@@ -84,7 +84,7 @@ public final class NihilityParticle extends SingleQuadParticle {
             default -> throw new IllegalStateException("Unhandled style " + style);
         }
         this.quadSize = this.baseSize;
-        this.alpha = style == Style.RIPPLE ? 0.86F : 0.95F;
+        this.alpha = style == Style.RIPPLE ? 0.62F : 0.78F;
     }
 
     @Override
@@ -110,7 +110,7 @@ public final class NihilityParticle extends SingleQuadParticle {
                 this.xd *= 0.62;
                 this.yd *= 0.62;
                 this.zd *= 0.62;
-                this.quadSize = baseSize * (0.65F + progress * 1.45F);
+                this.quadSize = baseSize * (0.62F + progress * 0.83F);
             }
             case SHARD -> {
                 this.yd += 0.0018;
@@ -135,7 +135,7 @@ public final class NihilityParticle extends SingleQuadParticle {
         this.zd *= this.friction;
         this.roll += spin;
         float fade = (1.0F - progress) * (1.0F - progress * 0.35F);
-        setAlpha(fade * (style == Style.RIPPLE ? 0.85F : 0.95F));
+        setAlpha(fade * (style == Style.RIPPLE ? 0.62F : 0.78F));
         setSpriteFromAge(sprites);
     }
 

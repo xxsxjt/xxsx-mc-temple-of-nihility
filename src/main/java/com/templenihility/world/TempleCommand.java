@@ -97,9 +97,9 @@ public class TempleCommand {
         String timeStr = switch (mode) {
             case STRUCTURE -> "12250"; // Warm golden sunset — gothic cathedral & cyan spires pop crisply
             case ARMOR -> "6000";      // Clear noon daylight — zero shadow ambiguity on armor UV & gold trim
-            case CREATURES -> "12450"; // Golden-violet dusk — combat sparks pop while T1-T4 & raiders stay clear
-            case BOSS -> "12750";      // Deep twilight — Saint Void Terminus & Erasure Line glow vividly
-            case WEAPONS -> "12400";   // Crisp dusk — crescent waves, fissure pillars & enemy squads read clearly
+            case CREATURES -> "2200";  // Bright morning daylight — silhouettes, armor & combat sparks read cleanly
+            case BOSS -> "1800";       // Crisp morning light — Saint Boss Bar, spacing & void beams stay legible
+            case WEAPONS -> "2200";    // Bright daylight — weapon swings, knockback & enemy squads stay crystal clear
             default -> "12400";
         };
         level.getServer().getCommands().performPrefixedCommand(silent, "time set " + timeStr);
@@ -265,10 +265,7 @@ public class TempleCommand {
         NihilityCreature t1 = spawnTempleMob(level, ModEntities.NIHILITY_BELIEVER.get(), origin.getX() - 4.0, origin.getY(), origin.getZ() - 3.5);
         NihilityCreature t2 = spawnTempleMob(level, ModEntities.NIHILITY_FOLLOWER.get(), origin.getX() - 3.0, origin.getY(), origin.getZ() - 1.5);
         NihilityCreature t3 = spawnTempleMob(level, ModEntities.NIHILITY_ENVOY.get(), origin.getX() - 5.2, origin.getY(), origin.getZ() - 2.0);
-        for (NihilityCreature c : List.of(t1, t2, t3)) {
-            c.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 1200, 2, false, false));
-            c.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 1200, 2, false, false));
-        }
+        // Authentic combat stats — no artificial resistance or regeneration crutches
 
         // Spawn real hostile enemies (Vindicators + Skeleton archers so T2 guards & T3 deflects arrows!)
         Mob e1 = spawnRaider(level, "vindicator", origin.getX() + 3.5, origin.getY(), origin.getZ() - 3.0, new ItemStack(Items.IRON_AXE));
@@ -299,19 +296,16 @@ public class TempleCommand {
             origin.getX() + 32, origin.getY() + 30, origin.getZ() + 32);
         for (Mob mob : level.getEntitiesOfClass(Mob.class, box)) mob.discard();
 
-        // Spawn T5 Nihility Saint right before the Sovereign Throne Arch at (0, 1, 13)
+        // Spawn T5 Nihility Saint right before the Sovereign Throne Arch at (0, 1, 13.8)
         NihilitySaint saint = (NihilitySaint) spawnTempleMob(level, ModEntities.NIHILITY_SAINT.get(),
-            origin.getX() + 0.5, origin.getY() + 1.0, origin.getZ() + 13.0);
+            origin.getX() + 0.5, origin.getY() + 1.0, origin.getZ() + 13.8);
         saint.setYRot(180.0f);
         saint.setYHeadRot(180.0f);
-        saint.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 1200, 2, false, false));
 
-        // Put player in REAL SURVIVAL MODE with full Nihility Armor + combat sustain so Saint truly fights back!
+        // Authentic SURVIVAL MODE duel — no artificial Resistance or Regeneration crutches!
         player.setGameMode(GameType.SURVIVAL);
-        player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 1200, 3, false, false));
-        player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 1200, 3, false, false));
-        player.teleportTo(level, origin.getX() + 0.5, origin.getY() + 1.05, origin.getZ() + 7.5,
-            Set.of(), 0.0f, 2.0f, false);
+        player.teleportTo(level, origin.getX() + 0.5, origin.getY() + 1.05, origin.getZ() + 7.2,
+            Set.of(), 0.0f, -2.0f, false);
         saint.becomeHostileTo(player);
     }
 
@@ -327,44 +321,52 @@ public class TempleCommand {
         spawnWeaponTargetWave(level, origin, 1);
         for (Mob m : level.getEntitiesOfClass(Mob.class, box, LivingEntity::isAlive)) m.setTarget(player);
 
+        // Authentic SURVIVAL MODE weapon test — no artificial Resistance or Regeneration crutches!
         player.setGameMode(GameType.SURVIVAL);
-        player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 1200, 4, false, false));
-        player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 1200, 3, false, false));
-        player.teleportTo(level, origin.getX() + 0.5, origin.getY() + 0.05, origin.getZ() + 4.0,
-            Set.of(), 180.0f, 3.0f, false);
+        player.teleportTo(level, origin.getX() + 0.5, origin.getY() + 0.05, origin.getZ() + 4.2,
+            Set.of(), 180.0f, 2.0f, false);
     }
 
     private static void spawnWeaponTargetWave(ServerLevel level, BlockPos origin, int wave) {
         if (wave == 1) {
-            // Well-framed squad of armored Husks & Vindicators 6-9 blocks ahead (brief slowness so camera stays crystal-clear during katana draw & slash!)
-            double[][] pts = { {-2.6, -4.8}, {0.0, -5.2}, {2.6, -4.8}, {-1.5, -7.0}, {1.5, -7.0} };
+            // Well-framed squad of armored Husks & Vindicator 9-12 blocks ahead for clean Blade of Zero draw & knockback
+            double[][] pts = { {-2.4, -5.6}, {0.0, -5.8}, {2.4, -5.6}, {-1.5, -7.6}, {1.5, -7.6} };
             for (int i = 0; i < pts.length; i++) {
-                Mob m = spawnRaider(level, i % 2 == 0 ? "husk" : "vindicator",
+                Mob m = spawnRaider(level, i == 1 ? "vindicator" : "husk",
                     origin.getX() + 0.5 + pts[i][0], origin.getY(), origin.getZ() + pts[i][1],
                     new ItemStack(Items.IRON_SWORD));
                 if (m != null) {
                     m.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
                     m.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE));
-                    m.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 75, 3, false, false));
+                    m.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 60, 2, false, false));
                 }
             }
         } else if (wave == 2) {
-            // Heavy Ravager + 3 Vindicators for Boundary Greatsword 3-wave fissure pillars!
+            // Heavy Ravager + 2 Armored Husks framed cleanly for Boundary Greatsword 3-wave fissure pillars
             Mob rav = (Mob) createVanilla(level, "ravager");
             if (rav != null) {
-                rav.snapTo(origin.getX() + 0.5, origin.getY(), origin.getZ() - 2.8, 0.0f, 0.0f);
+                rav.snapTo(origin.getX() + 0.5, origin.getY(), origin.getZ() - 4.2, 0.0f, 0.0f);
                 level.addFreshEntity(rav);
             }
-            for (double x : new double[] {-2.4, 2.4, 0.0}) {
-                spawnRaider(level, "vindicator", origin.getX() + 0.5 + x, origin.getY(), origin.getZ() - 4.6,
-                    new ItemStack(Items.IRON_AXE));
+            for (double x : new double[] {-2.6, 2.6}) {
+                Mob h = spawnRaider(level, "husk", origin.getX() + 0.5 + x, origin.getY(), origin.getZ() - 6.0,
+                    new ItemStack(Items.IRON_SWORD));
+                if (h != null) h.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
             }
         } else {
-            // Two-row Vindicator squad: front line pierced by Missing Step, rear line right in front of landing point for immediate X-slash follow-up!
-            for (double[] pt : new double[][] { {-1.6, -1.0}, {0.0, -1.2}, {1.6, -1.0}, {-1.4, -5.2}, {0.0, -5.6}, {1.4, -5.2} }) {
-                Mob m = spawnRaider(level, "vindicator", origin.getX() + 0.5 + pt[0], origin.getY(), origin.getZ() + pt[1],
-                    new ItemStack(Items.IRON_AXE));
-                if (m != null) m.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 60, 2, false, false));
+            // Balanced unbuffed-survival squad: vanguard Husks for Missing Step, mid-row for X-slash, iron-helmet Skeleton flankers for Drum & Barrier
+            double[][] husks = { {-1.3, 0.0}, {0.0, -0.3}, {1.3, 0.0}, {-1.7, -3.5}, {1.7, -3.5} };
+            for (double[] pt : husks) {
+                Mob m = spawnRaider(level, "husk", origin.getX() + 0.5 + pt[0], origin.getY(), origin.getZ() + pt[1],
+                    new ItemStack(Items.IRON_SWORD));
+                if (m != null) {
+                    m.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
+                    m.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 45, 1, false, false));
+                }
+            }
+            for (double x : new double[] {-2.5, 2.5}) {
+                spawnRaider(level, "skeleton", origin.getX() + 0.5 + x, origin.getY(), origin.getZ() - 5.8,
+                    new ItemStack(Items.BOW));
             }
         }
     }
@@ -396,7 +398,9 @@ public class TempleCommand {
             mob.snapTo(x, y, z, 180.0f, 0.0f);
             mob.setItemSlot(EquipmentSlot.MAINHAND, weapon);
             mob.setPersistenceRequired();
-            mob.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 1200, 0, false, false));
+            if ("skeleton".equals(vanillaId)) {
+                mob.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
+            }
             level.addFreshEntity(mob);
             return mob;
         }
@@ -411,9 +415,7 @@ public class TempleCommand {
         if (player == null || player.level() != level) return;
 
         long elapsed = level.getGameTime() - sceneStartTick;
-        if (elapsed % 20 == 0) {
-            VoidPower.set(player, 100);
-        }
+        // Authentic VoidPower flow during combat (no 1-second infinite refill crutch)
 
         switch (activeScene) {
             case STRUCTURE -> tickStructureFlyover(level, player, elapsed);

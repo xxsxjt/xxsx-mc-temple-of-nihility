@@ -57,10 +57,10 @@ public class NihilityCreatureFlowLayer extends RenderLayer<NihilityRenderState, 
             blue = 255;
             alpha = 255;
         } else if (state.disposition == Disposition.HOSTILE) {
-            red = 255;
-            green = Math.round(132 * pulse);
-            blue = Math.round(168 * pulse);
-            alpha = 255;
+            red = Math.round(218 * pulse);
+            green = Math.round(238 * pulse);
+            blue = 255;
+            alpha = 215;
         }
         return (clampByte(alpha) << 24)
             | (clampByte(red) << 16)
