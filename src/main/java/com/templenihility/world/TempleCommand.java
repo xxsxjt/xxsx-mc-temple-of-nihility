@@ -3,6 +3,7 @@ package com.templenihility.world;
 import com.mojang.brigadier.CommandDispatcher;
 import com.templenihility.TempleNihilityMod;
 import com.templenihility.action.CreatureActionPolicy.ActionType;
+import com.templenihility.compat.CuriosCompat;
 import com.templenihility.energy.VoidPower;
 import com.templenihility.entity.*;
 import com.templenihility.init.ModBlocks;
@@ -40,7 +41,7 @@ import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
 public class TempleCommand {
     private enum SceneMode {
-        NONE, STRUCTURE, ARMOR, CREATURES, BOSS, WEAPONS
+        NONE, STRUCTURE, ARMOR, CREATURES, BOSS, WEAPONS, CURIOS
     }
 
     private static SceneMode activeScene = SceneMode.NONE;
@@ -62,6 +63,7 @@ public class TempleCommand {
                 .then(Commands.literal("creatures").executes(ctx -> setupScene(ctx.getSource(), SceneMode.CREATURES)))
                 .then(Commands.literal("boss").executes(ctx -> setupScene(ctx.getSource(), SceneMode.BOSS)))
                 .then(Commands.literal("weapons").executes(ctx -> setupScene(ctx.getSource(), SceneMode.WEAPONS)))
+                .then(Commands.literal("curios").executes(ctx -> setupScene(ctx.getSource(), SceneMode.CURIOS)))
             )
             .executes(ctx -> {
                 ctx.getSource().sendSuccess(() -> Component.literal("§e/temple shrine|temple|complex|scene <structure|armor|creatures|boss|weapons>"), false);
@@ -99,7 +101,7 @@ public class TempleCommand {
             case ARMOR -> "6000";      // Clear noon daylight — zero shadow ambiguity on armor UV & gold trim
             case CREATURES -> "2200";  // Bright morning daylight — silhouettes, armor & combat sparks read cleanly
             case BOSS -> "1800";       // Crisp morning light — Saint Boss Bar, spacing & void beams stay legible
-            case WEAPONS -> "2200";    // Bright daylight — weapon swings, knockback & enemy squads stay crystal clear
+            case WEAPONS, CURIOS -> "2200"; // Bright daylight — weapon swings, Curios procs & enemy squads stay crystal clear
             default -> "12400";
         };
         level.getServer().getCommands().performPrefixedCommand(silent, "time set " + timeStr);
@@ -128,6 +130,7 @@ public class TempleCommand {
             case CREATURES -> buildCreaturesScene(level, player, origin);
             case BOSS -> buildBossScene(level, player, origin);
             case WEAPONS -> buildWeaponsScene(level, player, origin);
+            case CURIOS -> buildCuriosScene(level, player, origin);
             default -> {}
         }
 
@@ -148,8 +151,9 @@ public class TempleCommand {
         player.getInventory().setItem(0, new ItemStack(ModItems.NIHILITY_SWORD.get()));
         player.getInventory().setItem(1, new ItemStack(ModItems.NIHILITY_GREATSWORD.get()));
         player.getInventory().setItem(2, new ItemStack(ModItems.NIHILITY_DAGGER.get()));
-        player.getInventory().setItem(3, new ItemStack(ModItems.NIHILITY_BARRIER_CORE.get()));
-        player.getInventory().setItem(4, new ItemStack(ModItems.NIHILITY_ABYSSAL_DRUM.get()));
+        player.getInventory().setItem(3, new ItemStack(ModItems.NIHILITY_AXE.get()));
+        player.getInventory().setItem(4, new ItemStack(ModItems.NIHILITY_BARRIER_CORE.get()));
+        player.getInventory().setItem(5, new ItemStack(ModItems.NIHILITY_ABYSSAL_DRUM.get()));
     }
 
     private static void buildPlateau(ServerLevel level, BlockPos origin, int radius) {
@@ -321,6 +325,7 @@ public class TempleCommand {
         spawnWeaponTargetWave(level, origin, 1);
         for (Mob m : level.getEntitiesOfClass(Mob.class, box, LivingEntity::isAlive)) m.setTarget(player);
 
+        CuriosCompat.equipShowcaseLoadout(player, "clear");
         // Authentic SURVIVAL MODE weapon test — no artificial Resistance or Regeneration crutches!
         player.setGameMode(GameType.SURVIVAL);
         player.teleportTo(level, origin.getX() + 0.5, origin.getY() + 0.05, origin.getZ() + 4.2,
@@ -330,7 +335,7 @@ public class TempleCommand {
     private static void spawnWeaponTargetWave(ServerLevel level, BlockPos origin, int wave) {
         if (wave == 1) {
             // Well-framed squad of armored Husks & Vindicator 9-12 blocks ahead for clean Blade of Zero draw & knockback
-            double[][] pts = { {-2.4, -5.6}, {0.0, -5.8}, {2.4, -5.6}, {-1.5, -7.6}, {1.5, -7.6} };
+            double[][] pts = { {-1.8, -1.6}, {0.0, -1.2}, {1.8, -1.6}, {-1.4, -3.6}, {1.4, -3.6} };
             for (int i = 0; i < pts.length; i++) {
                 Mob m = spawnRaider(level, i == 1 ? "vindicator" : "husk",
                     origin.getX() + 0.5 + pts[i][0], origin.getY(), origin.getZ() + pts[i][1],
@@ -338,7 +343,11 @@ public class TempleCommand {
                 if (m != null) {
                     m.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
                     m.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE));
-                    m.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 60, 2, false, false));
+                    if (i == 1) {
+                        m.addEffect(new MobEffectInstance(MobEffects.STRENGTH, 240, 0, false, true));
+                        m.addEffect(new MobEffectInstance(MobEffects.SPEED, 240, 0, false, true));
+                    }
+                    m.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 40, 1, false, false));
                 }
             }
         } else if (wave == 2) {
@@ -422,6 +431,7 @@ public class TempleCommand {
             case CREATURES -> tickCreaturesCombat(level, player, elapsed);
             case BOSS -> tickBossDuel(level, player, elapsed);
             case WEAPONS -> tickWeaponsGauntlet(level, player, elapsed);
+            case CURIOS -> tickCuriosShowcase(level, player, elapsed);
             case ARMOR -> {
                 if (elapsed > 360) activeScene = SceneMode.NONE;
             }
@@ -600,13 +610,127 @@ public class TempleCommand {
                 Set.of(), 170.0f, 3.0f, false);
             spawnWeaponTargetWave(level, sceneOrigin, 2);
         }
-        // Wave 3 spawns at elapsed 280 (~10.8s into recording) right before Rift Dagger Missing Step & Drum/Barrier!
+        // Wave 3 spawns at elapsed 280 (~10.8s into recording) for Rift Dagger Backstab & Missing Mark Detonation
         else if (sceneStage == 1 && elapsed >= 280) {
             sceneStage = 2;
             for (Mob m : level.getEntitiesOfClass(Mob.class, arena)) m.discard();
             player.teleportTo(level, sceneOrigin.getX() + 0.5, sceneOrigin.getY() + 0.05, sceneOrigin.getZ() + 4.0,
                 Set.of(), 180.0f, 3.0f, false);
             spawnWeaponTargetWave(level, sceneOrigin, 3);
+        }
+        // Wave 4 spawns at elapsed 390 (~16.3s into recording) for Nihility Axe Shatter Cleave & 4pc Zero Counter!
+        else if (sceneStage == 2 && elapsed >= 390) {
+            sceneStage = 3;
+            for (Mob m : level.getEntitiesOfClass(Mob.class, arena)) m.discard();
+            player.teleportTo(level, sceneOrigin.getX() + 0.5, sceneOrigin.getY() + 0.05, sceneOrigin.getZ() + 3.2,
+                Set.of(), 180.0f, 3.0f, false);
+            double[][] axeWave = { {-1.5, 0.2}, {0.0, -0.2}, {1.5, 0.2}, {0.0, -1.8} };
+            for (int i = 0; i < axeWave.length; i++) {
+                Mob m = spawnRaider(level, i == 0 ? "vindicator" : "husk",
+                    sceneOrigin.getX() + 0.5 + axeWave[i][0], sceneOrigin.getY(), sceneOrigin.getZ() + axeWave[i][1],
+                    new ItemStack(i == 0 ? Items.IRON_AXE : Items.IRON_SWORD));
+                if (m != null) {
+                    m.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
+                    m.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE));
+                }
+            }
+        } else if (elapsed >= 520) {
+            activeScene = SceneMode.NONE;
+        }
+    }
+
+    // ==================== SCENE 6: FOUR-ASPECT CURIOS BUILDS ====================
+    private static void buildCuriosScene(ServerLevel level, ServerPlayer player, BlockPos origin) {
+        buildPlateau(level, origin, 17);
+        TempleGenerator.generateTemple(level, origin.offset(0, 0, -16), TempleType.SHRINE);
+        AABB box = new AABB(origin.getX() - 32, origin.getY() - 4, origin.getZ() - 32,
+            origin.getX() + 32, origin.getY() + 24, origin.getZ() + 32);
+        for (Mob mob : level.getEntitiesOfClass(Mob.class, box)) mob.discard();
+
+        player.setGameMode(GameType.SURVIVAL);
+        CuriosCompat.equipShowcaseLoadout(player, "chaos");
+        VoidPower.set(player, 120);
+        // Start at 45% HP so Chaos Blood Ring (+40% dmg & <40% Chaos Splash) activates right in real combat!
+        player.setHealth(Math.min(player.getMaxHealth(), 9.0F));
+        player.teleportTo(level, origin.getX() + 0.5, origin.getY() + 0.05, origin.getZ() + 2.8,
+            Set.of(), 180.0f, 3.0f, false);
+        spawnCuriosStageWave(level, origin, 0);
+        for (Mob m : level.getEntitiesOfClass(Mob.class, box, LivingEntity::isAlive)) m.setTarget(player);
+        player.sendOverlayMessage(Component.literal("§d【混沌构筑】血戒燃血 + 手甲五连 + 命定暴击 + 王冠免死过载"));
+    }
+
+    private static void spawnCuriosStageWave(ServerLevel level, BlockPos origin, int stage) {
+        if (stage == 0) {
+            double[][] pts = { {-1.3, 0.2}, {0.0, 0.0}, {1.3, 0.2}, {-1.8, -1.6}, {1.8, -1.6} };
+            for (int i = 0; i < pts.length; i++) {
+                Mob m = spawnRaider(level, i == 1 ? "vindicator" : "husk",
+                    origin.getX() + 0.5 + pts[i][0], origin.getY(), origin.getZ() + pts[i][1],
+                    new ItemStack(Items.IRON_SWORD));
+                if (m != null) {
+                    m.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
+                    m.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE));
+                }
+            }
+        } else if (stage == 1) {
+            double[][] pts = { {-1.4, 0.3}, {0.0, 0.0}, {1.4, 0.3}, {-1.6, -1.4}, {1.6, -1.4} };
+            for (int i = 0; i < pts.length; i++) {
+                Mob m = spawnRaider(level, i == 0 ? "vindicator" : "husk",
+                    origin.getX() + 0.5 + pts[i][0], origin.getY(), origin.getZ() + pts[i][1],
+                    new ItemStack(Items.IRON_SWORD));
+                if (m != null) {
+                    m.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
+                }
+            }
+        } else {
+            double[][] melee = { {-1.2, 0.2}, {0.0, -0.2}, {1.2, 0.2} };
+            for (double[] pt : melee) {
+                Mob m = spawnRaider(level, "husk",
+                    origin.getX() + 0.5 + pt[0], origin.getY(), origin.getZ() + pt[1],
+                    new ItemStack(Items.IRON_SWORD));
+                if (m != null) {
+                    m.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
+                    m.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE));
+                }
+            }
+            for (double x : new double[] { -3.6, 0.0, 3.6 }) {
+                spawnRaider(level, "skeleton",
+                    origin.getX() + 0.5 + x, origin.getY(), origin.getZ() - 5.8,
+                    new ItemStack(Items.BOW));
+            }
+        }
+    }
+
+    private static void tickCuriosShowcase(ServerLevel level, ServerPlayer player, long elapsed) {
+        AABB arena = new AABB(sceneOrigin.getX() - 24, sceneOrigin.getY() - 4, sceneOrigin.getZ() - 24,
+            sceneOrigin.getX() + 24, sceneOrigin.getY() + 16, sceneOrigin.getZ() + 24);
+        if (elapsed % 12 == 0) {
+            for (Mob m : level.getEntitiesOfClass(Mob.class, arena, LivingEntity::isAlive)) {
+                if (m.getTarget() == null) m.setTarget(player);
+            }
+        }
+        // Stage 1: Abyss Immortal Build (elapsed 185 = ~6.5s into recording)
+        if (sceneStage == 0 && elapsed >= 185) {
+            sceneStage = 1;
+            for (Mob m : level.getEntitiesOfClass(Mob.class, arena)) m.discard();
+            CuriosCompat.equipShowcaseLoadout(player, "abyss");
+            player.setHealth(player.getMaxHealth());
+            VoidPower.set(player, 120);
+            player.teleportTo(level, sceneOrigin.getX() + 0.5, sceneOrigin.getY() + 0.05, sceneOrigin.getZ() + 2.8,
+                Set.of(), 180.0f, 3.0f, false);
+            spawnCuriosStageWave(level, sceneOrigin, 1);
+            player.sendOverlayMessage(Component.literal("§c【深渊构筑】虹吸过量转魂盾 + 冥焰反震 + 空中重压 + 魂锚"));
+        }
+        // Stage 2: Void + Nihility Tactical Build (elapsed 320 = ~13.2s into recording)
+        else if (sceneStage == 1 && elapsed >= 320) {
+            sceneStage = 2;
+            for (Mob m : level.getEntitiesOfClass(Mob.class, arena)) m.discard();
+            CuriosCompat.equipShowcaseLoadout(player, "void_nihility");
+            player.setHealth(player.getMaxHealth());
+            VoidPower.set(player, 120);
+            player.teleportTo(level, sceneOrigin.getX() + 0.5, sceneOrigin.getY() + 0.05, sceneOrigin.getZ() + 3.2,
+                Set.of(), 180.0f, 3.0f, false);
+            spawnCuriosStageWave(level, sceneOrigin, 2);
+            player.sendOverlayMessage(Component.literal("§b【虚空·虚无构筑】哨兵偏折破甲 + 裂隙拉拽 + 归零薄膜 + 蚀影伏击"));
         } else if (elapsed >= 480) {
             activeScene = SceneMode.NONE;
         }

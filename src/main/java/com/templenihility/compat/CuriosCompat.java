@@ -137,6 +137,50 @@ public final class CuriosCompat {
         return until > 0L && until >= player.level().getGameTime();
     }
 
+    public static void equipShowcaseLoadout(Player player, String profile) {
+        CuriosApi.getCuriosInventory(player).ifPresent(handler -> {
+            for (String slot : new String[] { "head", "necklace", "back", "belt", "hands", "ring", "charm", "curio" }) {
+                handler.getStacksHandler(slot).ifPresent(stacks -> {
+                    for (int i = 0; i < stacks.getSlots(); i++) {
+                        handler.setEquippedCurio(slot, i, ItemStack.EMPTY);
+                    }
+                });
+            }
+            switch (profile) {
+                case "chaos" -> {
+                    setCurioSafe(handler, "head", 0, new ItemStack(ModItems.NIHILITY_CROWN.get()));
+                    setCurioSafe(handler, "ring", 0, new ItemStack(ModItems.NIHILITY_RING.get()));
+                    setCurioSafe(handler, "hands", 0, new ItemStack(ModItems.NIHILITY_GAUNTLET.get()));
+                    setCurioSafe(handler, "charm", 0, new ItemStack(ModItems.NIHILITY_CHARM.get()));
+                }
+                case "abyss" -> {
+                    setCurioSafe(handler, "ring", 0, new ItemStack(ModItems.NIHILITY_SIPHON_RING.get()));
+                    setCurioSafe(handler, "ring", 1, new ItemStack(ModItems.NIHILITY_REGENERATOR.get()));
+                    setCurioSafe(handler, "back", 0, new ItemStack(ModItems.NIHILITY_ABYSS_MANTLE.get()));
+                    setCurioSafe(handler, "charm", 0, new ItemStack(ModItems.NIHILITY_RECOVERY_ORB.get()));
+                    setCurioSafe(handler, "necklace", 0, new ItemStack(ModItems.NIHILITY_SOUL_ANCHOR.get()));
+                }
+                case "void_nihility" -> {
+                    setCurioSafe(handler, "ring", 0, new ItemStack(ModItems.NIHILITY_RIFT_RING.get()));
+                    setCurioSafe(handler, "charm", 0, new ItemStack(ModItems.NIHILITY_SENTINEL_EYE.get()));
+                    setCurioSafe(handler, "charm", 1, new ItemStack(ModItems.NIHILITY_WARD.get()));
+                    setCurioSafe(handler, "belt", 0, new ItemStack(ModItems.NIHILITY_PEARL_BELT.get()));
+                    setCurioSafe(handler, "necklace", 0, new ItemStack(ModItems.NIHILITY_ECLIPSE_AMULET.get()));
+                }
+                default -> {}
+            }
+        });
+    }
+
+    private static void setCurioSafe(top.theillusivec4.curios.api.type.capability.ICuriosItemHandler handler,
+                                     String slot, int index, ItemStack stack) {
+        handler.getStacksHandler(slot).ifPresent(stacks -> {
+            if (index < stacks.getSlots()) {
+                handler.setEquippedCurio(slot, index, stack);
+            }
+        });
+    }
+
     private static void playerTick(PlayerTickEvent.Post event) {
         Player player = event.getEntity();
         if (player.level().isClientSide()) {
