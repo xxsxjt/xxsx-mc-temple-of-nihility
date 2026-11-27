@@ -326,8 +326,10 @@ public final class PlayerWeaponActions {
         Vec3 direction = (type == ActionType.BOUNDARY_BREAK || type == ActionType.MISSING_STEP)
             ? horizontalLook(player)
             : player.getLookAngle().normalize();
-        ACTIVE.put(player.getUUID(), new ActiveAction(
-            type, hand, stack.getItem(), level.dimension(), level.getGameTime(), direction, energyCost, chargeTier));
+        Vec3 origin = player.position().add(0.0, player.getBbHeight() * 0.56, 0.0);
+        ActiveAction active = new ActiveAction(
+            type, hand, stack.getItem(), level.dimension(), level.getGameTime(), origin, direction, energyCost, chargeTier);
+        ACTIVE.put(player.getUUID(), active);
         if (type != ActionType.ZERO_SLASH) {
             player.startUsingItem(hand);
         }
@@ -368,9 +370,12 @@ public final class PlayerWeaponActions {
     }
 
     private static void tickZeroSlash(Player player, ServerLevel level, ActiveAction action, long elapsed) {
-        if (!action.activated && elapsed >= action.type.firstActiveTick) {
-            action.activated = true;
-            executeZeroSlash(player, level, action);
+        int step = (int) Math.min(9L, Math.max(0L, elapsed));
+        if (step >= action.zeroSlashStep && action.zeroSlashStep < 10) {
+            while (action.zeroSlashStep <= step && action.zeroSlashStep < 10) {
+                executeZeroSlashStep(player, level, action, action.zeroSlashStep);
+                action.zeroSlashStep++;
+            }
         }
     }
 
@@ -380,7 +385,7 @@ public final class PlayerWeaponActions {
         player.setDeltaMovement(movement.x * 0.42, movement.y, movement.z * 0.42);
         player.hurtMarked = true;
 
-        int[] waveTicks = {16, 20, 24};
+        int[] waveTicks = {15, 21, 27};
         while (action.nextWave < waveTicks.length && elapsed >= waveTicks[action.nextWave]) {
             executeBoundaryWave(player, level, action, action.nextWave);
             action.nextWave++;
@@ -428,71 +433,147 @@ public final class PlayerWeaponActions {
         NihilityVisualEffects.missingStep(level, origin, destination);
     }
 
-    private static void executeZeroSlash(Player player, ServerLevel level, ActiveAction action) {
-        double reach = 7.5 + action.chargeTier * 2.25;
-        double corridor = 1.2 + action.chargeTier * 0.25;
-        Vec3 start = player.getEyePosition();
-        Vec3 end = start.add(action.direction.scale(reach));
-        List<Entity> targets = entitiesAlongLine(level, player, start, end, corridor);
+    /**
+     * Traveling flying crescent sword-wave for Blade of Zero:
+     * sweeps from -0.65 blocks (point-blank touching player) out to 10/13/16 blocks over 10 ticks,
+     * slicing projectiles & enemies along its 3D crescent swath and delivering true armor-piercing
+     * Execute + clean lethal finisher on low-HP non-boss targets.
+     */
+    private static void executeZeroSlashStep(Player player, ServerLevel level, ActiveAction action, int step) {
+        double reach = 10.0 + action.chargeTier * 3.0;
+        double totalSteps = 10.0;
+        double prevDist = step == 0 ? -0.65 : (reach * (step / totalSteps)) - 0.75;
+        double currDist = (reach * ((step + 1) / totalSteps)) + 0.65;
+        double halfWidth = 1.65 + action.chargeTier * 0.35;
+        double halfHeight = 1.45;
+
+        if (step == 0) {
+            player.swing(action.hand, true);
+            damageActionItem(player, action);
+        }
+
+        Vec3 fwd = action.direction;
+        Vec3 right = new Vec3(-fwd.z, 0.0, fwd.x);
+        if (right.lengthSqr() < 1.0E-5) {
+            right = new Vec3(1.0, 0.0, 0.0);
+        } else {
+            right = right.normalize();
+        }
+        Vec3 up = right.cross(fwd).normalize();
+
+        Vec3 segStart = action.origin.add(fwd.scale(Math.max(-0.5, prevDist)));
+        Vec3 segEnd = action.origin.add(fwd.scale(currDist));
+        AABB sweepBox = new AABB(segStart, segEnd).inflate(halfWidth + 0.85, halfHeight + 0.65, halfWidth + 0.85);
+
+        List<Entity> candidates = level.getEntities(player, sweepBox,
+            candidate -> candidate.isAlive() && !candidate.isSpectator());
+        candidates.sort(Comparator.comparingDouble(entity -> entity.position().distanceToSqr(action.origin)));
+
         long now = level.getGameTime();
-        int processed = 0;
-        boolean executeNotified = false;
-        for (Entity entity : targets) {
-            if (processed >= MAX_ACTION_TARGETS) {
+        for (Entity entity : candidates) {
+            if (action.zeroSlashProcessed >= MAX_ACTION_TARGETS) {
                 break;
             }
+            if (action.hitEntityIds.contains(entity.getId())) {
+                continue;
+            }
+
+            Vec3 center = entity.getBoundingBox().getCenter();
+            Vec3 rel = center.subtract(action.origin);
+            double forward = rel.dot(fwd);
+            double entityHalfDepth = Math.max(entity.getBbWidth(), 0.6) * 0.55;
+            if (forward + entityHalfDepth < prevDist || forward - entityHalfDepth > currDist) {
+                continue;
+            }
+            double lateral = Math.abs(rel.dot(right));
+            double vertical = Math.abs(rel.dot(up));
+            if (lateral > halfWidth + entity.getBbWidth() * 0.55
+                || vertical > halfHeight + entity.getBbHeight() * 0.55) {
+                continue;
+            }
+
             if (entity instanceof Projectile projectile) {
                 if (projectile.isPickable() && projectile.getOwner() != player) {
+                    action.hitEntityIds.add(projectile.getId());
                     projectile.discard();
                     VoidPower.add(player, 4);
-                    processed++;
+                    action.zeroSlashProcessed++;
                 }
                 continue;
             }
+
             if (entity instanceof LivingEntity living && canHit(player, living)) {
+                action.hitEntityIds.add(living.getId());
                 double atk = player.getAttributeValue(Attributes.ATTACK_DAMAGE);
-                float damage = (float) (atk * (1.15 + action.chargeTier * 0.25)
-                    + 4.0 + action.chargeTier * 2.5);
-                int stacks = getExistenceStacks(living, now);
+                float slashDamage = (float) (atk * (1.20 + action.chargeTier * 0.28)
+                    + 5.0 + action.chargeTier * 3.0);
+                int stacksBefore = getExistenceStacks(living, now);
                 float executeBonus = RelicBuildPolicy.zeroSlashExecuteBonus(
-                    living.getHealth(), living.getMaxHealth(), stacks);
-                if (executeBonus > 0.0F) {
-                    damage += executeBonus;
-                }
-                if (living.hurtServer(level, player.damageSources().playerAttack(player), damage)) {
+                    living.getHealth(), living.getMaxHealth(), stacksBefore);
+
+                living.invulnerableTime = 0;
+                boolean hit = living.hurtServer(level, player.damageSources().playerAttack(player), slashDamage);
+                if (hit) {
                     applyExistenceReductionStacks(living, now, 1 + action.chargeTier);
-                    if (executeBonus > 0.0F) {
+                    boolean interruptImmune = level.registryAccess().lookupOrThrow(Registries.ENTITY_TYPE)
+                        .wrapAsHolder(living.getType()).is(ModTags.EntityTypes.ACTION_INTERRUPT_IMMUNE);
+                    int stacksAfter = getExistenceStacks(living, now);
+                    boolean executeTriggered = executeBonus > 0.0F
+                        || RelicBuildPolicy.shouldLethalZeroExecute(
+                            living.getHealth(), living.getMaxHealth(), Math.max(stacksBefore, stacksAfter), interruptImmune);
+
+                    if (executeTriggered && living.isAlive()) {
+                        float trueExecuteDmg = Math.max(6.0F, executeBonus);
+                        if (RelicBuildPolicy.shouldLethalZeroExecute(
+                                living.getHealth(), living.getMaxHealth(), Math.max(stacksBefore, stacksAfter), interruptImmune)) {
+                            trueExecuteDmg = Math.max(trueExecuteDmg * 1.6F, living.getHealth() + 8.0F);
+                        }
+                        living.invulnerableTime = 0;
+                        living.hurtServer(level, player.damageSources().magic(), trueExecuteDmg);
+                    }
+
+                    if (executeTriggered) {
                         stripBeneficialEffects(living);
                         VoidPower.add(player, 12);
-                        if (!executeNotified) {
+                        NihilityVisualEffects.zeroExecuteBurst(level, living);
+                        if (!action.executeNotified) {
                             NihilityNetwork.sendCombatFeedback(player, CombatFeedbackPolicy.Kind.ZERO_EXECUTE, 12, "");
-                            executeNotified = true;
+                            action.executeNotified = true;
+                        }
+                    } else {
+                        NihilityVisualEffects.weaponHitBurst(level, living, action.type.visual);
+                    }
+
+                    if (living.isAlive()) {
+                        if (living instanceof Mob mob && !interruptImmune) {
+                            mob.getNavigation().stop();
+                        }
+                        Vec3 flatPush = new Vec3(fwd.x, 0.0, fwd.z);
+                        if (flatPush.lengthSqr() > 1.0E-4) {
+                            flatPush = flatPush.normalize().scale(0.54 + action.chargeTier * 0.14).add(0.0, 0.18, 0.0);
+                            living.setDeltaMovement(living.getDeltaMovement().add(flatPush));
+                            living.hurtMarked = true;
                         }
                     }
-                    NihilityVisualEffects.weaponHitBurst(level, living, action.type.visual);
-                    if (living instanceof Mob mob) {
-                        mob.getNavigation().stop();
-                    }
-                    Vec3 flatPush = new Vec3(action.direction.x, 0.0, action.direction.z);
-                    if (flatPush.lengthSqr() > 1.0E-4) {
-                        flatPush = flatPush.normalize().scale(0.58 + action.chargeTier * 0.14).add(0.0, 0.20, 0.0);
-                        living.setDeltaMovement(living.getDeltaMovement().add(flatPush));
-                        living.hurtMarked = true;
-                    }
-                    processed++;
+                    action.zeroSlashProcessed++;
                 }
             }
         }
-        player.swing(action.hand, true);
-        damageActionItem(player, action);
-        NihilityVisualEffects.zeroSlash(level, start, action.direction, reach, action.chargeTier);
+
+        double waveFront = reach * ((step + 1) / totalSteps);
+        NihilityVisualEffects.zeroSlashWaveStep(level, action.origin, fwd, waveFront, reach, action.chargeTier, step);
     }
 
+    /**
+     * Boundary Greatsword 3-wave combo:
+     * uses per-wave hit tracking and resets invulnerableTime before each wave so ALL 3 waves
+     * reliably connect from point-blank (-0.65 blocks) through mid-range with escalating damage!
+     */
     private static void executeBoundaryWave(Player player, ServerLevel level, ActiveAction action, int wave) {
-        double minForward = Math.max(-0.5, wave * 1.35 - 0.8);
-        double maxForward = 3.6 + wave * 2.85;
-        double maxLateral = 2.15 + wave * 0.75;
-        AABB search = player.getBoundingBox().inflate(maxForward + 1.0, 2.5, maxForward + 1.0);
+        double minForward = -0.65;
+        double maxForward = 4.2 + wave * 2.6;
+        double maxLateral = 2.4 + wave * 0.75;
+        AABB search = player.getBoundingBox().inflate(maxForward + 1.2, 2.8, maxForward + 1.2);
         List<LivingEntity> candidates = new ArrayList<>();
         for (Entity entity : level.getEntities(player, search,
                 candidate -> candidate instanceof LivingEntity && candidate.isAlive() && !candidate.isSpectator())) {
@@ -503,32 +584,39 @@ public final class PlayerWeaponActions {
         candidates.sort(Comparator.comparingDouble(player::distanceToSqr));
 
         long now = level.getGameTime();
+        Set<Integer> waveHitIds = new HashSet<>();
         int hits = 0;
+        float mult = RelicBuildPolicy.boundaryWaveDamageMultiplier(wave);
+        float flatBonus = RelicBuildPolicy.boundaryWaveFlatBonus(wave);
         for (LivingEntity living : candidates) {
-            if (action.hitEntityIds.contains(living.getId()) || hits >= MAX_ACTION_TARGETS) {
+            if (waveHitIds.contains(living.getId()) || hits >= MAX_ACTION_TARGETS) {
                 continue;
             }
-            Vec3 relative = living.position().subtract(player.position());
+            Vec3 relative = living.getBoundingBox().getCenter().subtract(player.position());
             double forward = relative.dot(action.direction);
-            Vec3 lateralVector = relative.subtract(action.direction.scale(forward));
+            Vec3 lateralVector = new Vec3(relative.x, 0.0, relative.z)
+                .subtract(action.direction.scale(forward));
             if (forward < minForward || forward > maxForward || lateralVector.length() > maxLateral) {
                 continue;
             }
 
-            float damage = (float) (player.getAttributeValue(Attributes.ATTACK_DAMAGE) * 1.45 + wave * 3.0);
+            float damage = (float) (player.getAttributeValue(Attributes.ATTACK_DAMAGE) * mult + flatBonus);
             if (NihilityRelicEffects.isArmorShattered(living, now) || NihilityRelicEffects.isEchoed(living, now)) {
                 damage *= 1.35F;
             }
+            living.invulnerableTime = 0;
             if (living.hurtServer(level, player.damageSources().playerAttack(player), damage)) {
-                action.hitEntityIds.add(living.getId());
-                NihilityRelicEffects.applyArmorShatter(living, 80);
+                waveHitIds.add(living.getId());
+                NihilityRelicEffects.applyArmorShatter(living, 100);
                 NihilityVisualEffects.weaponHitBurst(level, living, action.type.visual);
                 boolean interruptImmune = level.registryAccess().lookupOrThrow(Registries.ENTITY_TYPE)
                     .wrapAsHolder(living.getType()).is(ModTags.EntityTypes.ACTION_INTERRUPT_IMMUNE);
                 if (living instanceof Mob mob && !interruptImmune) {
                     mob.getNavigation().stop();
                 }
-                Vec3 push = action.direction.scale(0.68 + wave * 0.16).add(0.0, 0.24, 0.0);
+                double pushScale = wave == 2 ? 0.84 : (wave == 1 ? 0.28 : 0.22);
+                double lift = wave == 2 ? 0.34 : 0.12;
+                Vec3 push = action.direction.scale(pushScale).add(0.0, lift, 0.0);
                 living.setDeltaMovement(living.getDeltaMovement().add(push));
                 living.hurtMarked = true;
                 hits++;
@@ -672,7 +760,7 @@ public final class PlayerWeaponActions {
     private enum ActionType {
         MISSING_STEP(4, MISSING_STEP_DURATION, NihilityVisualEffects.WeaponAction.MISSING_STEP),
         ZERO_SLASH(0, 10, NihilityVisualEffects.WeaponAction.ZERO_SLASH),
-        BOUNDARY_BREAK(16, BOUNDARY_BREAK_DURATION, NihilityVisualEffects.WeaponAction.BOUNDARY_BREAK);
+        BOUNDARY_BREAK(15, BOUNDARY_BREAK_DURATION, NihilityVisualEffects.WeaponAction.BOUNDARY_BREAK);
 
         private final int firstActiveTick;
         private final int totalTicks;
@@ -691,21 +779,26 @@ public final class PlayerWeaponActions {
         private final Item expectedItem;
         private final net.minecraft.resources.ResourceKey<Level> dimension;
         private final long startTick;
+        private final Vec3 origin;
         private final Vec3 direction;
         private final int energyCost;
         private final int chargeTier;
         private final Set<Integer> hitEntityIds = new HashSet<>();
         private boolean activated;
+        private boolean executeNotified;
+        private int zeroSlashStep;
+        private int zeroSlashProcessed;
         private int nextWave;
 
         private ActiveAction(ActionType type, InteractionHand hand, Item expectedItem,
                              net.minecraft.resources.ResourceKey<Level> dimension, long startTick,
-                             Vec3 direction, int energyCost, int chargeTier) {
+                             Vec3 origin, Vec3 direction, int energyCost, int chargeTier) {
             this.type = type;
             this.hand = hand;
             this.expectedItem = expectedItem;
             this.dimension = dimension;
             this.startTick = startTick;
+            this.origin = origin;
             this.direction = direction;
             this.energyCost = energyCost;
             this.chargeTier = chargeTier;

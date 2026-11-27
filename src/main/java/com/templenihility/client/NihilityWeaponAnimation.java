@@ -156,18 +156,18 @@ public final class NihilityWeaponAnimation {
 
         switch (activeSkill) {
             case BOUNDARY_BREAK -> {
-                if (t < 16.0F) {
+                if (t < 15.0F) {
                     state.rightArmPose = HumanoidModel.ArmPose.THROW_TRIDENT;
                     state.attackTime = 0.0F;
-                } else if (t < 20.0F) {
+                } else if (t < 21.0F) {
                     state.rightArmPose = HumanoidModel.ArmPose.ITEM;
-                    state.attackTime = Mth.clamp((t - 16.0F) / 4.0F, 0.08F, 0.96F);
-                } else if (t < 24.0F) {
+                    state.attackTime = Mth.clamp((t - 15.0F) / 6.0F, 0.08F, 0.96F);
+                } else if (t < 27.0F) {
                     state.rightArmPose = HumanoidModel.ArmPose.ITEM;
-                    state.attackTime = Mth.clamp((t - 20.0F) / 4.0F, 0.08F, 0.96F);
-                } else if (t < 31.0F) {
+                    state.attackTime = Mth.clamp((t - 21.0F) / 6.0F, 0.08F, 0.96F);
+                } else if (t < 35.0F) {
                     state.rightArmPose = HumanoidModel.ArmPose.ITEM;
-                    state.attackTime = Mth.clamp((t - 24.0F) / 7.0F, 0.08F, 0.98F);
+                    state.attackTime = Mth.clamp((t - 27.0F) / 8.0F, 0.08F, 0.98F);
                 }
             }
             case ZERO_SLASH_RELEASE -> {
@@ -335,35 +335,35 @@ public final class NihilityWeaponAnimation {
         }
     }
 
-    /** Boundary Greatsword: 16t dramatic overhead hoist -> Wave 1 Slam -> Wave 2 Reverse Sweep -> Wave 3 Crushing Finish! */
+    /** Boundary Greatsword: 15t overhead hoist -> Wave 1 Slam (15t) -> Wave 2 Reverse Sweep (21t) -> Wave 3 Crushing Finish (27t)! */
     private static void applyBoundaryBreakFirstPerson(PoseStack ps, float side, float t) {
-        if (t < 16.0F) {
-            float p = easeOutCubic(t / 16.0F);
+        if (t < 15.0F) {
+            float p = easeOutCubic(t / 15.0F);
             float tremor = Mth.sin(t * 1.4F) * 1.6F * p;
             ps.translate(side * (-0.10F * p), 0.30F * p, 0.10F * p);
             ps.mulPose(Axis.XP.rotationDegrees(44.0F * p + tremor));
             ps.mulPose(Axis.YP.rotationDegrees(side * (-16.0F * p)));
             ps.mulPose(Axis.ZP.rotationDegrees(side * (20.0F * p)));
-        } else if (t < 20.0F) {
-            float p = easeOutCubic((t - 16.0F) / 4.0F);
+        } else if (t < 21.0F) {
+            float p = easeOutCubic((t - 15.0F) / 6.0F);
             ps.translate(side * Mth.lerp(p, -0.10F, -0.58F), Mth.lerp(p, 0.30F, -0.34F), Mth.lerp(p, 0.10F, -0.36F));
             ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, 44.0F, -98.0F)));
             ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, -16.0F, 36.0F)));
             ps.mulPose(Axis.ZP.rotationDegrees(side * Mth.lerp(p, 20.0F, 72.0F)));
-        } else if (t < 24.5F) {
-            float p = easeOutCubic((t - 20.0F) / 4.5F);
+        } else if (t < 27.0F) {
+            float p = easeOutCubic((t - 21.0F) / 6.0F);
             ps.translate(side * Mth.lerp(p, -0.58F, 0.16F), Mth.lerp(p, -0.34F, 0.18F), Mth.lerp(p, -0.36F, -0.24F));
             ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, -98.0F, -32.0F)));
             ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, 36.0F, -32.0F)));
             ps.mulPose(Axis.ZP.rotationDegrees(side * Mth.lerp(p, 72.0F, -58.0F)));
-        } else if (t < 29.5F) {
-            float p = easeOutCubic((t - 24.5F) / 5.0F);
+        } else if (t < 33.0F) {
+            float p = easeOutCubic((t - 27.0F) / 6.0F);
             ps.translate(side * Mth.lerp(p, 0.16F, -0.34F), Mth.lerp(p, 0.18F, -0.40F), Mth.lerp(p, -0.24F, -0.36F));
             ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, -32.0F, -106.0F)));
             ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, -32.0F, 24.0F)));
             ps.mulPose(Axis.ZP.rotationDegrees(side * Mth.lerp(p, -58.0F, 28.0F)));
         } else {
-            float p = easeInOutQuad(Mth.clamp((t - 29.5F) / 9.5F, 0.0F, 1.0F));
+            float p = easeInOutQuad(Mth.clamp((t - 33.0F) / 6.0F, 0.0F, 1.0F));
             ps.translate(side * Mth.lerp(p, -0.34F, 0.0F), Mth.lerp(p, -0.40F, 0.0F), Mth.lerp(p, -0.36F, 0.0F));
             ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, -106.0F, 0.0F)));
             ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, 24.0F, 0.0F)));
