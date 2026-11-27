@@ -125,24 +125,24 @@ public class NihilityTerminalScreen extends AbstractContainerScreen<NihilityTerm
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         graphics.text(font, Component.translatable("screen.templenihility.terminal_title_short"),
-            titleLabelX, titleLabelY, 0xFF404040, false);
+            titleLabelX, titleLabelY, 0xFFEAF8FB, false);
         graphics.text(font, Component.translatable("screen.templenihility.settings_label"),
-            NihilityTerminalLayout.SETTINGS_LABEL_X, NihilityTerminalLayout.SETTINGS_LABEL_Y, 0xFF566064, false);
+            NihilityTerminalLayout.SETTINGS_LABEL_X, NihilityTerminalLayout.SETTINGS_LABEL_Y, 0xFF8CB4C2, false);
         graphics.text(font, Component.translatable("screen.templenihility.vault_status_line",
             formatCount(menu.getVaultCount()), formatCount(menu.getFilteredSlotCount()), formatCount(menu.getStoredItemCount())),
-            NihilityTerminalLayout.VAULT_STATUS_X, NihilityTerminalLayout.VAULT_STATUS_Y, 0xFF566064, false);
+            NihilityTerminalLayout.VAULT_STATUS_X, NihilityTerminalLayout.VAULT_STATUS_Y, 0xFF9AC5D2, false);
         graphics.text(font, Component.translatable("screen.templenihility.vault_stats_compact",
             formatCount(menu.getUsedSlots()), formatCount(menu.getTotalSlots())),
-            NihilityTerminalLayout.STATS_TEXT_X, NihilityTerminalLayout.STATS_TEXT_Y, 0xFF566064, false);
+            NihilityTerminalLayout.STATS_TEXT_X, NihilityTerminalLayout.STATS_TEXT_Y, 0xFFC5DEE6, false);
         graphics.text(font, Component.translatable("screen.templenihility.sort_state",
                 Component.translatable(menu.getSortLabelKey())),
-            NihilityTerminalLayout.SORT_TEXT_X, NihilityTerminalLayout.SORT_TEXT_Y, 0xFF396E78, false);
+            NihilityTerminalLayout.SORT_TEXT_X, NihilityTerminalLayout.SORT_TEXT_Y, 0xFF66D9E8, false);
         graphics.text(font, Component.translatable("screen.templenihility.crafting_label"),
-            NihilityTerminalLayout.CRAFTING_LABEL_X, NihilityTerminalLayout.CRAFTING_LABEL_Y, 0xFF566064, false);
+            NihilityTerminalLayout.CRAFTING_LABEL_X, NihilityTerminalLayout.CRAFTING_LABEL_Y, 0xFF8CB4C2, false);
         drawCapacityBar(graphics);
         drawStorageScrollbar(graphics);
         drawStorageEmptyHint(graphics);
-        graphics.text(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0xFF404040, false);
+        graphics.text(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0xFF8CB4C2, false);
         addPanelTooltips(graphics, mouseX, mouseY);
 
         if (confirmingDisableChunkload) {
@@ -321,27 +321,34 @@ public class NihilityTerminalScreen extends AbstractContainerScreen<NihilityTerm
         int x = NihilityTerminalLayout.CAPACITY_BAR_X;
         int y = NihilityTerminalLayout.CAPACITY_BAR_Y;
         int width = NihilityTerminalLayout.CAPACITY_BAR_WIDTH;
+        int height = NihilityTerminalLayout.CAPACITY_BAR_HEIGHT;
         int total = Math.max(1, menu.getTotalSlots());
         int used = Math.max(0, Math.min(menu.getUsedSlots(), total));
         int filled = Math.max(0, Math.min(width, used * width / total));
-        graphics.fill(x, y, x + width, y + NihilityTerminalLayout.CAPACITY_BAR_HEIGHT, 0x55180F22);
-        graphics.fill(x, y, x + filled, y + NihilityTerminalLayout.CAPACITY_BAR_HEIGHT, 0xAA4DB8C8);
-        graphics.outline(x - 1, y - 1, width + 2, NihilityTerminalLayout.CAPACITY_BAR_HEIGHT + 2, 0x663F314D);
+        graphics.fill(x, y, x + width, y + height, 0xFF0A0E16);
+        if (filled > 0) {
+            int barColor = (used * 10 >= total * 9) ? 0xFFE68A4C : 0xFF56D4E5;
+            graphics.fill(x, y, x + filled, y + height, barColor);
+        }
+        graphics.outline(x - 1, y - 1, width + 2, height + 2, 0xFF28384A);
     }
 
     private void drawStorageScrollbar(GuiGraphicsExtractor graphics) {
-        int maxScroll = menu.getMaxScrollOffset();
-        if (maxScroll <= 0) {
-            return;
-        }
         int x = NihilityTerminalLayout.SCROLLBAR_X;
         int y = NihilityTerminalLayout.SCROLLBAR_Y;
-        int height = NihilityTerminalMenu.STORAGE_ROWS * NihilityTerminalLayout.SLOT_STEP;
-        int thumbHeight = Math.max(12, height * NihilityTerminalMenu.STORAGE_ROWS
+        int width = NihilityTerminalLayout.SCROLLBAR_WIDTH;
+        int height = NihilityTerminalMenu.STORAGE_ROWS * NihilityTerminalLayout.SLOT_STEP - 2;
+        int maxScroll = menu.getMaxScrollOffset();
+        graphics.fill(x, y, x + width, y + height, 0xFF0B0F17);
+        if (maxScroll <= 0) {
+            graphics.fill(x + 1, y + 2, x + width - 1, y + height - 2, 0xFF1F2B3A);
+            return;
+        }
+        int thumbHeight = Math.max(14, height * NihilityTerminalMenu.STORAGE_ROWS
             / (NihilityTerminalMenu.STORAGE_ROWS + maxScroll));
         int thumbY = y + (height - thumbHeight) * menu.getScrollOffset() / maxScroll;
-        graphics.fill(x, y, x + NihilityTerminalLayout.SCROLLBAR_WIDTH, y + height, 0x663F314D);
-        graphics.fill(x + 1, thumbY, x + 3, thumbY + thumbHeight, 0xCC4DB8C8);
+        graphics.fill(x + 1, thumbY, x + width - 1, thumbY + thumbHeight, 0xFF56D4E5);
+        graphics.fill(x + 1, thumbY, x + width - 1, thumbY + 1, 0xFFA6F3FF);
     }
 
     private void drawStorageEmptyHint(GuiGraphicsExtractor graphics) {
@@ -352,11 +359,18 @@ public class NihilityTerminalScreen extends AbstractContainerScreen<NihilityTerm
         Component message = Component.translatable(searching
             ? "screen.templenihility.no_results"
             : "screen.templenihility.vault_empty");
+        int boxX = NihilityTerminalLayout.STORAGE_X + 8;
+        int boxY = NihilityTerminalLayout.STORAGE_Y + 18;
+        int boxW = NihilityTerminalMenu.STORAGE_COLUMNS * NihilityTerminalLayout.SLOT_STEP - 18;
+        int boxH = 34;
+        graphics.fill(boxX, boxY, boxX + boxW, boxY + boxH, 0xE60B1018);
+        graphics.outline(boxX, boxY, boxW, boxH, 0xFF3E7E8F);
+        graphics.fill(boxX + 1, boxY + 1, boxX + boxW - 1, boxY + 2, 0x777EEBFF);
         graphics.textWithWordWrap(font, message,
-            NihilityTerminalLayout.STORAGE_X + 8,
-            NihilityTerminalLayout.STORAGE_Y + 27,
-            NihilityTerminalMenu.STORAGE_COLUMNS * NihilityTerminalLayout.SLOT_STEP - 18,
-            0xFF7A6C85);
+            boxX + 8,
+            boxY + 7,
+            boxW - 16,
+            0xFFD8EFF4);
     }
 
     private void addPanelTooltips(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {

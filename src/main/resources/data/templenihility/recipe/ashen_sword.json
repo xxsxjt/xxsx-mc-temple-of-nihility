@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    " S ",
+    "DSD",
+    " T "
+  ],
+  "key": {
+    "S": "templenihility:nihility_shard",
+    "D": "templenihility:nihility_dust",
+    "T": "minecraft:stick"
+  },
+  "result": {
+    "id": "templenihility:ashen_sword"
+  }
+}

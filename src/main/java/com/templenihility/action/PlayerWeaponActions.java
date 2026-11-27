@@ -9,7 +9,11 @@ import com.templenihility.energy.VoidPower;
 import com.templenihility.network.NihilityNetwork;
 import com.templenihility.init.ModEffects;
 import com.templenihility.init.ModTags;
+import com.templenihility.item.AshenAxe;
+import com.templenihility.item.AshenSword;
 import com.templenihility.item.NihilityAxe;
+import com.templenihility.item.RiftAxe;
+import com.templenihility.item.RiftBlade;
 import com.templenihility.item.NihilityDagger;
 import com.templenihility.item.NihilityGreatsword;
 import com.templenihility.item.NihilitySword;
@@ -198,20 +202,38 @@ public final class PlayerWeaponActions {
             return;
         }
 
-        // Core melee-to-energy loop: every Nihility weapon hit restores +4 VoidPower (short ICD prevents multi-hit spam)
+        // Core melee-to-energy loop scaled by weapon tier: Tier 1 (+2), Tier 2 (+3), Tier 3 (+4)
         long nextEnergyTick = attacker.getPersistentData().getLongOr(MELEE_ENERGY_NEXT, 0L);
         if (gameTime >= nextEnergyTick) {
-            attacker.getPersistentData().putLong(MELEE_ENERGY_NEXT, gameTime + 4L);
-            VoidPower.add(attacker, 4);
+            int gain = meleeEnergyGain(mainHand);
+            long icd = gain >= 4 ? 4L : (gain == 3 ? 5L : 6L);
+            attacker.getPersistentData().putLong(MELEE_ENERGY_NEXT, gameTime + icd);
+            VoidPower.add(attacker, gain);
         }
 
-        // Blade of Zero melee passive: stacks Existence Reduction (1..3) and deals +12% per stack
+        // Sword line Existence Reduction progression: Ashen (+6% up to 1 stack) -> Rift (+9% up to 2) -> Blade of Zero (+12% up to 3)
         if (mainHand.getItem() instanceof NihilitySword) {
             int existingStacks = getExistenceStacks(target, gameTime);
             if (existingStacks > 0) {
                 event.setAmount(event.getAmount() * (1.0F + existingStacks * 0.12F));
             }
             applyExistenceReductionStacks(target, gameTime, 1);
+        } else if (mainHand.getItem() instanceof RiftBlade) {
+            int existingStacks = Math.min(2, getExistenceStacks(target, gameTime));
+            if (existingStacks > 0) {
+                event.setAmount(event.getAmount() * (1.0F + existingStacks * 0.09F));
+            }
+            if (getExistenceStacks(target, gameTime) < 2) {
+                applyExistenceReductionStacks(target, gameTime, 1);
+            }
+        } else if (mainHand.getItem() instanceof AshenSword) {
+            int existingStacks = Math.min(1, getExistenceStacks(target, gameTime));
+            if (existingStacks > 0) {
+                event.setAmount(event.getAmount() * 1.06F);
+            }
+            if (getExistenceStacks(target, gameTime) < 1) {
+                applyExistenceReductionStacks(target, gameTime, 1);
+            }
         }
 
         // Rift Dagger passive: Backstab Crit (120-degree rear cone -> 1.45x damage & +4 extra VoidPower)
@@ -620,7 +642,21 @@ public final class PlayerWeaponActions {
         return stack.getItem() instanceof NihilityDagger
             || stack.getItem() instanceof NihilitySword
             || stack.getItem() instanceof NihilityGreatsword
-            || stack.getItem() instanceof NihilityAxe;
+            || stack.getItem() instanceof NihilityAxe
+            || stack.getItem() instanceof RiftBlade
+            || stack.getItem() instanceof RiftAxe
+            || stack.getItem() instanceof AshenSword
+            || stack.getItem() instanceof AshenAxe;
+    }
+
+    private static int meleeEnergyGain(ItemStack stack) {
+        if (stack.getItem() instanceof AshenSword || stack.getItem() instanceof AshenAxe) {
+            return 2;
+        }
+        if (stack.getItem() instanceof RiftBlade || stack.getItem() instanceof RiftAxe) {
+            return 3;
+        }
+        return 4;
     }
 
     private static Vec3 horizontalLook(Player player) {

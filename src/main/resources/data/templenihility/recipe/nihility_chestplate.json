@@ -1,15 +1,19 @@
 {
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
-  "key": {
-    "C": "templenihility:nihility_crystal",
-    "R": "templenihility:nihility_rune"
-  },
   "pattern": [
-    "C C",
-    "CRC",
-    "CCC"
+    "FTF",
+    "OAO",
+    "NQN"
   ],
+  "key": {
+    "F": "templenihility:nihility_relic_fragment",
+    "T": "templenihility:temple_seal",
+    "O": "templenihility:nihility_core",
+    "A": "templenihility:shade_chestplate",
+    "N": "minecraft:netherite_ingot",
+    "Q": "templenihility:nihility_resonance_core"
+  },
   "result": {
     "id": "templenihility:nihility_chestplate"
   }

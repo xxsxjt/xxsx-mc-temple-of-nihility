@@ -4,79 +4,83 @@ public final class NihilityTerminalLayout {
     public static final int IMAGE_WIDTH = 248;
     public static final int IMAGE_HEIGHT = 231;
 
-    public static final int TITLE_X = 8;
-    public static final int TITLE_Y = 6;
-    public static final int VAULT_STATUS_X = 8;
-    public static final int VAULT_STATUS_Y = 18;
-    public static final int INVENTORY_LABEL_X = 8;
-    public static final int INVENTORY_LABEL_Y = 140;
+    // Header & status strip (top-left)
+    public static final int TITLE_X = 11;
+    public static final int TITLE_Y = 8;
+    public static final int VAULT_STATUS_X = 11;
+    public static final int VAULT_STATUS_Y = 19;
+    public static final int HELP_BUTTON_X = 161;
+    public static final int HELP_BUTTON_Y = 9;
+    public static final int HELP_BUTTON_WIDTH = 14;
+    public static final int HELP_BUTTON_HEIGHT = 14;
 
+    // Search & sort toolbar
     public static final int SEARCH_X = 8;
     public static final int SEARCH_Y = 32;
-    public static final int SEARCH_WIDTH = 96;
+    public static final int SEARCH_WIDTH = 99;
     public static final int SEARCH_HEIGHT = 16;
-    public static final int SEARCH_JEI_WIDTH = 76;
-
-    public static final int SORT_BUTTON_X = 108;
+    public static final int SEARCH_JEI_WIDTH = 78;
+    public static final int SORT_BUTTON_X = 110;
     public static final int SORT_BUTTON_Y = 32;
-    public static final int SORT_BUTTON_WIDTH = 42;
+    public static final int SORT_BUTTON_WIDTH = 46;
     public static final int SORT_BUTTON_HEIGHT = 16;
-    public static final int CLEAR_SEARCH_X = 154;
+    public static final int CLEAR_SEARCH_X = 159;
     public static final int CLEAR_SEARCH_Y = 32;
     public static final int CLEAR_SEARCH_SIZE = 16;
 
-    public static final int CHUNKLOAD_BUTTON_X = 184;
-    public static final int CHUNKLOAD_BUTTON_Y = 13;
-    public static final int CHUNKLOAD_BUTTON_WIDTH = 52;
-    public static final int CHUNKLOAD_BUTTON_HEIGHT = 15;
-    public static final int PROTECTION_BUTTON_X = 184;
-    public static final int PROTECTION_BUTTON_Y = 31;
-    public static final int PROTECTION_BUTTON_WIDTH = 52;
-    public static final int PROTECTION_BUTTON_HEIGHT = 15;
-    public static final int HELP_BUTTON_X = 224;
-    public static final int HELP_BUTTON_Y = 47;
-    public static final int HELP_BUTTON_WIDTH = 12;
-    public static final int HELP_BUTTON_HEIGHT = 11;
-
-    public static final int SETTINGS_LABEL_X = 184;
-    public static final int SETTINGS_LABEL_Y = 4;
-
+    // Storage grid & scrollbar
     public static final int STORAGE_X = 8;
-    public static final int STORAGE_Y = 55;
+    public static final int STORAGE_Y = 54;
     public static final int SLOT_STEP = 18;
     public static final int SLOT_INNER_SIZE = 16;
     public static final int SLOT_FRAME_OFFSET = 1;
+    public static final int SCROLLBAR_X = 171;
+    public static final int SCROLLBAR_Y = 54;
+    public static final int SCROLLBAR_WIDTH = 5;
 
-    public static final int SCROLLBAR_X = 172;
-    public static final int SCROLLBAR_Y = 55;
-    public static final int SCROLLBAR_WIDTH = 4;
-
-    public static final int CRAFT_GRID_X = 181;
-    public static final int CRAFT_GRID_Y = 94;
-    public static final int CRAFT_RESULT_X = 199;
-    public static final int CRAFT_RESULT_Y = 164;
-    public static final int CRAFTING_LABEL_X = 181;
-    public static final int CRAFTING_LABEL_Y = 83;
-
+    // Player inventory (3x9 + hotbar)
+    public static final int INVENTORY_LABEL_X = 9;
+    public static final int INVENTORY_LABEL_Y = 135;
     public static final int PLAYER_INV_X = 8;
-    public static final int PLAYER_INV_Y = 149;
+    public static final int PLAYER_INV_Y = 147;
 
-    public static final int STATS_TEXT_X = 181;
-    public static final int STATS_TEXT_Y = 183;
-    public static final int SORT_TEXT_X = 181;
-    public static final int SORT_TEXT_Y = 193;
-    public static final int CAPACITY_BAR_X = 181;
-    public static final int CAPACITY_BAR_Y = 207;
-    public static final int CAPACITY_BAR_WIDTH = 54;
-    public static final int CAPACITY_BAR_HEIGHT = 3;
+    // Right column: controls (starts below top-right QoL mod safe zone y=5..20)
+    public static final int SETTINGS_LABEL_X = 186;
+    public static final int SETTINGS_LABEL_Y = 24;
+    public static final int CHUNKLOAD_BUTTON_X = 185;
+    public static final int CHUNKLOAD_BUTTON_Y = 35;
+    public static final int CHUNKLOAD_BUTTON_WIDTH = 54;
+    public static final int CHUNKLOAD_BUTTON_HEIGHT = 15;
+    public static final int PROTECTION_BUTTON_X = 185;
+    public static final int PROTECTION_BUTTON_Y = 53;
+    public static final int PROTECTION_BUTTON_WIDTH = 54;
+    public static final int PROTECTION_BUTTON_HEIGHT = 15;
 
+    // Right column: 3x3 crafting + result
+    public static final int CRAFTING_LABEL_X = 186;
+    public static final int CRAFTING_LABEL_Y = 78;
+    public static final int CRAFT_GRID_X = 185;
+    public static final int CRAFT_GRID_Y = 90;
+    public static final int CRAFT_RESULT_X = 203;
+    public static final int CRAFT_RESULT_Y = 163;
+
+    // Right column: telemetry footer
+    public static final int STATS_TEXT_X = 186;
+    public static final int STATS_TEXT_Y = 193;
+    public static final int CAPACITY_BAR_X = 186;
+    public static final int CAPACITY_BAR_Y = 204;
+    public static final int CAPACITY_BAR_WIDTH = 52;
+    public static final int CAPACITY_BAR_HEIGHT = 4;
+    public static final int SORT_TEXT_X = 186;
+    public static final int SORT_TEXT_Y = 212;
+
+    // Disable chunkload confirmation modal
     public static final int CONFIRM_YES_X = 64;
     public static final int CONFIRM_YES_Y = 132;
     public static final int CONFIRM_NO_X = 130;
     public static final int CONFIRM_NO_Y = 132;
     public static final int CONFIRM_BUTTON_WIDTH = 54;
     public static final int CONFIRM_BUTTON_HEIGHT = 18;
-
     public static final int CONFIRM_PANEL_X = 48;
     public static final int CONFIRM_PANEL_Y = 74;
     public static final int CONFIRM_PANEL_WIDTH = 152;
@@ -86,62 +90,63 @@ public final class NihilityTerminalLayout {
     public static final int CONFIRM_MESSAGE_Y = 102;
     public static final int CONFIRM_MESSAGE_WIDTH = 128;
 
-    public static final int LEFT_GLOW_X = -4;
-    public static final int LEFT_GLOW_Y = 6;
+    // Outer ambient glow accents
+    public static final int LEFT_GLOW_X = -3;
+    public static final int LEFT_GLOW_Y = 10;
     public static final int LEFT_GLOW_WIDTH = 2;
-    public static final int LEFT_GLOW_HEIGHT = IMAGE_HEIGHT - 16;
-    public static final int RIGHT_GLOW_X = IMAGE_WIDTH + 2;
-    public static final int RIGHT_GLOW_Y = 12;
+    public static final int LEFT_GLOW_HEIGHT = IMAGE_HEIGHT - 20;
+    public static final int RIGHT_GLOW_X = IMAGE_WIDTH + 1;
+    public static final int RIGHT_GLOW_Y = 10;
     public static final int RIGHT_GLOW_WIDTH = 2;
-    public static final int RIGHT_GLOW_HEIGHT = IMAGE_HEIGHT - 28;
-    public static final int TOP_GLOW_X = 8;
-    public static final int TOP_GLOW_Y = -4;
-    public static final int TOP_GLOW_WIDTH = IMAGE_WIDTH - 16;
+    public static final int RIGHT_GLOW_HEIGHT = IMAGE_HEIGHT - 20;
+    public static final int TOP_GLOW_X = 12;
+    public static final int TOP_GLOW_Y = -3;
+    public static final int TOP_GLOW_WIDTH = IMAGE_WIDTH - 24;
     public static final int TOP_GLOW_HEIGHT = 2;
     public static final int BOTTOM_GLOW_X = 12;
-    public static final int BOTTOM_GLOW_Y = IMAGE_HEIGHT + 2;
+    public static final int BOTTOM_GLOW_Y = IMAGE_HEIGHT + 1;
     public static final int BOTTOM_GLOW_WIDTH = IMAGE_WIDTH - 24;
     public static final int BOTTOM_GLOW_HEIGHT = 2;
 
-    public static final int SHARD_ATLAS_WIDTH = 64;
+    // Floating void shards atlas (128x64: 4x2 cells of 32x32)
+    public static final int SHARD_ATLAS_WIDTH = 128;
     public static final int SHARD_ATLAS_HEIGHT = 64;
-
-    public static final int SHARD_LEFT_TOP_X = -27;
-    public static final int SHARD_LEFT_TOP_Y = 10;
+    public static final int SHARD_LEFT_TOP_X = -30;
+    public static final int SHARD_LEFT_TOP_Y = 14;
     public static final int SHARD_LEFT_TOP_SOURCE_X = 0;
     public static final int SHARD_LEFT_TOP_SOURCE_Y = 0;
-    public static final int SHARD_LEFT_TOP_WIDTH = 23;
-    public static final int SHARD_LEFT_TOP_HEIGHT = 23;
-    public static final int SHARD_RIGHT_TOP_X = IMAGE_WIDTH + 18;
-    public static final int SHARD_RIGHT_TOP_Y = 70;
+    public static final int SHARD_LEFT_TOP_WIDTH = 32;
+    public static final int SHARD_LEFT_TOP_HEIGHT = 32;
+    public static final int SHARD_RIGHT_TOP_X = IMAGE_WIDTH + 6;
+    public static final int SHARD_RIGHT_TOP_Y = 44;
     public static final int SHARD_RIGHT_TOP_SOURCE_X = 32;
     public static final int SHARD_RIGHT_TOP_SOURCE_Y = 0;
-    public static final int SHARD_RIGHT_TOP_WIDTH = 22;
-    public static final int SHARD_RIGHT_TOP_HEIGHT = 22;
-    public static final int SHARD_LEFT_MIDDLE_X = -22;
-    public static final int SHARD_LEFT_MIDDLE_Y = 142;
+    public static final int SHARD_RIGHT_TOP_WIDTH = 32;
+    public static final int SHARD_RIGHT_TOP_HEIGHT = 32;
+    public static final int SHARD_LEFT_MIDDLE_X = -28;
+    public static final int SHARD_LEFT_MIDDLE_Y = 138;
     public static final int SHARD_LEFT_MIDDLE_SOURCE_X = 64;
     public static final int SHARD_LEFT_MIDDLE_SOURCE_Y = 0;
-    public static final int SHARD_LEFT_MIDDLE_WIDTH = 18;
-    public static final int SHARD_LEFT_MIDDLE_HEIGHT = 28;
-    public static final int SHARD_RIGHT_BOTTOM_X = IMAGE_WIDTH + 10;
+    public static final int SHARD_LEFT_MIDDLE_WIDTH = 32;
+    public static final int SHARD_LEFT_MIDDLE_HEIGHT = 32;
+    public static final int SHARD_RIGHT_BOTTOM_X = IMAGE_WIDTH + 6;
     public static final int SHARD_RIGHT_BOTTOM_Y = 166;
     public static final int SHARD_RIGHT_BOTTOM_SOURCE_X = 0;
     public static final int SHARD_RIGHT_BOTTOM_SOURCE_Y = 32;
-    public static final int SHARD_RIGHT_BOTTOM_WIDTH = 20;
-    public static final int SHARD_RIGHT_BOTTOM_HEIGHT = 26;
-    public static final int SHARD_TOP_X = 42;
-    public static final int SHARD_TOP_Y = -19;
+    public static final int SHARD_RIGHT_BOTTOM_WIDTH = 32;
+    public static final int SHARD_RIGHT_BOTTOM_HEIGHT = 32;
+    public static final int SHARD_TOP_X = 46;
+    public static final int SHARD_TOP_Y = -28;
     public static final int SHARD_TOP_SOURCE_X = 32;
     public static final int SHARD_TOP_SOURCE_Y = 32;
-    public static final int SHARD_TOP_WIDTH = 26;
-    public static final int SHARD_TOP_HEIGHT = 18;
-    public static final int SHARD_BOTTOM_X = 112;
-    public static final int SHARD_BOTTOM_Y = IMAGE_HEIGHT + 4;
+    public static final int SHARD_TOP_WIDTH = 32;
+    public static final int SHARD_TOP_HEIGHT = 32;
+    public static final int SHARD_BOTTOM_X = 110;
+    public static final int SHARD_BOTTOM_Y = IMAGE_HEIGHT + 2;
     public static final int SHARD_BOTTOM_SOURCE_X = 64;
     public static final int SHARD_BOTTOM_SOURCE_Y = 32;
-    public static final int SHARD_BOTTOM_WIDTH = 20;
-    public static final int SHARD_BOTTOM_HEIGHT = 24;
+    public static final int SHARD_BOTTOM_WIDTH = 32;
+    public static final int SHARD_BOTTOM_HEIGHT = 32;
 
     private NihilityTerminalLayout() {
     }

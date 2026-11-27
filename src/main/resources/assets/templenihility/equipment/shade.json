@@ -1,0 +1,19 @@
+{
+  "layers": {
+    "humanoid": [
+      {
+        "texture": "templenihility:shade"
+      }
+    ],
+    "humanoid_baby": [
+      {
+        "texture": "templenihility:shade"
+      }
+    ],
+    "humanoid_leggings": [
+      {
+        "texture": "templenihility:shade"
+      }
+    ]
+  }
+}

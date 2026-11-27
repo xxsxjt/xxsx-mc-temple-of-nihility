@@ -70,6 +70,10 @@ public class ModClientEvents {
     private static void registerClientExtensions(RegisterClientExtensionsEvent event) {
         event.registerItem(
             NihilityWeaponAnimation.WEAPON_EXTENSIONS,
+            ModItems.ASHEN_SWORD.get(),
+            ModItems.ASHEN_AXE.get(),
+            ModItems.RIFT_BLADE.get(),
+            ModItems.RIFT_AXE.get(),
             ModItems.NIHILITY_SWORD.get(),
             ModItems.NIHILITY_GREATSWORD.get(),
             ModItems.NIHILITY_DAGGER.get(),
