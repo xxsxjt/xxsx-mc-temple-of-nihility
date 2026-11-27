@@ -9,7 +9,11 @@ import com.templenihility.action.SaintActionPolicy;
 import com.templenihility.entity.CreatureDispositionPolicy.Disposition;
 import com.templenihility.init.ModItems;
 import com.templenihility.world.NihilityVisualEffects;
+import java.util.EnumSet;
 import java.util.UUID;
+import net.minecraft.server.level.ServerBossEvent;
+import net.minecraft.world.BossEvent;
+import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -56,9 +60,43 @@ public class NihilitySaint extends NihilityCreature {
     private int saintActionSequence;
     private Vec3 terminusCenter = Vec3.ZERO;
     private long terminusStartedGameTime = -1L;
+    private final ServerBossEvent bossEvent = new ServerBossEvent(
+        UUID.randomUUID(),
+        Component.translatable("entity.templenihility.nihility_saint"),
+        BossEvent.BossBarColor.WHITE,
+        BossEvent.BossBarOverlay.NOTCHED_6
+    );
 
     public NihilitySaint(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
+        this.bossEvent.setVisible(false);
+    }
+
+    @Override
+    protected void registerGoals() {
+        super.registerGoals();
+        this.goalSelector.addGoal(1, new SaintTacticalSpacingGoal(this));
+    }
+
+    @Override
+    public void startSeenByPlayer(ServerPlayer player) {
+        super.startSeenByPlayer(player);
+        this.bossEvent.addPlayer(player);
+    }
+
+    @Override
+    public void stopSeenByPlayer(ServerPlayer player) {
+        super.stopSeenByPlayer(player);
+        this.bossEvent.removePlayer(player);
+    }
+
+    private void updateBossBar() {
+        boolean combatActive = isAlive() && (isRitualChallengeActive() || getDisposition().isCombat() || getTarget() != null);
+        this.bossEvent.setVisible(combatActive);
+        if (combatActive) {
+            this.bossEvent.setProgress(Math.max(0.0F, Math.min(1.0F, getHealth() / Math.max(1.0F, getMaxHealth()))));
+            this.bossEvent.setName(getDisplayName());
+        }
     }
 
     @Override
@@ -80,6 +118,10 @@ public class NihilitySaint extends NihilityCreature {
             tickSaintActionTelegraph();
             tickMissingZones(serverLevel);
             tickVoidTerminus(serverLevel);
+            updateBossBar();
+            com.templenihility.world.TempleCommand.tickShowcaseDirector(serverLevel, this);
+        } else if (!level().isClientSide() && !isAlive()) {
+            this.bossEvent.setVisible(false);
         }
     }
 
@@ -174,7 +216,9 @@ public class NihilitySaint extends NihilityCreature {
 
     @Override
     protected ActionType selectCreatureAction(LivingEntity target, long gameTime) {
-        if (getChallengePhase() != ChallengePhase.ACTIVE || !isRitualChallengeActive()) {
+        boolean challengeActive = getChallengePhase() == ChallengePhase.ACTIVE && isRitualChallengeActive();
+        boolean hostileCombat = getDisposition() == Disposition.HOSTILE && target != null && target.isAlive();
+        if (!challengeActive && !hostileCombat) {
             return ActionType.NONE;
         }
         double healthFraction = getMaxHealth() > 0.0
@@ -202,10 +246,14 @@ public class NihilitySaint extends NihilityCreature {
     @Override
     protected void applyCustomCreatureAction(ServerLevel level, ActionType action,
                                              LivingEntity target, long elapsed) {
-        ServerPlayer player = level.getServer().getPlayerList().getPlayer(challengePlayerId);
-        EndReason endReason = currentChallengeEndReason(level, player);
-        if (endReason != EndReason.NONE) {
-            finishRitualChallenge(endReason, true);
+        if (isRitualChallengeActive()) {
+            ServerPlayer player = level.getServer().getPlayerList().getPlayer(challengePlayerId);
+            EndReason endReason = currentChallengeEndReason(level, player);
+            if (endReason != EndReason.NONE) {
+                finishRitualChallenge(endReason, true);
+                return;
+            }
+        } else if (target == null || !target.isAlive()) {
             return;
         }
         if (!markCreatureActionApplied()) {
@@ -256,27 +304,30 @@ public class NihilitySaint extends NihilityCreature {
             return;
         }
         double progress = (double) elapsed / SaintActionPolicy.TERMINUS_DURATION_TICKS;
-        ServerPlayer player = level.getServer().getPlayerList().getPlayer(challengePlayerId);
+        LivingEntity victim = isRitualChallengeActive() && challengePlayerId != null
+            ? level.getServer().getPlayerList().getPlayer(challengePlayerId)
+            : getTarget();
         double radius = SaintActionPolicy.terminusSafeRadius(progress);
         if (tickCount % 10 == 0) {
             NihilityVisualEffects.saintVoidTerminusPulse(this, terminusCenter, radius);
         }
-        if (player != null && player.level() == level && getDisposition().isCombat()) {
-            double distanceSquared = player.distanceToSqr(terminusCenter);
+        if (victim != null && victim.isAlive() && victim.level() == level && getDisposition().isCombat()) {
+            double distanceSquared = victim.distanceToSqr(terminusCenter);
             boolean safe = SaintActionPolicy.isInTerminusSafeZone(distanceSquared, progress);
             if (!safe && tickCount % 20 == 0) {
-                player.hurtServer(level, damageSources().mobAttack(this),
+                victim.hurtServer(level, damageSources().mobAttack(this),
                     SaintActionPolicy.terminusDamage(progress));
             }
         }
     }
 
     private void applyErasureLine(ServerLevel level, LivingEntity target) {
-        boolean hit = target instanceof ServerPlayer player
-            && isChallengeParticipant(player)
-            && Math.abs(player.getY() - lockedActionOrigin.y) <= 3.5
+        boolean validTarget = target != null && target.isAlive()
+            && (!isRitualChallengeActive() || (target instanceof ServerPlayer p && isChallengeParticipant(p)));
+        boolean hit = validTarget
+            && Math.abs(target.getY() - lockedActionOrigin.y) <= 3.5
             && SaintActionPolicy.lineHits(
-                player.getX(), player.getZ(),
+                target.getX(), target.getZ(),
                 lockedActionOrigin.x, lockedActionOrigin.z,
                 lockedActionDirection.x, lockedActionDirection.z);
         if (hit && target.hurtServer(level, damageSources().mobAttack(this),
@@ -307,40 +358,43 @@ public class NihilitySaint extends NihilityCreature {
     }
 
     private void tickMissingZones(ServerLevel level) {
-        if (missingZonesUntilGameTime <= level.getGameTime() || !isRitualChallengeActive()) {
+        boolean combatActive = isRitualChallengeActive() || (getDisposition().isCombat() && getTarget() != null);
+        if (missingZonesUntilGameTime <= level.getGameTime() || !combatActive) {
             if (missingZonesUntilGameTime != 0L) {
                 clearMissingZones();
             }
             return;
         }
-        ServerPlayer player = level.getServer().getPlayerList().getPlayer(challengePlayerId);
-        if (player == null || player.level() != level) {
+        LivingEntity victim = isRitualChallengeActive() && challengePlayerId != null
+            ? level.getServer().getPlayerList().getPlayer(challengePlayerId)
+            : getTarget();
+        if (victim == null || !victim.isAlive() || victim.level() != level) {
             clearMissingZones();
             return;
         }
 
         Vec3 containingCenter = null;
         for (Vec3 center : missingZoneCenters) {
-            if (Math.abs(player.getY() - center.y) <= 3.0
-                && SaintActionPolicy.zoneContains(player.getX(), player.getZ(), center.x, center.z)) {
+            if (Math.abs(victim.getY() - center.y) <= 3.0
+                && SaintActionPolicy.zoneContains(victim.getX(), victim.getZ(), center.x, center.z)) {
                 containingCenter = center;
                 break;
             }
         }
         if (containingCenter != null && tickCount % 2 == 0) {
-            Vec3 outward = player.position().subtract(containingCenter).multiply(1.0, 0.0, 1.0);
+            Vec3 outward = victim.position().subtract(containingCenter).multiply(1.0, 0.0, 1.0);
             if (outward.lengthSqr() <= 1.0E-6) {
-                outward = player.position().subtract(position()).multiply(1.0, 0.0, 1.0);
+                outward = victim.position().subtract(position()).multiply(1.0, 0.0, 1.0);
             }
             if (outward.lengthSqr() > 1.0E-6) {
                 outward = outward.normalize().scale(0.14);
-                Vec3 movement = player.getDeltaMovement();
-                player.setDeltaMovement(movement.x + outward.x,
+                Vec3 movement = victim.getDeltaMovement();
+                victim.setDeltaMovement(movement.x + outward.x,
                     Math.max(0.12, movement.y), movement.z + outward.z);
-                player.hurtMarked = true;
+                victim.hurtMarked = true;
             }
             if (tickCount % 20 == 0) {
-                player.hurtServer(level, damageSources().mobAttack(this), SaintActionPolicy.MISSING_ZONE_DAMAGE);
+                victim.hurtServer(level, damageSources().mobAttack(this), SaintActionPolicy.MISSING_ZONE_DAMAGE);
             }
         }
         if (tickCount % 10 == 0) {
@@ -510,6 +564,53 @@ public class NihilitySaint extends NihilityCreature {
             "TempleSaintChallengePhase", ChallengePhase.NONE.ordinal())));
         if (getChallengePhase() == ChallengePhase.NONE || challengeExpiresGameTime <= 0L) {
             clearChallengeState();
+        }
+    }
+
+    private static final class SaintTacticalSpacingGoal extends Goal {
+        private static final double MIN_STANDOFF = 4.4;
+        private static final double MAX_STANDOFF = 6.8;
+        private final NihilitySaint saint;
+
+        SaintTacticalSpacingGoal(NihilitySaint saint) {
+            this.saint = saint;
+            this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+        }
+
+        @Override
+        public boolean canUse() {
+            LivingEntity target = saint.getTarget();
+            return target != null && target.isAlive()
+                && (saint.isRitualChallengeActive() || saint.getDisposition().isCombat());
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return canUse();
+        }
+
+        @Override
+        public void tick() {
+            LivingEntity target = saint.getTarget();
+            if (target == null) return;
+            saint.getLookControl().setLookAt(target, 45.0F, 45.0F);
+            if (saint.getCreatureActionPhase() != Phase.IDLE) {
+                saint.getNavigation().stop();
+                return;
+            }
+            double dist = saint.distanceTo(target);
+            if (dist < MIN_STANDOFF) {
+                Vec3 away = saint.position().subtract(target.position()).multiply(1.0, 0.0, 1.0);
+                if (away.lengthSqr() > 1.0E-4) {
+                    away = away.normalize();
+                    Vec3 retreat = saint.position().add(away.scale(2.6));
+                    saint.getNavigation().moveTo(retreat.x, retreat.y, retreat.z, 1.05);
+                }
+            } else if (dist > MAX_STANDOFF) {
+                saint.getNavigation().moveTo(target, 1.0);
+            } else {
+                saint.getNavigation().stop();
+            }
         }
     }
 }

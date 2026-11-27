@@ -37,7 +37,7 @@ public class NihilitySword extends Item {
 
     @Override
     public ItemUseAnimation getUseAnimation(ItemStack stack) {
-        return ItemUseAnimation.BLOCK;
+        return ItemUseAnimation.NONE;
     }
 
     @Override
@@ -52,7 +52,11 @@ public class NihilitySword extends Item {
             }
             return false;
         }
-        return level.isClientSide() || PlayerWeaponActions.startZeroSlash(player, player.getUsedItemHand(), chargeTicks);
+        if (level.isClientSide()) {
+            PlayerWeaponActions.notifyClientSkillStart(player, player.getUsedItemHand(), "ZERO_SLASH_RELEASE");
+            return true;
+        }
+        return PlayerWeaponActions.startZeroSlash(player, player.getUsedItemHand(), chargeTicks);
     }
 
     @Override

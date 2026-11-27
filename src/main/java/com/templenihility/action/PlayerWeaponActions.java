@@ -1,9 +1,15 @@
 package com.templenihility.action;
 
 import com.templenihility.TempleNihilityMod;
-import com.templenihility.energy.VoidPower;
+import com.templenihility.effect.NihilityRelicEffects;
+import com.templenihility.effect.RelicBuildPolicy;
 import com.templenihility.effect.VoidPhaseEvents;
+import com.templenihility.effect.CombatFeedbackPolicy;
+import com.templenihility.energy.VoidPower;
+import com.templenihility.network.NihilityNetwork;
+import com.templenihility.init.ModEffects;
 import com.templenihility.init.ModTags;
+import com.templenihility.item.NihilityAxe;
 import com.templenihility.item.NihilityDagger;
 import com.templenihility.item.NihilityGreatsword;
 import com.templenihility.item.NihilitySword;
@@ -22,6 +28,8 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.effect.MobEffectCategory;
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -54,6 +62,25 @@ public final class PlayerWeaponActions {
     private static final String HEAL_LOCK_UNTIL = TempleNihilityMod.MOD_ID + ".HealLockUntil";
     private static final String EXISTENCE_STACKS = TempleNihilityMod.MOD_ID + ".ExistenceReductionStacks";
     private static final String EXISTENCE_UNTIL = TempleNihilityMod.MOD_ID + ".ExistenceReductionUntil";
+    private static final String MELEE_ENERGY_NEXT = TempleNihilityMod.MOD_ID + ".MeleeEnergyNextTick";
+
+    @FunctionalInterface
+    public interface ClientSkillListener {
+        void onSkillStart(Player player, InteractionHand hand, String skillName);
+    }
+
+    private static volatile ClientSkillListener clientSkillListener;
+
+    public static void setClientSkillListener(ClientSkillListener listener) {
+        clientSkillListener = listener;
+    }
+
+    public static void notifyClientSkillStart(Player player, InteractionHand hand, String skillName) {
+        ClientSkillListener listener = clientSkillListener;
+        if (listener != null) {
+            listener.onSkillStart(player, hand, skillName);
+        }
+    }
 
     private static final Map<UUID, ActiveAction> ACTIVE = new HashMap<>();
 
@@ -82,6 +109,27 @@ public final class PlayerWeaponActions {
     public static boolean startBoundaryBreak(Player player, InteractionHand hand) {
         return start(player, hand, ActionType.BOUNDARY_BREAK,
             BOUNDARY_BREAK_COST, BOUNDARY_BREAK_COOLDOWN, 0);
+    }
+
+    public static void applyExistenceReductionStacks(LivingEntity target, long gameTime, int addStacks) {
+        var data = target.getPersistentData();
+        int current = getExistenceStacks(target, gameTime);
+        int next = Math.max(1, Math.min(3, current + Math.max(1, addStacks)));
+        data.putInt(EXISTENCE_STACKS, next);
+        data.putLong(EXISTENCE_UNTIL, gameTime + 120L);
+    }
+
+    public static int getExistenceStacks(LivingEntity target, long gameTime) {
+        var data = target.getPersistentData();
+        long until = data.getLongOr(EXISTENCE_UNTIL, 0L);
+        if (until < gameTime) {
+            if (until != 0L) {
+                data.remove(EXISTENCE_UNTIL);
+                data.remove(EXISTENCE_STACKS);
+            }
+            return 0;
+        }
+        return Math.max(0, Math.min(3, data.getIntOr(EXISTENCE_STACKS, 0)));
     }
 
     public static void playerTick(PlayerTickEvent.Post event) {
@@ -115,27 +163,75 @@ public final class PlayerWeaponActions {
 
     public static void incomingDamage(LivingIncomingDamageEvent event) {
         LivingEntity target = event.getEntity();
-        if (event.isCanceled() || target instanceof Player phasedPlayer && VoidPhaseEvents.hasFullPhase(phasedPlayer)) {
+        if (event.isCanceled() || target.level().isClientSide() || event.getAmount() <= 0.0F
+            || target instanceof Player phasedPlayer && VoidPhaseEvents.hasFullPhase(phasedPlayer)) {
             return;
         }
+
+        long gameTime = target.level().getGameTime();
+
         if (target instanceof Player player) {
             ActiveAction active = ACTIVE.get(player.getUUID());
-            if (active != null
-                && event.getAmount() >= 4.0F
-                && player.level().getGameTime() - active.startTick < active.type.firstActiveTick) {
-                ACTIVE.remove(player.getUUID());
-                stopActionPose(player, active);
-                player.sendOverlayMessage(Component.translatable("message.templenihility.action_interrupted"));
+            if (active != null && gameTime - active.startTick < active.type.firstActiveTick) {
+                float rawIncoming = event.getAmount();
+                if (active.type == ActionType.BOUNDARY_BREAK) {
+                    // Greatsword Heavy Poise: 65% damage reduction during windup, only >=12 raw damage interrupts
+                    event.setAmount(rawIncoming * 0.35F);
+                    if (rawIncoming >= 12.0F) {
+                        ACTIVE.remove(player.getUUID());
+                        stopActionPose(player, active);
+                        player.sendOverlayMessage(Component.translatable("message.templenihility.action_interrupted"));
+                    }
+                } else if (rawIncoming >= 4.0F) {
+                    ACTIVE.remove(player.getUUID());
+                    stopActionPose(player, active);
+                    player.sendOverlayMessage(Component.translatable("message.templenihility.action_interrupted"));
+                }
             }
         }
 
-        if (!(event.getSource().getEntity() instanceof Player attacker)
-            || !isNihilityWeapon(attacker.getMainHandItem())) {
+        if (!(event.getSource().getEntity() instanceof Player attacker) || target == attacker) {
+            return;
+        }
+        ItemStack mainHand = attacker.getMainHandItem();
+        if (!isNihilityWeapon(mainHand)) {
             return;
         }
 
+        // Core melee-to-energy loop: every Nihility weapon hit restores +4 VoidPower (short ICD prevents multi-hit spam)
+        long nextEnergyTick = attacker.getPersistentData().getLongOr(MELEE_ENERGY_NEXT, 0L);
+        if (gameTime >= nextEnergyTick) {
+            attacker.getPersistentData().putLong(MELEE_ENERGY_NEXT, gameTime + 4L);
+            VoidPower.add(attacker, 4);
+        }
+
+        // Blade of Zero melee passive: stacks Existence Reduction (1..3) and deals +12% per stack
+        if (mainHand.getItem() instanceof NihilitySword) {
+            int existingStacks = getExistenceStacks(target, gameTime);
+            if (existingStacks > 0) {
+                event.setAmount(event.getAmount() * (1.0F + existingStacks * 0.12F));
+            }
+            applyExistenceReductionStacks(target, gameTime, 1);
+        }
+
+        // Rift Dagger passive: Backstab Crit (120-degree rear cone -> 1.45x damage & +4 extra VoidPower)
+        if (mainHand.getItem() instanceof NihilityDagger) {
+            Vec3 targetLook = target.getLookAngle();
+            if (RelicBuildPolicy.isBackstab(
+                    attacker.getX(), attacker.getZ(),
+                    target.getX(), target.getZ(),
+                    targetLook.x, targetLook.z)) {
+                event.setAmount(event.getAmount() * 1.45F);
+                VoidPower.add(attacker, 4);
+                if (target.level() instanceof ServerLevel serverLevel) {
+                    NihilityVisualEffects.weaponHitBurst(serverLevel, target, NihilityVisualEffects.WeaponAction.MISSING_STEP);
+                }
+                NihilityNetwork.sendCombatFeedback(attacker, CombatFeedbackPolicy.Kind.DAGGER_BACKSTAB, 4, "");
+            }
+        }
+
+        // Missing Mark detonation: percent-max-HP armor-piercing burst + 4s heal lock + +10 VP + phase cloak + CD halve
         var data = target.getPersistentData();
-        long gameTime = target.level().getGameTime();
         long markUntil = data.getLongOr(MARK_UNTIL, 0L);
         String markOwner = data.getStringOr(MARK_OWNER, "");
         if (markUntil < gameTime || !markOwner.equals(attacker.getUUID().toString())) {
@@ -146,10 +242,19 @@ public final class PlayerWeaponActions {
         }
 
         clearMissingMark(target);
-        data.putLong(HEAL_LOCK_UNTIL, gameTime + 40L);
-        event.setAmount(event.getAmount() + 3.0F);
+        data.putLong(HEAL_LOCK_UNTIL, gameTime + 80L);
+        float executeBonus = RelicBuildPolicy.missingMarkExecuteBonus(target.getMaxHealth());
+        event.setAmount(event.getAmount() + executeBonus);
         event.addReductionModifier(DamageContainer.Reduction.ARMOR, (container, reduction) -> 0.0F);
-        attacker.sendOverlayMessage(Component.translatable("message.templenihility.missing_mark_consumed"));
+        VoidPower.add(attacker, 10);
+        attacker.addEffect(new MobEffectInstance(ModEffects.INTO_NIHILITY, 30, 0, true, false, true));
+        if (mainHand.getItem() instanceof NihilityDagger) {
+            attacker.getCooldowns().addCooldown(mainHand, MISSING_STEP_COOLDOWN / 2);
+        }
+        if (target.level() instanceof ServerLevel serverLevel) {
+            NihilityVisualEffects.weaponHitBurst(serverLevel, target, NihilityVisualEffects.WeaponAction.MISSING_STEP);
+        }
+        NihilityNetwork.sendCombatFeedback(attacker, CombatFeedbackPolicy.Kind.DAGGER_MARK, 10, "");
     }
 
     public static void livingHeal(LivingHealEvent event) {
@@ -165,13 +270,7 @@ public final class PlayerWeaponActions {
             data.remove(HEAL_LOCK_UNTIL);
         }
 
-        long existenceUntil = data.getLongOr(EXISTENCE_UNTIL, 0L);
-        if (existenceUntil < gameTime) {
-            data.remove(EXISTENCE_UNTIL);
-            data.remove(EXISTENCE_STACKS);
-            return;
-        }
-        int stacks = Math.max(0, Math.min(3, data.getIntOr(EXISTENCE_STACKS, 0)));
+        int stacks = getExistenceStacks(entity, gameTime);
         if (stacks > 0) {
             event.setAmount(event.getAmount() * (1.0F - stacks * 0.2F));
         }
@@ -196,12 +295,13 @@ public final class PlayerWeaponActions {
         if (!canPrepare(player, stack, energyCost)) {
             return false;
         }
+        int effectiveCost = VoidPower.effectiveCost(player, energyCost);
         if (!VoidPower.tryConsume(player, energyCost)) {
-            sendNoPower(player, energyCost);
+            sendNoPower(player, effectiveCost);
             return false;
         }
 
-        Vec3 direction = type == ActionType.BOUNDARY_BREAK
+        Vec3 direction = (type == ActionType.BOUNDARY_BREAK || type == ActionType.MISSING_STEP)
             ? horizontalLook(player)
             : player.getLookAngle().normalize();
         ACTIVE.put(player.getUUID(), new ActiveAction(
@@ -225,8 +325,9 @@ public final class PlayerWeaponActions {
             player.sendOverlayMessage(Component.translatable("message.templenihility.item_cooldown"));
             return false;
         }
-        if (VoidPower.get(player) < energyCost) {
-            sendNoPower(player, energyCost);
+        int effectiveCost = VoidPower.effectiveCost(player, energyCost);
+        if (VoidPower.get(player) < effectiveCost) {
+            sendNoPower(player, effectiveCost);
             return false;
         }
         return true;
@@ -275,7 +376,15 @@ public final class PlayerWeaponActions {
 
         LivingEntity target = nearestLivingAlongLine(level, player,
             origin.add(0.0, player.getBoundingBox().getYsize() * 0.5, 0.0),
-            destination.add(0.0, player.getBoundingBox().getYsize() * 0.5, 0.0), 0.75);
+            destination.add(0.0, player.getBoundingBox().getYsize() * 0.5, 0.0), 0.9);
+        if (target != null) {
+            double distToTarget = origin.distanceTo(target.position());
+            double desiredDist = Math.min(5.5, Math.max(1.8, distToTarget + 1.9));
+            Vec3 tuned = findSafeDashDestination(player, level, action.direction, desiredDist);
+            if (tuned.distanceToSqr(origin) >= 0.25) {
+                destination = tuned;
+            }
+        }
         player.teleportTo(destination.x, destination.y, destination.z);
         player.setDeltaMovement(Vec3.ZERO);
         player.hurtMarked = true;
@@ -283,9 +392,13 @@ public final class PlayerWeaponActions {
         player.swing(action.hand, true);
 
         if (target != null) {
-            float damage = (float) Math.max(5.0, player.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.8);
+            float damage = (float) Math.max(6.0, player.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.95);
             if (target.hurtServer(level, player.damageSources().playerAttack(player), damage)) {
                 applyMissingMark(target, player, level.getGameTime());
+                NihilityVisualEffects.weaponHitBurst(level, target, action.type.visual);
+                Vec3 push = action.direction.scale(0.28).add(0.0, 0.12, 0.0);
+                target.setDeltaMovement(target.getDeltaMovement().add(push));
+                target.hurtMarked = true;
                 player.sendOverlayMessage(Component.translatable("message.templenihility.missing_mark_applied"));
             }
         }
@@ -294,11 +407,14 @@ public final class PlayerWeaponActions {
     }
 
     private static void executeZeroSlash(Player player, ServerLevel level, ActiveAction action) {
-        double reach = 7.0 + action.chargeTier * 2.0;
+        double reach = 7.5 + action.chargeTier * 2.25;
+        double corridor = 1.2 + action.chargeTier * 0.25;
         Vec3 start = player.getEyePosition();
         Vec3 end = start.add(action.direction.scale(reach));
-        List<Entity> targets = entitiesAlongLine(level, player, start, end, 0.8);
+        List<Entity> targets = entitiesAlongLine(level, player, start, end, corridor);
+        long now = level.getGameTime();
         int processed = 0;
+        boolean executeNotified = false;
         for (Entity entity : targets) {
             if (processed >= MAX_ACTION_TARGETS) {
                 break;
@@ -306,15 +422,41 @@ public final class PlayerWeaponActions {
             if (entity instanceof Projectile projectile) {
                 if (projectile.isPickable() && projectile.getOwner() != player) {
                     projectile.discard();
+                    VoidPower.add(player, 4);
                     processed++;
                 }
                 continue;
             }
             if (entity instanceof LivingEntity living && canHit(player, living)) {
-                float damage = (float) (player.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.75
-                    + 2.0 + action.chargeTier * 2.0);
+                double atk = player.getAttributeValue(Attributes.ATTACK_DAMAGE);
+                float damage = (float) (atk * (1.15 + action.chargeTier * 0.25)
+                    + 4.0 + action.chargeTier * 2.5);
+                int stacks = getExistenceStacks(living, now);
+                float executeBonus = RelicBuildPolicy.zeroSlashExecuteBonus(
+                    living.getHealth(), living.getMaxHealth(), stacks);
+                if (executeBonus > 0.0F) {
+                    damage += executeBonus;
+                }
                 if (living.hurtServer(level, player.damageSources().playerAttack(player), damage)) {
-                    applyExistenceReduction(living, level.getGameTime());
+                    applyExistenceReductionStacks(living, now, 1 + action.chargeTier);
+                    if (executeBonus > 0.0F) {
+                        stripBeneficialEffects(living);
+                        VoidPower.add(player, 12);
+                        if (!executeNotified) {
+                            NihilityNetwork.sendCombatFeedback(player, CombatFeedbackPolicy.Kind.ZERO_EXECUTE, 12, "");
+                            executeNotified = true;
+                        }
+                    }
+                    NihilityVisualEffects.weaponHitBurst(level, living, action.type.visual);
+                    if (living instanceof Mob mob) {
+                        mob.getNavigation().stop();
+                    }
+                    Vec3 flatPush = new Vec3(action.direction.x, 0.0, action.direction.z);
+                    if (flatPush.lengthSqr() > 1.0E-4) {
+                        flatPush = flatPush.normalize().scale(0.58 + action.chargeTier * 0.14).add(0.0, 0.20, 0.0);
+                        living.setDeltaMovement(living.getDeltaMovement().add(flatPush));
+                        living.hurtMarked = true;
+                    }
                     processed++;
                 }
             }
@@ -325,9 +467,9 @@ public final class PlayerWeaponActions {
     }
 
     private static void executeBoundaryWave(Player player, ServerLevel level, ActiveAction action, int wave) {
-        double minForward = wave * 2.0;
-        double maxForward = 3.5 + wave * 2.75;
-        double maxLateral = 2.0 + wave * 0.7;
+        double minForward = Math.max(-0.5, wave * 1.35 - 0.8);
+        double maxForward = 3.6 + wave * 2.85;
+        double maxLateral = 2.15 + wave * 0.75;
         AABB search = player.getBoundingBox().inflate(maxForward + 1.0, 2.5, maxForward + 1.0);
         List<LivingEntity> candidates = new ArrayList<>();
         for (Entity entity : level.getEntities(player, search,
@@ -338,6 +480,7 @@ public final class PlayerWeaponActions {
         }
         candidates.sort(Comparator.comparingDouble(player::distanceToSqr));
 
+        long now = level.getGameTime();
         int hits = 0;
         for (LivingEntity living : candidates) {
             if (action.hitEntityIds.contains(living.getId()) || hits >= MAX_ACTION_TARGETS) {
@@ -350,41 +493,70 @@ public final class PlayerWeaponActions {
                 continue;
             }
 
-            float damage = (float) (player.getAttributeValue(Attributes.ATTACK_DAMAGE) * 1.15 + wave * 1.5);
+            float damage = (float) (player.getAttributeValue(Attributes.ATTACK_DAMAGE) * 1.45 + wave * 3.0);
+            if (NihilityRelicEffects.isArmorShattered(living, now) || NihilityRelicEffects.isEchoed(living, now)) {
+                damage *= 1.35F;
+            }
             if (living.hurtServer(level, player.damageSources().playerAttack(player), damage)) {
                 action.hitEntityIds.add(living.getId());
+                NihilityRelicEffects.applyArmorShatter(living, 80);
+                NihilityVisualEffects.weaponHitBurst(level, living, action.type.visual);
                 boolean interruptImmune = level.registryAccess().lookupOrThrow(Registries.ENTITY_TYPE)
                     .wrapAsHolder(living.getType()).is(ModTags.EntityTypes.ACTION_INTERRUPT_IMMUNE);
                 if (living instanceof Mob mob && !interruptImmune) {
                     mob.getNavigation().stop();
                 }
-                Vec3 push = action.direction.scale(0.35 + wave * 0.08).add(0.0, 0.08, 0.0);
+                Vec3 push = action.direction.scale(0.68 + wave * 0.16).add(0.0, 0.24, 0.0);
                 living.setDeltaMovement(living.getDeltaMovement().add(push));
                 living.hurtMarked = true;
                 hits++;
             }
         }
 
+        player.swing(action.hand, true);
         if (wave == 0) {
-            player.swing(action.hand, true);
             damageActionItem(player, action);
         }
         NihilityVisualEffects.boundaryBreakWave(level, player.position(), action.direction, wave);
     }
 
+    private static void stripBeneficialEffects(LivingEntity target) {
+        List<MobEffectInstance> toRemove = new ArrayList<>();
+        for (MobEffectInstance effect : target.getActiveEffects()) {
+            if (effect.getEffect().value().getCategory() == MobEffectCategory.BENEFICIAL) {
+                toRemove.add(effect);
+            }
+        }
+        for (MobEffectInstance effect : toRemove) {
+            target.removeEffect(effect.getEffect());
+        }
+    }
+
     private static Vec3 findSafeDashDestination(Player player, ServerLevel level, Vec3 direction, double maxDistance) {
         Vec3 origin = player.position();
+        Vec3 flatDir = new Vec3(direction.x, 0.0, direction.z);
+        if (flatDir.lengthSqr() <= 1.0E-6) {
+            return origin;
+        }
+        flatDir = flatDir.normalize();
         AABB baseBox = player.getBoundingBox();
+        double[] stepOffsets = { 0.0, 0.5, 1.0 };
         for (double distance = maxDistance; distance >= 0.75; distance -= 0.25) {
-            Vec3 candidate = origin.add(direction.scale(distance));
-            BlockPos candidatePos = BlockPos.containing(candidate);
-            if (!level.hasChunk(SectionPos.blockToSectionCoord(candidatePos.getX()),
-                    SectionPos.blockToSectionCoord(candidatePos.getZ()))) {
-                continue;
-            }
-            AABB moved = baseBox.move(candidate.subtract(origin)).deflate(0.03);
-            if (level.noBlockCollision(player, moved) && level.noBorderCollision(player, moved)) {
-                return candidate;
+            for (double dy : stepOffsets) {
+                Vec3 candidate = new Vec3(
+                    origin.x + flatDir.x * distance,
+                    Math.max(origin.y, Math.floor(origin.y)) + dy,
+                    origin.z + flatDir.z * distance
+                );
+                BlockPos candidatePos = BlockPos.containing(candidate);
+                if (!level.hasChunk(SectionPos.blockToSectionCoord(candidatePos.getX()),
+                        SectionPos.blockToSectionCoord(candidatePos.getZ()))) {
+                    continue;
+                }
+                AABB moved = baseBox.move(candidate.subtract(origin));
+                if (level.noBlockCollision(player, moved) && level.noBorderCollision(player, moved)) {
+                    return candidate;
+                }
             }
         }
         return origin;
@@ -420,20 +592,13 @@ public final class PlayerWeaponActions {
 
     private static void applyMissingMark(LivingEntity target, Player owner, long gameTime) {
         var data = target.getPersistentData();
-        data.putLong(MARK_UNTIL, gameTime + 60L);
+        data.putLong(MARK_UNTIL, gameTime + 80L);
         data.putString(MARK_OWNER, owner.getUUID().toString());
     }
 
     private static void clearMissingMark(LivingEntity target) {
         target.getPersistentData().remove(MARK_UNTIL);
         target.getPersistentData().remove(MARK_OWNER);
-    }
-
-    private static void applyExistenceReduction(LivingEntity target, long gameTime) {
-        var data = target.getPersistentData();
-        int stacks = Math.max(0, Math.min(3, data.getIntOr(EXISTENCE_STACKS, 0) + 1));
-        data.putInt(EXISTENCE_STACKS, stacks);
-        data.putLong(EXISTENCE_UNTIL, gameTime + 100L);
     }
 
     private static void damageActionItem(Player player, ActiveAction action) {
@@ -454,7 +619,8 @@ public final class PlayerWeaponActions {
     private static boolean isNihilityWeapon(ItemStack stack) {
         return stack.getItem() instanceof NihilityDagger
             || stack.getItem() instanceof NihilitySword
-            || stack.getItem() instanceof NihilityGreatsword;
+            || stack.getItem() instanceof NihilityGreatsword
+            || stack.getItem() instanceof NihilityAxe;
     }
 
     private static Vec3 horizontalLook(Player player) {

@@ -22,8 +22,10 @@ public class NihilityGreatsword extends Item {
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         if (level.isClientSide()) {
-            player.startUsingItem(hand);
-            return InteractionResult.CONSUME;
+            if (!player.getCooldowns().isOnCooldown(player.getItemInHand(hand))) {
+                PlayerWeaponActions.notifyClientSkillStart(player, hand, "BOUNDARY_BREAK");
+            }
+            return InteractionResult.SUCCESS;
         }
         return PlayerWeaponActions.startBoundaryBreak(player, hand)
             ? InteractionResult.SUCCESS_SERVER
