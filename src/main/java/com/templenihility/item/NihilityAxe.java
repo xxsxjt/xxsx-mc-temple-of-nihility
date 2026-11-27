@@ -1,7 +1,9 @@
 package com.templenihility.item;
 
 import com.templenihility.effect.NihilityRelicEffects;
+import com.templenihility.effect.CombatFeedbackPolicy;
 import com.templenihility.energy.VoidPower;
+import com.templenihility.network.NihilityNetwork;
 import com.templenihility.world.NihilityVisualEffects;
 import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
@@ -88,7 +90,7 @@ public class NihilityAxe extends Item {
         player.getCooldowns().addCooldown(stack, SHATTER_CLEAVE_COOLDOWN);
         NihilityVisualEffects.itemUse(player, NihilityVisualEffects.Burst.WAR);
         if (hits > 0) {
-            player.sendOverlayMessage(Component.translatable("message.templenihility.axe_shatter_cleave", hits));
+            NihilityNetwork.sendCombatFeedback(player, CombatFeedbackPolicy.Kind.AXE_SHATTER, -SHATTER_CLEAVE_COST, "破界碎甲 ×" + hits);
         }
         return InteractionResult.SUCCESS_SERVER;
     }

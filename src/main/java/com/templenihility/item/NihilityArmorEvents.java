@@ -3,7 +3,9 @@ package com.templenihility.item;
 import com.templenihility.TempleNihilityMod;
 import com.templenihility.action.PlayerWeaponActions;
 import com.templenihility.effect.VoidPhaseEvents;
+import com.templenihility.effect.CombatFeedbackPolicy;
 import com.templenihility.energy.VoidPower;
+import com.templenihility.network.NihilityNetwork;
 import com.templenihility.init.ModItems;
 import com.templenihility.world.NihilityVisualEffects;
 import java.util.ArrayList;
@@ -27,11 +29,18 @@ public final class NihilityArmorEvents {
     public static final String STACK_VOID_POWER_KEY = VoidPower.STACK_POWER_KEY;
     public static final String STACK_VOID_POWER_MAX_KEY = VoidPower.STACK_MAX_POWER_KEY;
     private static final String ZERO_COUNTER_UNTIL = TempleNihilityMod.MOD_ID + ".ZeroCounterUntil";
+    private static final String LAST_DODGE_AUDIO_TICK = TempleNihilityMod.MOD_ID + ".LastDodgeAudioTick";
     private static final double DODGE_CHANCE = 0.25;
 
     public static void playerTick(PlayerTickEvent.Post event) {
         Player player = event.getEntity();
-        if (player.level().isClientSide() || player.tickCount % 20 != 0) {
+        if (player.level().isClientSide()) {
+            return;
+        }
+        if (player.tickCount % 10 == 0) {
+            NihilityNetwork.syncHud(player);
+        }
+        if (player.tickCount % 20 != 0) {
             return;
         }
 
@@ -46,6 +55,7 @@ public final class NihilityArmorEvents {
             }
         }
         VoidPower.syncArmorTooltipPower(player);
+        NihilityNetwork.syncHud(player);
     }
 
     public static void incomingDamage(LivingIncomingDamageEvent event) {
@@ -67,7 +77,7 @@ public final class NihilityArmorEvents {
                 if (target.level() instanceof ServerLevel level) {
                     NihilityVisualEffects.weaponHitBurst(level, target, NihilityVisualEffects.WeaponAction.ZERO_SLASH);
                 }
-                attacker.sendOverlayMessage(Component.translatable("message.templenihility.zero_counter_triggered"));
+                NihilityNetwork.sendCombatFeedback(attacker, CombatFeedbackPolicy.Kind.ZERO_COUNTER, 0, "");
             } else if (counterUntil > 0L) {
                 attacker.getPersistentData().remove(ZERO_COUNTER_UNTIL);
             }
@@ -91,11 +101,20 @@ public final class NihilityArmorEvents {
             VoidPower.add(player, 12);
             player.getPersistentData().putLong(ZERO_COUNTER_UNTIL, now + 80L);
             emitPhaseShockwave(player);
-            NihilityVisualEffects.itemUse(player, NihilityVisualEffects.Burst.PHASE);
-            player.sendOverlayMessage(Component.translatable(
-                "message.templenihility.void_power_dodge", VoidPower.get(player), VoidPower.getMax(player)));
+            long lastAudio = player.getPersistentData().getLongOr(LAST_DODGE_AUDIO_TICK, -100L);
+            boolean playAudio = CombatFeedbackPolicy.shouldPlayDodgeAudio(now, lastAudio);
+            if (playAudio) {
+                player.getPersistentData().putLong(LAST_DODGE_AUDIO_TICK, now);
+            }
+            NihilityVisualEffects.phaseDodgeBurst(player, playAudio);
+            NihilityNetwork.sendCombatFeedback(player, CombatFeedbackPolicy.Kind.PHASE_DODGE, 11, "");
         }
         VoidPower.syncArmorTooltipPower(player);
+    }
+
+    public static int getZeroCounterRemainingTicks(Player player, long now) {
+        long until = player.getPersistentData().getLongOr(ZERO_COUNTER_UNTIL, 0L);
+        return until > now ? (int) Math.min(200L, until - now) : 0;
     }
 
     public static int getVoidPower(Player player) {

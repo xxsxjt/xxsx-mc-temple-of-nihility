@@ -4,7 +4,9 @@ import com.templenihility.TempleNihilityMod;
 import com.templenihility.effect.NihilityRelicEffects;
 import com.templenihility.effect.RelicBuildPolicy;
 import com.templenihility.effect.VoidPhaseEvents;
+import com.templenihility.effect.CombatFeedbackPolicy;
 import com.templenihility.energy.VoidPower;
+import com.templenihility.network.NihilityNetwork;
 import com.templenihility.init.ModEffects;
 import com.templenihility.init.ModTags;
 import com.templenihility.item.NihilityAxe;
@@ -252,7 +254,7 @@ public final class PlayerWeaponActions {
         if (target.level() instanceof ServerLevel serverLevel) {
             NihilityVisualEffects.weaponHitBurst(serverLevel, target, NihilityVisualEffects.WeaponAction.MISSING_STEP);
         }
-        attacker.sendOverlayMessage(Component.translatable("message.templenihility.missing_mark_consumed"));
+        NihilityNetwork.sendCombatFeedback(attacker, CombatFeedbackPolicy.Kind.DAGGER_MARK, 10, "");
     }
 
     public static void livingHeal(LivingHealEvent event) {
@@ -439,7 +441,7 @@ public final class PlayerWeaponActions {
                         stripBeneficialEffects(living);
                         VoidPower.add(player, 12);
                         if (!executeNotified) {
-                            player.sendOverlayMessage(Component.translatable("message.templenihility.zero_slash_execute"));
+                            NihilityNetwork.sendCombatFeedback(player, CombatFeedbackPolicy.Kind.ZERO_EXECUTE, 12, "");
                             executeNotified = true;
                         }
                     }

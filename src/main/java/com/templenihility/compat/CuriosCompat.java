@@ -3,7 +3,9 @@ package com.templenihility.compat;
 import com.templenihility.TempleNihilityMod;
 import com.templenihility.blockentity.NihilityEnergyCellBlockEntity;
 import com.templenihility.effect.NihilityRelicEffects;
+import com.templenihility.effect.CombatFeedbackPolicy;
 import com.templenihility.effect.RelicBuildPolicy;
+import com.templenihility.network.NihilityNetwork;
 import com.templenihility.energy.VoidPower;
 import com.templenihility.init.ModEffects;
 import com.templenihility.init.ModItems;
@@ -132,6 +134,30 @@ public final class CuriosCompat {
         return hasCurio(player, ModItems.NIHILITY_TRADER_SEAL.get());
     }
 
+    public static int getOverdriveTicks(Player player, long now) {
+        long until = player.getPersistentData().getLongOr(CHAOS_OVERDRIVE_UNTIL, 0L);
+        return until > now ? (int) Math.min(200L, until - now) : 0;
+    }
+
+    public static int getGauntletStacks(Player player, long now) {
+        if (!hasCurio(player, ModItems.NIHILITY_GAUNTLET.get())) {
+            return 0;
+        }
+        long lastHit = player.getPersistentData().getLongOr(GAUNTLET_LAST_HIT, -1000L);
+        if (now - lastHit > 100L) {
+            return 0;
+        }
+        return player.getPersistentData().getIntOr(GAUNTLET_STACKS, 0);
+    }
+
+    public static int getWardCooldownTicks(Player player, long now) {
+        if (!hasCurio(player, ModItems.NIHILITY_WARD.get())) {
+            return -1;
+        }
+        long readyAt = player.getPersistentData().getLongOr(WARD_MEMBRANE_READY_AT, 0L);
+        return readyAt <= now ? 0 : (int) Math.min(300L, readyAt - now);
+    }
+
     public static boolean isChaosOverdriveActive(Player player) {
         long until = player.getPersistentData().getLongOr(CHAOS_OVERDRIVE_UNTIL, 0L);
         return until > 0L && until >= player.level().getGameTime();
@@ -211,8 +237,10 @@ public final class CuriosCompat {
             player.getPersistentData().putLong(SENTINEL_DEFLECT_READY_AT, now + 200L);
             event.setCanceled(true);
             event.getProjectile().discard();
-            NihilityVisualEffects.barrierImpact(player, hit.getLocation());
-            player.sendOverlayMessage(Component.translatable("message.templenihility.sentinel_deflect"));
+            if (player.level() instanceof ServerLevel sl) {
+                NihilityVisualEffects.sentinelDeflectBurst(sl, hit.getLocation());
+            }
+            NihilityNetwork.sendCombatFeedback(player, CombatFeedbackPolicy.Kind.SENTINEL_DEFLECT, 0, "");
         }
     }
 
@@ -276,8 +304,9 @@ public final class CuriosCompat {
                 player.getPersistentData().putLong(WARD_MEMBRANE_READY_AT, now + 240L);
                 event.setAmount(event.getAmount() * 0.50F);
                 VoidPower.add(player, 4);
-                NihilityVisualEffects.itemUse(player, NihilityVisualEffects.Burst.NULLIFY);
-                player.sendOverlayMessage(Component.translatable("message.templenihility.ward_membrane"));
+                Vec3 srcPos = event.getSource().getEntity() != null ? event.getSource().getEntity().position() : null;
+                NihilityVisualEffects.wardMembraneFlash(player, srcPos);
+                NihilityNetwork.sendCombatFeedback(player, CombatFeedbackPolicy.Kind.WARD_MEMBRANE, 4, "");
             }
         }
 
@@ -312,8 +341,8 @@ public final class CuriosCompat {
             NihilityRelicEffects.grantSoulShield(player, 8.0F, 20 * 14);
             player.addEffect(new MobEffectInstance(ModEffects.INTO_NIHILITY, 30, 0, true, false, true));
             knockbackNearby(player, 5.0, 0.62, 0.0F, false);
-            notifyTriggered(player, "message.templenihility.nihility_aegis_charm",
-                NihilityVisualEffects.Burst.BARRIER);
+            NihilityVisualEffects.itemUse(player, NihilityVisualEffects.Burst.BARRIER);
+            NihilityNetwork.sendCombatFeedback(player, CombatFeedbackPolicy.Kind.AEGIS_SHIELD, 0, "");
         }
 
         // Abyss Recovery Orb: 60s CD when <=35% HP -> +8 HP, +8 Soul Shield, -65% dmg, 6-block knockback + 6s suppress
@@ -325,8 +354,8 @@ public final class CuriosCompat {
             event.setAmount(event.getAmount() * 0.35F);
             NihilityRelicEffects.grantSoulShield(player, 8.0F, 20 * 20);
             knockbackNearby(player, 6.0, 0.72, 0.0F, true);
-            notifyTriggered(player, "message.templenihility.nihility_recovery_orb",
-                NihilityVisualEffects.Burst.HEAL);
+            NihilityVisualEffects.itemUse(player, NihilityVisualEffects.Burst.HEAL);
+            NihilityNetwork.sendCombatFeedback(player, CombatFeedbackPolicy.Kind.RECOVERY_ORB, 0, "");
         }
     }
 
@@ -365,8 +394,10 @@ public final class CuriosCompat {
                     target.setDeltaMovement(target.getDeltaMovement().add(flat.normalize().scale(0.60).add(0.0, 0.22, 0.0)));
                     target.hurtMarked = true;
                 }
-                NihilityVisualEffects.itemUse(attacker, NihilityVisualEffects.Burst.CHAOS);
-                attacker.sendOverlayMessage(Component.translatable("message.templenihility.gauntlet_chaos_burst"));
+                if (target.level() instanceof ServerLevel sl) {
+                    NihilityVisualEffects.chaosGauntletBurst(sl, target);
+                }
+                NihilityNetwork.sendCombatFeedback(attacker, CombatFeedbackPolicy.Kind.GAUNTLET_BURST, 0, "");
             }
         }
 
@@ -374,7 +405,7 @@ public final class CuriosCompat {
         if (hasCurio(attacker, ModItems.NIHILITY_CHARM.get()) && attacker.getRandom().nextFloat() < 0.18F) {
             multiplier *= 1.65F;
             VoidPower.add(attacker, 6);
-            attacker.sendOverlayMessage(Component.translatable("message.templenihility.fate_crit"));
+            NihilityNetwork.sendCombatFeedback(attacker, CombatFeedbackPolicy.Kind.FATE_CRIT, 6, "");
         }
 
         // Abyss Regenerator: +15% damage while Soul Shield is active
@@ -409,7 +440,7 @@ public final class CuriosCompat {
                 multiplier *= 1.45F;
                 VoidPower.add(attacker, 8);
                 NihilityVisualEffects.itemUse(attacker, NihilityVisualEffects.Burst.SHADOW);
-                attacker.sendOverlayMessage(Component.translatable("message.templenihility.eclipse_ambush"));
+                NihilityNetwork.sendCombatFeedback(attacker, CombatFeedbackPolicy.Kind.ECLIPSE_AMBUSH, 8, "");
             }
         }
 
@@ -441,6 +472,10 @@ public final class CuriosCompat {
             if (healAndShield[1] > 0.0F) {
                 NihilityRelicEffects.addSoulShield(attacker, healAndShield[1],
                     RelicBuildPolicy.SIPHON_SHIELD_CAP, 20 * 14);
+            }
+            if ((healAndShield[0] > 0.0F || healAndShield[1] > 0.0F) && attacker.level() instanceof ServerLevel sl) {
+                NihilityVisualEffects.abyssSiphonArc(sl, target, attacker);
+                NihilityNetwork.syncHud(attacker);
             }
         }
 
@@ -538,10 +573,11 @@ public final class CuriosCompat {
         player.resetFallDistance();
         player.invulnerableTime = invulnTicks;
         NihilityRelicEffects.grantSoulShield(player, shield, 20 * 30);
-        NihilityVisualEffects.Burst burst = messageKey.equals("message.templenihility.nihility_crown")
-            ? NihilityVisualEffects.Burst.CHAOS
-            : NihilityVisualEffects.Burst.HEAL;
-        notifyTriggered(player, messageKey, burst);
+        boolean isCrown = messageKey.equals("message.templenihility.nihility_crown");
+        NihilityVisualEffects.itemUse(player, isCrown ? NihilityVisualEffects.Burst.CHAOS : NihilityVisualEffects.Burst.HEAL);
+        NihilityNetwork.sendCombatFeedback(player,
+            isCrown ? CombatFeedbackPolicy.Kind.CHAOS_CROWN : CombatFeedbackPolicy.Kind.SOUL_ANCHOR,
+            isCrown ? -RelicBuildPolicy.CHAOS_CROWN_ENERGY_COST : 0, "");
     }
 
     private static void knockbackNearby(Player player, double radius, double force,
@@ -1067,8 +1103,10 @@ public final class CuriosCompat {
                         if (ready(player, ABYSS_SLAM_READY_AT, now)) {
                             data.putLong(ABYSS_SLAM_READY_AT, now + 80L);
                             knockbackNearby(player, 5.0, 0.70, 8.0F, false);
-                            NihilityVisualEffects.itemUse(player, NihilityVisualEffects.Burst.GRAVITY);
-                            player.sendOverlayMessage(Component.translatable("message.templenihility.abyss_mantle_slam"));
+                            if (player.level() instanceof ServerLevel sl) {
+                                NihilityVisualEffects.abyssSlamWave(sl, player);
+                            }
+                            NihilityNetwork.sendCombatFeedback(player, CombatFeedbackPolicy.Kind.ABYSS_SLAM, 0, "");
                         }
                     }
                 }

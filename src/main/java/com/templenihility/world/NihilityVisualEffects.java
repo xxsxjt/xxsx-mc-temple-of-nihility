@@ -849,6 +849,74 @@ public final class NihilityVisualEffects {
         sound(level, player.blockPosition(), SoundEvents.WARDEN_HEARTBEAT, 0.55F, 0.72F);
     }
 
+
+    public static void phaseDodgeBurst(Player player, boolean playAudio) {
+        if (!(player.level() instanceof ServerLevel level)) {
+            return;
+        }
+        Vec3 c = player.position().add(0.0, 0.95, 0.0);
+        ring(level, c.add(0.0, -0.35, 0.0), 0.92, ripple(), 14, 0.02);
+        ring(level, c.add(0.0, 0.35, 0.0), 0.68, shard(), 10, 0.025);
+        cloud(level, c, mote(), 8, 0.28, 0.45, 0.28, 0.022);
+        if (playAudio) {
+            sound(level, player.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, 0.26F, 1.85F);
+        }
+    }
+
+    public static void wardMembraneFlash(Player player, Vec3 attackerPos) {
+        if (!(player.level() instanceof ServerLevel level)) {
+            return;
+        }
+        Vec3 center = player.position().add(0.0, 1.05, 0.0);
+        Vec3 dir = attackerPos != null ? attackerPos.subtract(center) : player.getLookAngle();
+        Vec3 flat = new Vec3(dir.x, 0.0, dir.z);
+        Vec3 fwd = flat.lengthSqr() > 1.0E-4 ? flat.normalize() : player.getLookAngle();
+        Vec3 right = new Vec3(-fwd.z, 0.0, fwd.x);
+        if (right.lengthSqr() < 1.0E-4) right = new Vec3(1.0, 0.0, 0.0);
+        else right = right.normalize();
+        Vec3 shieldCenter = center.add(fwd.scale(0.85));
+        for (int i = 0; i < 12; i++) {
+            double ang = Math.PI * 2.0 * i / 12.0;
+            Vec3 pt = shieldCenter.add(right.scale(Math.cos(ang) * 0.58)).add(0.0, Math.sin(ang) * 0.68, 0.0);
+            level.sendParticles(i % 2 == 0 ? ripple() : mote(), pt.x, pt.y, pt.z, 1, 0.0, 0.0, 0.0, 0.005);
+        }
+        sound(level, player.blockPosition(), SoundEvents.SHIELD_BLOCK.value(), 0.42F, 1.55F);
+    }
+
+    public static void abyssSiphonArc(ServerLevel level, LivingEntity target, Player attacker) {
+        Vec3 start = target.position().add(0.0, target.getBbHeight() * 0.55, 0.0);
+        Vec3 end = attacker.position().add(0.0, 1.1, 0.0);
+        Vec3 mid = start.add(end).scale(0.5).add(0.0, 0.55, 0.0);
+        for (int i = 1; i <= 6; i++) {
+            double t = i / 6.0;
+            double omt = 1.0 - t;
+            Vec3 pt = start.scale(omt * omt).add(mid.scale(2.0 * omt * t)).add(end.scale(t * t));
+            level.sendParticles(abyss(), pt.x, pt.y, pt.z, 1, 0.02, 0.02, 0.02, 0.006);
+        }
+    }
+
+    public static void chaosGauntletBurst(ServerLevel level, LivingEntity target) {
+        Vec3 c = target.position().add(0.0, target.getBbHeight() * 0.5, 0.0);
+        ring(level, c, 1.45, chaos(), 18, 0.05);
+        ring(level, c.add(0.0, 0.3, 0.0), 0.95, shard(), 12, 0.04);
+        cloud(level, c, chaos(), 12, 0.35, 0.35, 0.35, 0.05);
+        sound(level, target.blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT, 0.65F, 0.85F);
+    }
+
+    public static void abyssSlamWave(ServerLevel level, Player player) {
+        Vec3 c = player.position().add(0.0, 0.18, 0.0);
+        ring(level, c, 2.2, abyss(), 24, 0.06);
+        ring(level, c.add(0.0, 0.15, 0.0), 3.6, ripple(), 28, 0.04);
+        cloud(level, c, abyss(), 18, 1.2, 0.25, 1.2, 0.04);
+        sound(level, player.blockPosition(), SoundEvents.GENERIC_EXPLODE.value(), 0.45F, 0.72F);
+    }
+
+    public static void sentinelDeflectBurst(ServerLevel level, Vec3 hitLoc) {
+        ring(level, hitLoc, 0.55, shard(), 10, 0.035);
+        cloud(level, hitLoc, mote(), 8, 0.16, 0.16, 0.16, 0.025);
+        sound(level, BlockPos.containing(hitLoc), SoundEvents.AMETHYST_BLOCK_CHIME, 0.55F, 1.65F);
+    }
+
     private static ParticleOptions mote() {
         return ModParticles.NIHILITY_MOTE.get();
     }
