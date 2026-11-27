@@ -130,6 +130,88 @@ public final class RelicBuildPolicy {
         return 0;
     }
 
+    /**
+     * Tiered Void armor set bonus snapshot supporting Tier 1 (Stillstone), Tier 2 (Shade),
+     * Tier 3 (Nihility) and smooth piece-by-piece upgrades across tiers.
+     */
+    public record ArmorSetBonus(
+        int twoPieceTier,
+        int fourPieceTier,
+        int vpMaxBonus,
+        int vpRegenPerTwoSeconds,
+        double dodgeChance,
+        int dodgeRefund,
+        int autoRepairIntervalSeconds,
+        boolean hasZeroCounter,
+        boolean hasDebuffDecay,
+        boolean hasShockwave
+    ) {
+        public static final ArmorSetBonus NONE = new ArmorSetBonus(0, 0, 0, 0, 0.0, 0, 0, false, false, false);
+    }
+
+    public static ArmorSetBonus tieredArmorSetBonus(int tier1Pieces, int tier2Pieces, int tier3Pieces) {
+        int t1 = Math.max(0, tier1Pieces);
+        int t2 = Math.max(0, tier2Pieces);
+        int t3 = Math.max(0, tier3Pieces);
+        int total = t1 + t2 + t3;
+        if (total < 2) {
+            return ArmorSetBonus.NONE;
+        }
+        int twoPieceTier = t3 >= 2 ? 3 : (t3 + t2 >= 2 ? 2 : 1);
+        int fourPieceTier = total < 4 ? 0 : (t3 >= 4 ? 3 : (t3 + t2 >= 4 ? 2 : 1));
+
+        int vpMaxBonus;
+        if (fourPieceTier == 3) {
+            vpMaxBonus = 80;
+        } else if (fourPieceTier == 2) {
+            vpMaxBonus = 55;
+        } else if (fourPieceTier == 1) {
+            vpMaxBonus = 30;
+        } else if (twoPieceTier == 3) {
+            vpMaxBonus = 35;
+        } else if (twoPieceTier == 2) {
+            vpMaxBonus = 25;
+        } else {
+            vpMaxBonus = 15;
+        }
+
+        int vpRegenPerTwoSeconds = switch (twoPieceTier) {
+            case 3 -> 4; // +2/s
+            case 2 -> 2; // +1/s
+            case 1 -> 1; // +1/2s
+            default -> 0;
+        };
+        double dodgeChance = switch (fourPieceTier) {
+            case 3 -> 0.25;
+            case 2 -> 0.16;
+            case 1 -> 0.10;
+            default -> 0.0;
+        };
+        int dodgeRefund = switch (fourPieceTier) {
+            case 3 -> 12;
+            case 2 -> 8;
+            case 1 -> 5;
+            default -> 0;
+        };
+        int autoRepairIntervalSeconds = switch (fourPieceTier) {
+            case 3 -> 1;
+            case 2 -> 2;
+            default -> 0;
+        };
+        return new ArmorSetBonus(
+            twoPieceTier,
+            fourPieceTier,
+            vpMaxBonus,
+            vpRegenPerTwoSeconds,
+            dodgeChance,
+            dodgeRefund,
+            autoRepairIntervalSeconds,
+            fourPieceTier == 3,
+            twoPieceTier == 3,
+            fourPieceTier >= 2
+        );
+    }
+
     private RelicBuildPolicy() {
     }
 }

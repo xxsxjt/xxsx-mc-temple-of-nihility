@@ -1,5 +1,6 @@
 package com.templenihility.item;
 
+import com.templenihility.action.PlayerWeaponActions;
 import com.templenihility.effect.NihilityRelicEffects;
 import com.templenihility.effect.CombatFeedbackPolicy;
 import com.templenihility.energy.VoidPower;
@@ -41,6 +42,7 @@ public class NihilityAxe extends Item {
             return InteractionResult.FAIL;
         }
         if (level.isClientSide()) {
+            PlayerWeaponActions.notifyClientSkillStart(player, hand, "AXE_SHATTER");
             return InteractionResult.SUCCESS;
         }
         int effectiveCost = VoidPower.effectiveCost(player, SHATTER_CLEAVE_COST);

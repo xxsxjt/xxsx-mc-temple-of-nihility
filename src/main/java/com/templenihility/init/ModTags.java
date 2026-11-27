@@ -13,6 +13,7 @@ public final class ModTags {
     }
 
     public static final class Items {
+        public static final TagKey<Item> STILLSTONE_REPAIR_MATERIALS = tag("stillstone_repair_materials");
         public static final TagKey<Item> NIHILITY_REPAIR_MATERIALS = tag("nihility_repair_materials");
 
         private Items() {
@@ -24,6 +25,8 @@ public final class ModTags {
     }
 
     public static final class Blocks {
+        public static final TagKey<Block> INCORRECT_FOR_STILLSTONE_TOOL = tag("incorrect_for_stillstone_tool");
+        public static final TagKey<Block> INCORRECT_FOR_RIFT_TOOL = tag("incorrect_for_rift_tool");
         public static final TagKey<Block> INCORRECT_FOR_NIHILITY_TOOL = tag("incorrect_for_nihility_tool");
 
         private Blocks() {

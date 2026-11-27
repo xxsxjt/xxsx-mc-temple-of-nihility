@@ -68,4 +68,46 @@ class RelicBuildPolicyTest {
         assertEquals(25, RelicBuildPolicy.armorSetVoidPowerBonus(2));
         assertEquals(50, RelicBuildPolicy.armorSetVoidPowerBonus(4));
     }
+
+    @Test
+    void tieredArmorProgressionAndMixedSetCarryover() {
+        var none = RelicBuildPolicy.tieredArmorSetBonus(1, 0, 0);
+        assertEquals(0, none.vpMaxBonus());
+        assertEquals(0.0, none.dodgeChance(), 0.0001);
+
+        var t1Full = RelicBuildPolicy.tieredArmorSetBonus(4, 0, 0);
+        assertEquals(1, t1Full.fourPieceTier());
+        assertEquals(30, t1Full.vpMaxBonus());
+        assertEquals(0.10, t1Full.dodgeChance(), 0.0001);
+        assertFalse(t1Full.hasZeroCounter());
+
+        var t2Full = RelicBuildPolicy.tieredArmorSetBonus(0, 4, 0);
+        assertEquals(2, t2Full.fourPieceTier());
+        assertEquals(55, t2Full.vpMaxBonus());
+        assertEquals(0.16, t2Full.dodgeChance(), 0.0001);
+        assertEquals(2, t2Full.autoRepairIntervalSeconds());
+
+        var t3Full = RelicBuildPolicy.tieredArmorSetBonus(0, 0, 4);
+        assertEquals(3, t3Full.fourPieceTier());
+        assertEquals(80, t3Full.vpMaxBonus());
+        assertEquals(0.25, t3Full.dodgeChance(), 0.0001);
+        assertEquals(1, t3Full.autoRepairIntervalSeconds());
+        assertTrue(t3Full.hasZeroCounter());
+        assertTrue(t3Full.hasDebuffDecay());
+
+        // Upgrading piece-by-piece: 2 Shade + 2 Nihility -> 2pc Tier 3 regen & debuff decay, 4pc Tier 2 dodge!
+        var mixed22 = RelicBuildPolicy.tieredArmorSetBonus(0, 2, 2);
+        assertEquals(3, mixed22.twoPieceTier());
+        assertEquals(2, mixed22.fourPieceTier());
+        assertEquals(55, mixed22.vpMaxBonus());
+        assertTrue(mixed22.hasDebuffDecay());
+        assertEquals(0.16, mixed22.dodgeChance(), 0.0001);
+
+        // 3 Stillstone + 1 Shade preserves full 4pc Tier 1 set bonus while upgrading!
+        var mixed31 = RelicBuildPolicy.tieredArmorSetBonus(3, 1, 0);
+        assertEquals(1, mixed31.twoPieceTier());
+        assertEquals(1, mixed31.fourPieceTier());
+        assertEquals(30, mixed31.vpMaxBonus());
+        assertEquals(0.10, mixed31.dodgeChance(), 0.0001);
+    }
 }

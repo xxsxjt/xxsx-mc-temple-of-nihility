@@ -1,15 +1,18 @@
 {
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
-  "key": {
-    "C": "templenihility:nihility_crystal",
-    "R": "templenihility:nihility_rune"
-  },
   "pattern": [
-    "CCC",
-    "C C",
-    "R R"
+    "FTF",
+    "OAO",
+    "N N"
   ],
+  "key": {
+    "F": "templenihility:nihility_relic_fragment",
+    "T": "templenihility:temple_seal",
+    "O": "templenihility:nihility_core",
+    "A": "templenihility:shade_leggings",
+    "N": "minecraft:netherite_ingot"
+  },
   "result": {
     "id": "templenihility:nihility_leggings"
   }

@@ -1,16 +1,19 @@
 {
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
-  "key": {
-    "C": "templenihility:nihility_crystal",
-    "R": "templenihility:nihility_rune",
-    "S": "minecraft:stick"
-  },
   "pattern": [
-    " C ",
-    " R ",
-    " S "
+    " FC",
+    "EOT",
+    " R "
   ],
+  "key": {
+    "F": "templenihility:nihility_relic_fragment",
+    "C": "templenihility:nihility_crystal",
+    "E": "minecraft:ender_pearl",
+    "O": "templenihility:nihility_core",
+    "T": "templenihility:temple_seal",
+    "R": "templenihility:nihility_rune"
+  },
   "result": {
     "id": "templenihility:nihility_dagger"
   }
