@@ -7,6 +7,8 @@ import com.templenihility.action.CreatureActionPolicy.Phase;
 import com.templenihility.compat.CuriosCompat;
 import com.templenihility.config.ModConfig;
 import com.templenihility.entity.CreatureDispositionPolicy.Disposition;
+import com.templenihility.init.ModItems;
+import net.minecraft.world.item.ItemStack;
 import com.templenihility.menu.NihilityTradeMenu;
 import com.templenihility.world.NihilityVisualEffects;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -273,6 +275,16 @@ public abstract class NihilityCreature extends PathfinderMob {
         return hurt;
     }
 
+    @Override
+    public boolean doHurtTarget(ServerLevel level, Entity target) {
+        this.swing(InteractionHand.MAIN_HAND);
+        boolean hit = super.doHurtTarget(level, target);
+        if (hit && target != null) {
+            NihilityVisualEffects.creatureMeleeStrike(this, target);
+        }
+        return hit;
+    }
+
     public abstract int getTier();
 
     protected ActionType selectCreatureAction(LivingEntity target, long gameTime) {
@@ -443,6 +455,13 @@ public abstract class NihilityCreature extends PathfinderMob {
         entityData.set(DATA_ACTION_TARGET, -1);
     }
 
+    public void triggerShowcaseAction(ActionType action, LivingEntity target) {
+        if (!(level() instanceof ServerLevel serverLevel) || target == null) return;
+        setTarget(target);
+        setAggressive(true);
+        startCreatureAction(action, target, serverLevel.getGameTime());
+    }
+
     protected final void cancelCreatureAction() {
         clearCreatureAction();
     }
@@ -493,12 +512,16 @@ public abstract class NihilityCreature extends PathfinderMob {
 
     @Override
     protected InteractionResult mobInteract(Player player, InteractionHand hand) {
-        if (this.level().isClientSide()) return InteractionResult.CONSUME;
-
-        if (getDisposition().blocksTrading()) {
-            player.sendSystemMessage(Component.translatable("message.templenihility.creature_hostile"));
-            return InteractionResult.FAIL;
+        ItemStack held = player.getItemInHand(hand);
+        boolean holdingCombatGear = held.is(ModItems.NIHILITY_SWORD.get())
+            || held.is(ModItems.NIHILITY_GREATSWORD.get())
+            || held.is(ModItems.NIHILITY_DAGGER.get())
+            || held.is(ModItems.NIHILITY_ABYSSAL_DRUM.get())
+            || held.is(ModItems.NIHILITY_BARRIER_CORE.get());
+        if (getDisposition().blocksTrading() || holdingCombatGear) {
+            return InteractionResult.PASS;
         }
+        if (this.level().isClientSide()) return InteractionResult.CONSUME;
 
         if (!canTradeWith(player)) {
             player.sendSystemMessage(Component.translatable("message.templenihility.trade_busy"));

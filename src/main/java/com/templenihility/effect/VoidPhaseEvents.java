@@ -1,6 +1,8 @@
 package com.templenihility.effect;
 
 import com.templenihility.TempleNihilityMod;
+import com.templenihility.energy.VoidPower;
+import com.templenihility.network.NihilityNetwork;
 import com.templenihility.init.ModEffects;
 import com.templenihility.world.NihilityVisualEffects;
 import java.util.HashSet;
@@ -138,6 +140,7 @@ public final class VoidPhaseEvents {
 
     public static void playerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         resetServerSnapshot(event.getEntity());
+        NihilityNetwork.syncHud(event.getEntity());
     }
 
     public static void playerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
@@ -147,10 +150,12 @@ public final class VoidPhaseEvents {
 
     public static void playerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         resetServerSnapshot(event.getEntity());
+        NihilityNetwork.syncHud(event.getEntity());
     }
 
     public static void playerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
         resetServerSnapshot(event.getEntity());
+        NihilityNetwork.syncHud(event.getEntity());
     }
 
     public static void playerChangeGameMode(PlayerEvent.PlayerChangeGameModeEvent event) {
@@ -162,6 +167,7 @@ public final class VoidPhaseEvents {
         boolean originalWasPhased = isPhaseActive(original);
         resetServerSnapshot(original);
         clearSnapshot(event.getEntity());
+        VoidPower.copyOnClone(original, event.getEntity(), event.isWasDeath());
         if (originalWasPhased && !event.getEntity().level().isClientSide()) {
             Player player = event.getEntity();
             player.noPhysics = player.isSpectator();

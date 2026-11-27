@@ -10,8 +10,14 @@ import com.templenihility.client.screen.NihilityTerminalScreen;
 import com.templenihility.client.screen.NihilityTransportCoreScreen;
 import com.templenihility.client.screen.NihilityTradeScreen;
 import com.templenihility.init.ModEntities;
+import com.templenihility.init.ModItems;
 import com.templenihility.init.ModMenus;
 import com.templenihility.init.ModParticles;
+import com.templenihility.item.NihilityAxe;
+import com.templenihility.item.NihilityDagger;
+import com.templenihility.item.NihilityGreatsword;
+import com.templenihility.item.NihilitySword;
+import com.templenihility.network.NihilityNetwork;
 import com.templenihility.network.OpenTerminalPayload;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
@@ -22,7 +28,11 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
+import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
+import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.lwjgl.glfw.GLFW;
@@ -43,10 +53,40 @@ public class ModClientEvents {
         modEventBus.addListener(ModClientEvents::registerKeyMappings);
         modEventBus.addListener(ModClientEvents::registerMenuScreens);
         modEventBus.addListener(ModClientEvents::registerParticleProviders);
+        modEventBus.addListener(ModClientEvents::registerClientExtensions);
+        modEventBus.addListener(ModClientEvents::registerGuiLayers);
+        NihilityNetwork.setClientHudHandler(NihilityHudState::applyHudSync);
+        NihilityNetwork.setClientFeedbackHandler(NihilityHudState::applyCombatFeedback);
         NeoForge.EVENT_BUS.addListener(ModClientEvents::clientTick);
-        NeoForge.EVENT_BUS.addListener(NihilityWeaponAnimation::renderHand);
+        NeoForge.EVENT_BUS.addListener(NihilityWeaponAnimation::onRightClickItem);
+        NeoForge.EVENT_BUS.addListener(NihilityWeaponAnimation::onUseItemStop);
+        NeoForge.EVENT_BUS.addListener(NihilityWeaponAnimation::renderPlayerPre);
+        com.templenihility.action.PlayerWeaponActions.setClientSkillListener(NihilityWeaponAnimation::handleClientSkillCallback);
         NeoForge.EVENT_BUS.addListener(NihilityClientRecipes::recipesReceived);
         NeoForge.EVENT_BUS.addListener(NihilityClientRecipes::loggingOut);
+        NeoForge.EVENT_BUS.addListener(ModClientEvents::onLoggingOut);
+    }
+
+    private static void registerClientExtensions(RegisterClientExtensionsEvent event) {
+        event.registerItem(
+            NihilityWeaponAnimation.WEAPON_EXTENSIONS,
+            ModItems.NIHILITY_SWORD.get(),
+            ModItems.NIHILITY_GREATSWORD.get(),
+            ModItems.NIHILITY_DAGGER.get(),
+            ModItems.NIHILITY_AXE.get()
+        );
+    }
+
+    private static void registerGuiLayers(RegisterGuiLayersEvent event) {
+        event.registerAbove(
+            VanillaGuiLayers.HOTBAR,
+            Identifier.fromNamespaceAndPath(TempleNihilityMod.MOD_ID, "nihility_hud"),
+            NihilityHudOverlay::render
+        );
+    }
+
+    private static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        NihilityHudState.reset();
     }
 
     private static void registerKeyMappings(RegisterKeyMappingsEvent event) {
@@ -75,10 +115,35 @@ public class ModClientEvents {
     }
 
     private static void clientTick(ClientTickEvent.Post event) {
+        Minecraft minecraft = Minecraft.getInstance();
         while (OPEN_TERMINAL.consumeClick()) {
-            Minecraft minecraft = Minecraft.getInstance();
             if (minecraft.getConnection() != null) {
                 ClientPacketDistributor.sendToServer(OpenTerminalPayload.INSTANCE);
+            }
+        }
+        // Subtle held-weapon Nihility erasure motes (restrained: 1 crisp mote flaking off weapon tip every 5 ticks)
+        if (!minecraft.isPaused() && minecraft.player != null && minecraft.level != null) {
+            NihilityHudState.clientTick();
+            var player = minecraft.player;
+            var mainItem = player.getMainHandItem().getItem();
+            boolean holdingNihilityWeapon = mainItem instanceof NihilitySword
+                || mainItem instanceof NihilityGreatsword
+                || mainItem instanceof NihilityDagger
+                || mainItem instanceof NihilityAxe;
+            long tick = minecraft.level.getGameTime();
+            if (holdingNihilityWeapon && tick % 5L == 0L) {
+                var look = player.getLookAngle();
+                double rightX = -look.z;
+                double rightZ = look.x;
+                double len = Math.max(0.001, Math.hypot(rightX, rightZ));
+                rightX /= len;
+                rightZ /= len;
+                double fwd = (mainItem instanceof NihilityGreatsword) ? 0.95 : 0.72;
+                double px = player.getX() + look.x * fwd + rightX * 0.42 + (minecraft.level.getRandom().nextDouble() - 0.5) * 0.14;
+                double py = player.getY() + 1.05 + (minecraft.level.getRandom().nextDouble() - 0.35) * 0.28;
+                double pz = player.getZ() + look.z * fwd + rightZ * 0.42 + (minecraft.level.getRandom().nextDouble() - 0.5) * 0.14;
+                var particle = (tick % 15L == 0L) ? ModParticles.NIHILITY_SHARD.get() : ModParticles.NIHILITY_MOTE.get();
+                minecraft.level.addParticle(particle, px, py, pz, 0.0, 0.018, 0.0);
             }
         }
     }

@@ -101,6 +101,7 @@ public class TempleNihilityMod {
         NeoForge.EVENT_BUS.addListener(PlayerWeaponActions::playerCloned);
         NeoForge.EVENT_BUS.addListener(NihilityActionService::playerLoggedOut);
         NeoForge.EVENT_BUS.addListener(GravityFieldManager::levelTick);
+        NeoForge.EVENT_BUS.addListener(TempleCommand::levelTick);
         NeoForge.EVENT_BUS.addListener(VoidPhaseEvents::playerTick);
         NeoForge.EVENT_BUS.addListener(VoidPhaseEvents::incomingDamage);
         NeoForge.EVENT_BUS.addListener(VoidPhaseEvents::invulnerabilityCheck);
