@@ -1,10 +1,10 @@
 modLoader="javafml"
 loaderVersion="[3,)"
-license="All Rights Reserved"
+license="AGPL-3.0-only"
 
 [[mods]]
 modId="templenihility"
-version="1.0.0-beta.3"
+version="1.0.0-beta.5"
 displayName="Temple of Nihility"
 logoFile="logo.png"
 logoBlur=false
@@ -17,7 +17,7 @@ authors="xxsx"
 [[dependencies.templenihility]]
 modId="neoforge"
 type="required"
-versionRange="[26.2.0.7-beta,)"
+versionRange="[26.2.0.93,)"
 ordering="NONE"
 side="BOTH"
 
