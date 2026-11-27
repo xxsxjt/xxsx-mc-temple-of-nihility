@@ -2,15 +2,14 @@ package com.templenihility.item;
 
 import com.templenihility.TempleNihilityMod;
 import com.templenihility.action.PlayerWeaponActions;
-import com.templenihility.effect.VoidPhaseEvents;
 import com.templenihility.effect.CombatFeedbackPolicy;
+import com.templenihility.effect.RelicBuildPolicy;
+import com.templenihility.effect.VoidPhaseEvents;
 import com.templenihility.energy.VoidPower;
 import com.templenihility.network.NihilityNetwork;
-import com.templenihility.init.ModItems;
 import com.templenihility.world.NihilityVisualEffects;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectCategory;
@@ -30,7 +29,6 @@ public final class NihilityArmorEvents {
     public static final String STACK_VOID_POWER_MAX_KEY = VoidPower.STACK_MAX_POWER_KEY;
     private static final String ZERO_COUNTER_UNTIL = TempleNihilityMod.MOD_ID + ".ZeroCounterUntil";
     private static final String LAST_DODGE_AUDIO_TICK = TempleNihilityMod.MOD_ID + ".LastDodgeAudioTick";
-    private static final double DODGE_CHANCE = 0.25;
 
     public static void playerTick(PlayerTickEvent.Post event) {
         Player player = event.getEntity();
@@ -43,14 +41,21 @@ public final class NihilityArmorEvents {
         if (player.tickCount % 20 != 0) {
             return;
         }
-
-        int pieces = countEquippedPieces(player);
-        if (pieces >= 2) {
-            VoidPower.add(player, 2);
-            accelerateHarmfulEffectDecay(player);
+        RelicBuildPolicy.ArmorSetBonus bonus = getArmorSetBonus(player);
+        boolean twoSecondBeat = (player.tickCount % 40 == 0);
+        if (bonus.twoPieceTier() >= 1) {
+            if (bonus.vpRegenPerTwoSeconds() >= 2) {
+                VoidPower.add(player, bonus.vpRegenPerTwoSeconds() / 2);
+            } else if (twoSecondBeat && bonus.vpRegenPerTwoSeconds() > 0) {
+                VoidPower.add(player, bonus.vpRegenPerTwoSeconds());
+            }
+            if (bonus.hasDebuffDecay()) {
+                accelerateHarmfulEffectDecay(player);
+            }
         }
-        if (pieces >= 4) {
-            if (VoidPower.get(player) > 0 && repairFirstDamagedNihilityItem(player)) {
+        if (bonus.autoRepairIntervalSeconds() > 0) {
+            boolean shouldRepair = bonus.autoRepairIntervalSeconds() == 1 || twoSecondBeat;
+            if (shouldRepair && VoidPower.get(player) > 0 && repairFirstDamagedNihilityItem(player)) {
                 VoidPower.tryConsume(player, 1);
             }
         }
@@ -62,11 +67,10 @@ public final class NihilityArmorEvents {
         if (event.isCanceled() || event.getAmount() <= 0.0F || event.getEntity().level().isClientSide()) {
             return;
         }
-
         LivingEntity target = event.getEntity();
         long now = target.level().getGameTime();
 
-        // 4pc Offensive Payoff: Zero Counter Strike primed by a phase dodge
+        // Tier 3 4pc Offensive Payoff: Zero Counter Strike primed by a phase dodge
         if (event.getSource().getEntity() instanceof Player attacker && target != attacker) {
             long counterUntil = attacker.getPersistentData().getLongOr(ZERO_COUNTER_UNTIL, 0L);
             if (counterUntil >= now) {
@@ -85,31 +89,54 @@ public final class NihilityArmorEvents {
 
         if (!(target instanceof Player player)
             || VoidPhaseEvents.hasFullPhase(player)
-            || !hasFullSet(player)
             || !isAttack(event.getSource())) {
             return;
         }
-
+        RelicBuildPolicy.ArmorSetBonus bonus = getArmorSetBonus(player);
+        if (bonus.fourPieceTier() <= 0 || bonus.dodgeChance() <= 0.0) {
+            return;
+        }
         if (!VoidPower.tryConsume(player, 1)) {
             return;
         }
-
-        boolean dodged = player.getRandom().nextDouble() < DODGE_CHANCE;
+        boolean dodged = player.getRandom().nextDouble() < bonus.dodgeChance();
         if (dodged) {
             event.setCanceled(true);
-            event.setInvulnerabilityTicks(12);
-            VoidPower.add(player, 12);
-            player.getPersistentData().putLong(ZERO_COUNTER_UNTIL, now + 80L);
-            emitPhaseShockwave(player);
+            int invulnTicks = bonus.fourPieceTier() == 3 ? 12 : (bonus.fourPieceTier() == 2 ? 10 : 8);
+            event.setInvulnerabilityTicks(invulnTicks);
+            VoidPower.add(player, bonus.dodgeRefund());
+            if (bonus.hasZeroCounter()) {
+                player.getPersistentData().putLong(ZERO_COUNTER_UNTIL, now + 80L);
+            }
+            if (bonus.hasShockwave()) {
+                emitPhaseShockwave(player, bonus.fourPieceTier() == 3 ? 0.55 : 0.35);
+            }
             long lastAudio = player.getPersistentData().getLongOr(LAST_DODGE_AUDIO_TICK, -100L);
             boolean playAudio = CombatFeedbackPolicy.shouldPlayDodgeAudio(now, lastAudio);
             if (playAudio) {
                 player.getPersistentData().putLong(LAST_DODGE_AUDIO_TICK, now);
             }
             NihilityVisualEffects.phaseDodgeBurst(player, playAudio);
-            NihilityNetwork.sendCombatFeedback(player, CombatFeedbackPolicy.Kind.PHASE_DODGE, 11, "");
+            NihilityNetwork.sendCombatFeedback(player, CombatFeedbackPolicy.Kind.PHASE_DODGE, bonus.dodgeRefund() - 1, "");
         }
         VoidPower.syncArmorTooltipPower(player);
+    }
+
+    public static RelicBuildPolicy.ArmorSetBonus getArmorSetBonus(Player player) {
+        int t1 = 0;
+        int t2 = 0;
+        int t3 = 0;
+        for (EquipmentSlot slot : new EquipmentSlot[] {
+                EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
+            if (player.getItemBySlot(slot).getItem() instanceof NihilityArmor armor) {
+                switch (armor.getTier()) {
+                    case STILLSTONE -> t1++;
+                    case SHADE -> t2++;
+                    case NIHILITY -> t3++;
+                }
+            }
+        }
+        return RelicBuildPolicy.tieredArmorSetBonus(t1, t2, t3);
     }
 
     public static int getZeroCounterRemainingTicks(Player player, long now) {
@@ -129,19 +156,14 @@ public final class NihilityArmorEvents {
         return VoidPower.tryConsume(player, amount);
     }
 
+    /** Counts all Void progression armor pieces (Stillstone + Shade + Nihility). */
     public static int countEquippedPieces(Player player) {
         int count = 0;
-        if (player.getItemBySlot(EquipmentSlot.HEAD).is(ModItems.NIHILITY_HELMET.get())) {
-            count++;
-        }
-        if (player.getItemBySlot(EquipmentSlot.CHEST).is(ModItems.NIHILITY_CHESTPLATE.get())) {
-            count++;
-        }
-        if (player.getItemBySlot(EquipmentSlot.LEGS).is(ModItems.NIHILITY_LEGGINGS.get())) {
-            count++;
-        }
-        if (player.getItemBySlot(EquipmentSlot.FEET).is(ModItems.NIHILITY_BOOTS.get())) {
-            count++;
+        for (EquipmentSlot slot : new EquipmentSlot[] {
+                EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
+            if (player.getItemBySlot(slot).getItem() instanceof NihilityArmor) {
+                count++;
+            }
         }
         return count;
     }
@@ -176,14 +198,14 @@ public final class NihilityArmorEvents {
         }
     }
 
-    private static void emitPhaseShockwave(Player player) {
+    private static void emitPhaseShockwave(Player player, double strength) {
         for (Entity entity : player.level().getEntities(player, player.getBoundingBox().inflate(4.0),
                 candidate -> candidate instanceof LivingEntity && candidate.isAlive() && !candidate.isSpectator())) {
             if (entity instanceof LivingEntity living && !player.isAlliedTo(living)) {
                 Vec3 away = living.position().subtract(player.position());
                 Vec3 flat = new Vec3(away.x, 0.0, away.z);
                 Vec3 dir = flat.lengthSqr() > 1.0E-4 ? flat.normalize() : new Vec3(1.0, 0.0, 0.0);
-                living.setDeltaMovement(living.getDeltaMovement().add(dir.scale(0.55).add(0.0, 0.20, 0.0)));
+                living.setDeltaMovement(living.getDeltaMovement().add(dir.scale(strength).add(0.0, 0.20, 0.0)));
                 living.hurtMarked = true;
             }
         }
@@ -198,7 +220,6 @@ public final class NihilityArmorEvents {
             player.getInventory().setChanged();
             return true;
         }
-
         for (EquipmentSlot slot : new EquipmentSlot[] {
                 EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
             if (repairOne(player.getItemBySlot(slot))) {
@@ -206,12 +227,10 @@ public final class NihilityArmorEvents {
                 return true;
             }
         }
-
         if (repairOne(player.getOffhandItem())) {
             player.getInventory().setChanged();
             return true;
         }
-
         for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
             if (repairOne(player.getInventory().getItem(i))) {
                 player.getInventory().setChanged();

@@ -1,16 +1,19 @@
 {
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
-  "key": {
-    "C": "templenihility:nihility_crystal",
-    "R": "templenihility:nihility_rune",
-    "S": "minecraft:stick"
-  },
   "pattern": [
-    " C ",
-    "CRC",
-    " S "
+    "BFB",
+    "TGT",
+    "NON"
   ],
+  "key": {
+    "B": "templenihility:nihility_crystal_block",
+    "F": "templenihility:nihility_relic_fragment",
+    "T": "templenihility:temple_seal",
+    "G": "templenihility:rift_blade",
+    "N": "minecraft:netherite_ingot",
+    "O": "templenihility:nihility_resonance_core"
+  },
   "result": {
     "id": "templenihility:nihility_greatsword"
   }

@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "C C",
+    "RAR",
+    "CDC"
+  ],
+  "key": {
+    "C": "templenihility:nihility_crystal",
+    "R": "templenihility:nihility_rune",
+    "A": "templenihility:stillstone_chestplate",
+    "D": "minecraft:diamond"
+  },
+  "result": {
+    "id": "templenihility:shade_chestplate"
+  }
+}

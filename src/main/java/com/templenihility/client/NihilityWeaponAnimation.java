@@ -3,10 +3,14 @@ package com.templenihility.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.templenihility.action.PlayerWeaponActions;
+import com.templenihility.item.AshenAxe;
+import com.templenihility.item.AshenSword;
+import com.templenihility.item.NihilityAxe;
 import com.templenihility.item.NihilityDagger;
 import com.templenihility.item.NihilityGreatsword;
-import com.templenihility.item.NihilityAxe;
 import com.templenihility.item.NihilitySword;
+import com.templenihility.item.RiftAxe;
+import com.templenihility.item.RiftBlade;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.player.LocalPlayer;
@@ -26,7 +30,9 @@ public final class NihilityWeaponAnimation {
         NONE,
         ZERO_SLASH_RELEASE,
         BOUNDARY_BREAK,
-        MISSING_STEP
+        MISSING_STEP,
+        AXE_SHATTER,
+        RIFT_CUT
     }
 
     private static ClientSkill activeSkill = ClientSkill.NONE;
@@ -62,6 +68,9 @@ public final class NihilityWeaponAnimation {
                 if (activeSkill == ClientSkill.MISSING_STEP && skillAge < 3.5F) {
                     return HumanoidModel.ArmPose.BOW_AND_ARROW;
                 }
+                if (activeSkill == ClientSkill.AXE_SHATTER && skillAge < 4.0F) {
+                    return HumanoidModel.ArmPose.THROW_TRIDENT;
+                }
             }
             return null;
         }
@@ -74,7 +83,6 @@ public final class NihilityWeaponAnimation {
         if (event.getEntity() != mc.player || mc.level == null) return;
         ItemStack stack = event.getItemStack();
         if (mc.player.getCooldowns().isOnCooldown(stack)) return;
-
         Item item = stack.getItem();
         if (item instanceof NihilityGreatsword) {
             startSkill(ClientSkill.BOUNDARY_BREAK, event.getHand(), PlayerWeaponActions.BOUNDARY_BREAK_DURATION, mc.level.getGameTime());
@@ -89,7 +97,7 @@ public final class NihilityWeaponAnimation {
         if (event.getEntity() != mc.player || mc.level == null) return;
         ItemStack stack = event.getItem();
         if (!(stack.getItem() instanceof NihilitySword)) return;
-        int chargeTicks = stack.getUseDuration(event.getEntity()) - event.getDuration();
+        int chargeTicks = stack.getUseDuration(mc.player) - event.getDuration();
         if (chargeTicks >= 8) {
             startSkill(ClientSkill.ZERO_SLASH_RELEASE, mc.player.getUsedItemHand(), 12, mc.level.getGameTime());
         }
@@ -103,6 +111,8 @@ public final class NihilityWeaponAnimation {
             case "BOUNDARY_BREAK" -> startSkill(ClientSkill.BOUNDARY_BREAK, hand, PlayerWeaponActions.BOUNDARY_BREAK_DURATION, now);
             case "MISSING_STEP" -> startSkill(ClientSkill.MISSING_STEP, hand, PlayerWeaponActions.MISSING_STEP_DURATION, now);
             case "ZERO_SLASH_RELEASE" -> startSkill(ClientSkill.ZERO_SLASH_RELEASE, hand, 12, now);
+            case "AXE_SHATTER" -> startSkill(ClientSkill.AXE_SHATTER, hand, 14, now);
+            case "RIFT_CUT" -> startSkill(ClientSkill.RIFT_CUT, hand, 10, now);
             default -> {}
         }
     }
@@ -126,17 +136,15 @@ public final class NihilityWeaponAnimation {
         return age;
     }
 
-    /** Third-person arm & torso swing synchronization so Greatsword/Sword/Dagger skills visibly animate on the player avatar! */
+    /** Third-person arm & torso swing synchronization so all weapon skills visibly animate on the player avatar! */
     public static void renderPlayerPre(RenderPlayerEvent.Pre<?> event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
         if (event.getRenderState().id != mc.player.getId()) return;
-
         var state = event.getRenderState();
         float partialTick = event.getPartialTick();
         ItemStack mainStack = mc.player.getMainHandItem();
 
-        // Blade of Zero charge -> high drawn katana stance in 3rd person
         if (mc.player.isUsingItem() && mc.player.getUsedItemHand() == InteractionHand.MAIN_HAND
                 && mainStack.getItem() instanceof NihilitySword) {
             state.rightArmPose = HumanoidModel.ArmPose.THROW_TRIDENT;
@@ -149,19 +157,15 @@ public final class NihilityWeaponAnimation {
         switch (activeSkill) {
             case BOUNDARY_BREAK -> {
                 if (t < 16.0F) {
-                    // Colossal overhead hoist windup — right arm raised high into the air!
                     state.rightArmPose = HumanoidModel.ArmPose.THROW_TRIDENT;
                     state.attackTime = 0.0F;
                 } else if (t < 20.0F) {
-                    // Wave 1 crashing downward cleave
                     state.rightArmPose = HumanoidModel.ArmPose.ITEM;
                     state.attackTime = Mth.clamp((t - 16.0F) / 4.0F, 0.08F, 0.96F);
                 } else if (t < 24.0F) {
-                    // Wave 2 sweeping follow-up cleave
                     state.rightArmPose = HumanoidModel.ArmPose.ITEM;
                     state.attackTime = Mth.clamp((t - 20.0F) / 4.0F, 0.08F, 0.96F);
                 } else if (t < 31.0F) {
-                    // Wave 3 final crushing slam
                     state.rightArmPose = HumanoidModel.ArmPose.ITEM;
                     state.attackTime = Mth.clamp((t - 24.0F) / 7.0F, 0.08F, 0.98F);
                 }
@@ -178,8 +182,32 @@ public final class NihilityWeaponAnimation {
                     state.attackTime = Mth.clamp((t - 3.5F) / 7.5F, 0.08F, 0.98F);
                 }
             }
+            case AXE_SHATTER -> {
+                if (t < 4.0F) {
+                    state.rightArmPose = HumanoidModel.ArmPose.THROW_TRIDENT;
+                    state.attackTime = 0.0F;
+                } else if (t < 11.5F) {
+                    state.rightArmPose = HumanoidModel.ArmPose.ITEM;
+                    state.attackTime = Mth.clamp((t - 4.0F) / 7.5F, 0.08F, 0.98F);
+                }
+            }
+            case RIFT_CUT -> {
+                state.rightArmPose = HumanoidModel.ArmPose.ITEM;
+                state.attackTime = Mth.clamp(t / 9.0F, 0.08F, 0.98F);
+            }
             default -> {}
         }
+    }
+
+    private static boolean isAnimatedWeapon(Item item) {
+        return item instanceof NihilitySword
+            || item instanceof NihilityGreatsword
+            || item instanceof NihilityDagger
+            || item instanceof NihilityAxe
+            || item instanceof RiftBlade
+            || item instanceof RiftAxe
+            || item instanceof AshenSword
+            || item instanceof AshenAxe;
     }
 
     /** Complete First-Person weapon grip, charge, skill & alternating melee swing choreography. */
@@ -187,7 +215,7 @@ public final class NihilityWeaponAnimation {
                                                      ItemStack stack, float partialTick,
                                                      float equipProcess, float swingProcess) {
         Item item = stack.getItem();
-        if (!(item instanceof NihilitySword || item instanceof NihilityGreatsword || item instanceof NihilityDagger || item instanceof NihilityAxe)) {
+        if (!isAnimatedWeapon(item)) {
             return false;
         }
 
@@ -195,7 +223,6 @@ public final class NihilityWeaponAnimation {
         InteractionHand hand = (arm == player.getMainArm()) ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
         float side = (arm == HumanoidArm.RIGHT) ? 1.0F : -1.0F;
 
-        // Track alternating melee combo direction whenever a fresh left-click swing begins
         if (hand == InteractionHand.MAIN_HAND) {
             if (swingProcess > 0.0F && prevSwingProgress == 0.0F) {
                 meleeComboParity = (meleeComboParity + 1) & 1;
@@ -205,7 +232,6 @@ public final class NihilityWeaponAnimation {
             prevSwingProgress = swingProcess;
         }
 
-        // Start from exact vanilla resting hand anchor
         poseStack.translate(side * 0.56F, -0.52F + equipProcess * -0.6F, -0.72F);
 
         // 1) Active Right-Click Skill Choreography (takes priority over vanilla swing)
@@ -223,9 +249,17 @@ public final class NihilityWeaponAnimation {
                 applyMissingStepFirstPerson(poseStack, side, skillAge);
                 return true;
             }
+            if (activeSkill == ClientSkill.AXE_SHATTER && (item instanceof NihilityAxe || item instanceof RiftAxe)) {
+                applyAxeShatterFirstPerson(poseStack, side, skillAge);
+                return true;
+            }
+            if (activeSkill == ClientSkill.RIFT_CUT && item instanceof RiftBlade) {
+                applyRiftCutFirstPerson(poseStack, side, skillAge);
+                return true;
+            }
         }
 
-        // 2) Blade of Zero Charge Stance (high-right iaijutsu draw — stays clearly visible, never sinks!)
+        // 2) Blade of Zero Charge Stance
         if (item instanceof NihilitySword && player.isUsingItem() && player.getUsedItemHand() == hand) {
             float ticks = player.getTicksUsingItem(partialTick);
             float charge = easeOutCubic(Mth.clamp(ticks / 20.0F, 0.0F, 1.0F));
@@ -239,12 +273,14 @@ public final class NihilityWeaponAnimation {
 
         // 3) Custom Expressive Left-Click Melee Swings per Weapon Class!
         if (swingProcess > 0.001F) {
-            if (item instanceof NihilitySword) {
+            if (item instanceof NihilitySword || item instanceof RiftBlade || item instanceof AshenSword) {
                 applySwordMeleeSwing(poseStack, side, swingProcess, meleeComboParity);
             } else if (item instanceof NihilityGreatsword) {
                 applyGreatswordMeleeSwing(poseStack, side, swingProcess);
             } else if (item instanceof NihilityDagger) {
                 applyDaggerMeleeSwing(poseStack, side, swingProcess, meleeComboParity);
+            } else if (item instanceof NihilityAxe || item instanceof RiftAxe || item instanceof AshenAxe) {
+                applyAxeMeleeSwing(poseStack, side, swingProcess, meleeComboParity);
             }
             return true;
         }
@@ -256,64 +292,77 @@ public final class NihilityWeaponAnimation {
     private static void applyZeroSlashRelease(PoseStack ps, float side, float t) {
         if (t < 3.5F) {
             float p = easeOutCubic(t / 3.5F);
-            // Sweep from upper-right high guard straight across center to lower-left!
             float tx = Mth.lerp(p, -0.14F, -0.74F);
-            float ty = Mth.lerp(p, 0.08F, -0.18F);
+            float ty = Mth.lerp(p, 0.08F, -0.22F);
             float tz = Mth.lerp(p, -0.10F, -0.34F);
             ps.translate(side * tx, ty, tz);
-            ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, -14.0F, -82.0F)));
-            ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, 22.0F, 58.0F)));
-            ps.mulPose(Axis.ZP.rotationDegrees(side * Mth.lerp(p, 26.0F, 88.0F)));
+            ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, -14.0F, -84.0F)));
+            ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, 22.0F, 52.0F)));
+            ps.mulPose(Axis.ZP.rotationDegrees(side * Mth.lerp(p, 26.0F, 92.0F)));
         } else if (t < 6.0F) {
-            // Brief crisp hitstop follow-through hold
-            float p = (t - 3.5F) / 2.5F;
-            ps.translate(side * (-0.70F - 0.04F * p), -0.14F - 0.03F * p, -0.32F);
-            ps.mulPose(Axis.XP.rotationDegrees(-78.0F - 4.0F * p));
-            ps.mulPose(Axis.YP.rotationDegrees(side * (54.0F + 4.0F * p)));
-            ps.mulPose(Axis.ZP.rotationDegrees(side * (84.0F + 4.0F * p)));
+            ps.translate(side * (-0.74F), -0.22F, -0.34F);
+            ps.mulPose(Axis.XP.rotationDegrees(-84.0F));
+            ps.mulPose(Axis.YP.rotationDegrees(side * 52.0F));
+            ps.mulPose(Axis.ZP.rotationDegrees(side * 92.0F));
         } else {
-            // Smooth flourish return to ready guard
             float p = easeInOutQuad(Mth.clamp((t - 6.0F) / 6.0F, 0.0F, 1.0F));
-            ps.translate(side * Mth.lerp(p, -0.74F, 0.0F), Mth.lerp(p, -0.17F, 0.0F), Mth.lerp(p, -0.32F, 0.0F));
-            ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, -82.0F, 0.0F)));
-            ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, 58.0F, 0.0F)));
-            ps.mulPose(Axis.ZP.rotationDegrees(side * Mth.lerp(p, 88.0F, 0.0F)));
+            ps.translate(side * Mth.lerp(p, -0.74F, 0.0F), Mth.lerp(p, -0.22F, 0.0F), Mth.lerp(p, -0.34F, 0.0F));
+            ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, -84.0F, 0.0F)));
+            ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, 52.0F, 0.0F)));
+            ps.mulPose(Axis.ZP.rotationDegrees(side * Mth.lerp(p, 92.0F, 0.0F)));
         }
     }
 
-    /** Boundary Greatsword: Colossal Overhead Hoist -> 3 Explosive Crushing Cleaves -> Weighty Recovery! */
+    /** Rift Blade right-click: crisp quick arc slash across center. */
+    private static void applyRiftCutFirstPerson(PoseStack ps, float side, float t) {
+        if (t < 2.2F) {
+            float p = easeOutCubic(t / 2.2F);
+            ps.translate(side * (0.10F * p), 0.14F * p, 0.06F * p);
+            ps.mulPose(Axis.XP.rotationDegrees(22.0F * p));
+            ps.mulPose(Axis.ZP.rotationDegrees(side * (-26.0F * p)));
+        } else if (t < 5.5F) {
+            float p = easeOutCubic((t - 2.2F) / 3.3F);
+            ps.translate(side * Mth.lerp(p, 0.10F, -0.66F), Mth.lerp(p, 0.14F, -0.18F), Mth.lerp(p, 0.06F, -0.32F));
+            ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, 22.0F, -78.0F)));
+            ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, 0.0F, 48.0F)));
+            ps.mulPose(Axis.ZP.rotationDegrees(side * Mth.lerp(p, -26.0F, 82.0F)));
+        } else {
+            float p = easeInOutQuad(Mth.clamp((t - 5.5F) / 4.5F, 0.0F, 1.0F));
+            ps.translate(side * Mth.lerp(p, -0.66F, 0.0F), Mth.lerp(p, -0.18F, 0.0F), Mth.lerp(p, -0.32F, 0.0F));
+            ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, -78.0F, 0.0F)));
+            ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, 48.0F, 0.0F)));
+            ps.mulPose(Axis.ZP.rotationDegrees(side * Mth.lerp(p, 82.0F, 0.0F)));
+        }
+    }
+
+    /** Boundary Greatsword: 16t dramatic overhead hoist -> Wave 1 Slam -> Wave 2 Reverse Sweep -> Wave 3 Crushing Finish! */
     private static void applyBoundaryBreakFirstPerson(PoseStack ps, float side, float t) {
-        if (t < 15.5F) {
-            // Heavy overhead hoist high above right shoulder
-            float p = easeOutCubic(t / 15.5F);
-            float shake = Mth.sin(t * 1.1F) * 2.2F * p;
+        if (t < 16.0F) {
+            float p = easeOutCubic(t / 16.0F);
+            float tremor = Mth.sin(t * 1.4F) * 1.6F * p;
             ps.translate(side * (-0.10F * p), 0.30F * p, 0.10F * p);
-            ps.mulPose(Axis.XP.rotationDegrees(38.0F * p + shake));
+            ps.mulPose(Axis.XP.rotationDegrees(44.0F * p + tremor));
             ps.mulPose(Axis.YP.rotationDegrees(side * (-16.0F * p)));
-            ps.mulPose(Axis.ZP.rotationDegrees(side * (16.0F * p)));
-        } else if (t < 19.5F) {
-            // Wave 1: Violent crashing downward-left overhead slam!
-            float p = easeOutCubic((t - 15.5F) / 4.0F);
-            ps.translate(side * Mth.lerp(p, -0.10F, -0.46F), Mth.lerp(p, 0.30F, -0.36F), Mth.lerp(p, 0.10F, -0.32F));
-            ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, 38.0F, -100.0F)));
-            ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, -16.0F, 34.0F)));
-            ps.mulPose(Axis.ZP.rotationDegrees(side * Mth.lerp(p, 16.0F, 52.0F)));
-        } else if (t < 23.5F) {
-            // Wave 2: Explosive backhand horizontal cleave sweeping left -> right!
-            float p = easeOutCubic((t - 19.5F) / 4.0F);
-            ps.translate(side * Mth.lerp(p, -0.46F, 0.16F), Mth.lerp(p, -0.36F, 0.02F), Mth.lerp(p, -0.32F, -0.24F));
-            ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, -100.0F, -64.0F)));
-            ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, 34.0F, -42.0F)));
-            ps.mulPose(Axis.ZP.rotationDegrees(side * Mth.lerp(p, 52.0F, -58.0F)));
+            ps.mulPose(Axis.ZP.rotationDegrees(side * (20.0F * p)));
+        } else if (t < 20.0F) {
+            float p = easeOutCubic((t - 16.0F) / 4.0F);
+            ps.translate(side * Mth.lerp(p, -0.10F, -0.58F), Mth.lerp(p, 0.30F, -0.34F), Mth.lerp(p, 0.10F, -0.36F));
+            ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, 44.0F, -98.0F)));
+            ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, -16.0F, 36.0F)));
+            ps.mulPose(Axis.ZP.rotationDegrees(side * Mth.lerp(p, 20.0F, 72.0F)));
+        } else if (t < 24.5F) {
+            float p = easeOutCubic((t - 20.0F) / 4.5F);
+            ps.translate(side * Mth.lerp(p, -0.58F, 0.16F), Mth.lerp(p, -0.34F, 0.18F), Mth.lerp(p, -0.36F, -0.24F));
+            ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, -98.0F, -32.0F)));
+            ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, 36.0F, -32.0F)));
+            ps.mulPose(Axis.ZP.rotationDegrees(side * Mth.lerp(p, 72.0F, -58.0F)));
         } else if (t < 29.5F) {
-            // Wave 3: Final overhead execution slam straight through center!
-            float p = easeOutCubic((t - 23.5F) / 6.0F);
-            ps.translate(side * Mth.lerp(p, 0.16F, -0.34F), Mth.lerp(p, 0.02F, -0.40F), Mth.lerp(p, -0.24F, -0.36F));
-            ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, -64.0F, -106.0F)));
-            ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, -42.0F, 24.0F)));
+            float p = easeOutCubic((t - 24.5F) / 5.0F);
+            ps.translate(side * Mth.lerp(p, 0.16F, -0.34F), Mth.lerp(p, 0.18F, -0.40F), Mth.lerp(p, -0.24F, -0.36F));
+            ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, -32.0F, -106.0F)));
+            ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, -32.0F, 24.0F)));
             ps.mulPose(Axis.ZP.rotationDegrees(side * Mth.lerp(p, -58.0F, 28.0F)));
         } else {
-            // Heavy recovery lift back to idle
             float p = easeInOutQuad(Mth.clamp((t - 29.5F) / 9.5F, 0.0F, 1.0F));
             ps.translate(side * Mth.lerp(p, -0.34F, 0.0F), Mth.lerp(p, -0.40F, 0.0F), Mth.lerp(p, -0.36F, 0.0F));
             ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, -106.0F, 0.0F)));
@@ -344,10 +393,77 @@ public final class NihilityWeaponAnimation {
         }
     }
 
-    /** Blade of Zero left-click alternating diagonal combo slashes (Forehand -> Backhand). */
+    /** Nihility & Rift Axe Right-Click: high shoulder windup -> armor-shattering downward-diagonal cleave -> weighty recovery! */
+    private static void applyAxeShatterFirstPerson(PoseStack ps, float side, float t) {
+        if (t < 3.5F) {
+            float p = easeOutCubic(t / 3.5F);
+            ps.translate(side * (0.14F * p), 0.24F * p, 0.10F * p);
+            ps.mulPose(Axis.XP.rotationDegrees(40.0F * p));
+            ps.mulPose(Axis.YP.rotationDegrees(side * (-16.0F * p)));
+            ps.mulPose(Axis.ZP.rotationDegrees(side * (-22.0F * p)));
+        } else if (t < 8.5F) {
+            float p = easeOutCubic((t - 3.5F) / 5.0F);
+            ps.translate(side * Mth.lerp(p, 0.14F, -0.52F), Mth.lerp(p, 0.24F, -0.34F), Mth.lerp(p, 0.10F, -0.38F));
+            ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, 40.0F, -98.0F)));
+            ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, -16.0F, 34.0F)));
+            ps.mulPose(Axis.ZP.rotationDegrees(side * Mth.lerp(p, -22.0F, 56.0F)));
+        } else {
+            float p = easeInOutQuad(Mth.clamp((t - 8.5F) / 5.5F, 0.0F, 1.0F));
+            ps.translate(side * Mth.lerp(p, -0.52F, 0.0F), Mth.lerp(p, -0.34F, 0.0F), Mth.lerp(p, -0.38F, 0.0F));
+            ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, -98.0F, 0.0F)));
+            ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, 34.0F, 0.0F)));
+            ps.mulPose(Axis.ZP.rotationDegrees(side * Mth.lerp(p, 56.0F, 0.0F)));
+        }
+    }
+
+    /** Axes left-click: heavy alternating diagonal chop & rising hook cleave. */
+    private static void applyAxeMeleeSwing(PoseStack ps, float side, float swing, int parity) {
+        if (parity == 0) {
+            // Heavy overhead diagonal chop
+            if (swing < 0.24F) {
+                float p = easeOutCubic(swing / 0.24F);
+                ps.translate(side * (0.08F * p), 0.20F * p, 0.08F * p);
+                ps.mulPose(Axis.XP.rotationDegrees(30.0F * p));
+                ps.mulPose(Axis.ZP.rotationDegrees(side * (-16.0F * p)));
+            } else if (swing < 0.58F) {
+                float p = easeOutCubic((swing - 0.24F) / 0.34F);
+                ps.translate(side * Mth.lerp(p, 0.08F, -0.46F), Mth.lerp(p, 0.20F, -0.30F), Mth.lerp(p, 0.08F, -0.32F));
+                ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, 30.0F, -88.0F)));
+                ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, 0.0F, 28.0F)));
+                ps.mulPose(Axis.ZP.rotationDegrees(side * Mth.lerp(p, -16.0F, 48.0F)));
+            } else {
+                float p = easeInOutQuad((swing - 0.58F) / 0.42F);
+                ps.translate(side * Mth.lerp(p, -0.46F, 0.0F), Mth.lerp(p, -0.30F, 0.0F), Mth.lerp(p, -0.32F, 0.0F));
+                ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, -88.0F, 0.0F)));
+                ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, 28.0F, 0.0F)));
+                ps.mulPose(Axis.ZP.rotationDegrees(side * Mth.lerp(p, 48.0F, 0.0F)));
+            }
+        } else {
+            // Heavy side-hook backhand cleave
+            if (swing < 0.22F) {
+                float p = easeOutCubic(swing / 0.22F);
+                ps.translate(side * (-0.34F * p), -0.14F * p, 0.02F * p);
+                ps.mulPose(Axis.XP.rotationDegrees(-20.0F * p));
+                ps.mulPose(Axis.ZP.rotationDegrees(side * (56.0F * p)));
+            } else if (swing < 0.58F) {
+                float p = easeOutCubic((swing - 0.22F) / 0.36F);
+                ps.translate(side * Mth.lerp(p, -0.34F, 0.10F), Mth.lerp(p, -0.14F, 0.14F), Mth.lerp(p, 0.02F, -0.28F));
+                ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, -20.0F, -64.0F)));
+                ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, 16.0F, -24.0F)));
+                ps.mulPose(Axis.ZP.rotationDegrees(side * Mth.lerp(p, 56.0F, -34.0F)));
+            } else {
+                float p = easeInOutQuad((swing - 0.58F) / 0.42F);
+                ps.translate(side * Mth.lerp(p, 0.10F, 0.0F), Mth.lerp(p, 0.14F, 0.0F), Mth.lerp(p, -0.28F, 0.0F));
+                ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(p, -64.0F, 0.0F)));
+                ps.mulPose(Axis.YP.rotationDegrees(side * Mth.lerp(p, -24.0F, 0.0F)));
+                ps.mulPose(Axis.ZP.rotationDegrees(side * Mth.lerp(p, -34.0F, 0.0F)));
+            }
+        }
+    }
+
+    /** Swords left-click alternating diagonal combo slashes (Forehand -> Backhand). */
     private static void applySwordMeleeSwing(PoseStack ps, float side, float swing, int parity) {
         if (parity == 0) {
-            // Forehand diagonal cut: upper-right -> lower-left across crosshair
             if (swing < 0.20F) {
                 float p = swing / 0.20F;
                 ps.translate(side * (0.06F * p), 0.10F * p, 0.04F * p);
@@ -367,7 +483,6 @@ public final class NihilityWeaponAnimation {
                 ps.mulPose(Axis.ZP.rotationDegrees(side * Mth.lerp(p, 78.0F, 0.0F)));
             }
         } else {
-            // Backhand rising slash: lower-left -> upper-right
             if (swing < 0.22F) {
                 float p = swing / 0.22F;
                 ps.translate(side * (-0.44F * p), -0.18F * p, -0.06F * p);

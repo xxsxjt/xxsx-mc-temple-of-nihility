@@ -1,15 +1,18 @@
 {
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
-  "key": {
-    "C": "templenihility:nihility_crystal",
-    "S": "minecraft:stick"
-  },
   "pattern": [
-    " C ",
-    " S ",
-    " S "
+    " T ",
+    "CSC",
+    "ROR"
   ],
+  "key": {
+    "T": "templenihility:temple_seal",
+    "C": "templenihility:nihility_crystal",
+    "S": "minecraft:diamond_shovel",
+    "R": "templenihility:nihility_rune",
+    "O": "templenihility:nihility_core"
+  },
   "result": {
     "id": "templenihility:nihility_shovel"
   }

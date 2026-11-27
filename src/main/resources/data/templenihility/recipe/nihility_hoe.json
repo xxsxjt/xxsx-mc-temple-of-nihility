@@ -1,15 +1,18 @@
 {
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
+  "pattern": [
+    "CT ",
+    "RHR",
+    " O "
+  ],
   "key": {
     "C": "templenihility:nihility_crystal",
-    "S": "minecraft:stick"
+    "T": "templenihility:temple_seal",
+    "R": "templenihility:nihility_rune",
+    "H": "minecraft:diamond_hoe",
+    "O": "templenihility:nihility_core"
   },
-  "pattern": [
-    "CC ",
-    " S ",
-    " S "
-  ],
   "result": {
     "id": "templenihility:nihility_hoe"
   }

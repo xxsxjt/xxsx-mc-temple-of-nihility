@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "CCC",
+    "RWR",
+    " D "
+  ],
+  "key": {
+    "C": "templenihility:nihility_crystal",
+    "R": "templenihility:nihility_rune",
+    "W": "templenihility:ashen_pickaxe",
+    "D": "minecraft:diamond"
+  },
+  "result": {
+    "id": "templenihility:rift_pickaxe"
+  }
+}

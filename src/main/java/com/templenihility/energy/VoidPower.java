@@ -34,7 +34,7 @@ public final class VoidPower {
 
     public static int getMax(Player player) {
         int max = BASE_MAX
-            + RelicBuildPolicy.armorSetVoidPowerBonus(NihilityArmorEvents.countEquippedPieces(player));
+            + NihilityArmorEvents.getArmorSetBonus(player).vpMaxBonus();
         if (CuriosCompat.hasVoidPowerBattery(player)) {
             max += BATTERY_ACCESSORY_BONUS;
         }

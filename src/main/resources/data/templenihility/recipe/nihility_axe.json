@@ -1,15 +1,18 @@
 {
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
-  "key": {
-    "C": "templenihility:nihility_crystal",
-    "S": "minecraft:stick"
-  },
   "pattern": [
-    "CC ",
-    "CS ",
-    " S "
+    "FTF",
+    "OAO",
+    " N "
   ],
+  "key": {
+    "F": "templenihility:nihility_relic_fragment",
+    "T": "templenihility:temple_seal",
+    "O": "templenihility:nihility_core",
+    "A": "templenihility:rift_axe",
+    "N": "minecraft:netherite_ingot"
+  },
   "result": {
     "id": "templenihility:nihility_axe"
   }

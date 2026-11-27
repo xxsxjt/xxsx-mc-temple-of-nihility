@@ -81,15 +81,31 @@ public class ModItems {
         id -> new NihilityTooltipItem(itemProperties(id).stacksTo(16).rarity(Rarity.RARE),
             true, "tooltip.templenihility.nihility_vault_expansion"));
 
-    // 武器
+    // 低阶武器与工具（空寂/归尘阶）
+    public static final DeferredItem<Item> ASHEN_SWORD = ITEMS.register("ashen_sword",
+        id -> new AshenSword(itemProperties(id).rarity(Rarity.COMMON)));
+    public static final DeferredItem<Item> ASHEN_AXE = ITEMS.register("ashen_axe",
+        id -> new AshenAxe(itemProperties(id).rarity(Rarity.COMMON)));
+    public static final DeferredItem<Item> ASHEN_PICKAXE = ITEMS.register("ashen_pickaxe",
+        id -> new AshenPickaxe(itemProperties(id).rarity(Rarity.COMMON)));
+
+    // 中阶武器与工具（裂隙/虚影阶）
+    public static final DeferredItem<Item> RIFT_BLADE = ITEMS.register("rift_blade",
+        id -> new RiftBlade(itemProperties(id).rarity(Rarity.UNCOMMON)));
+    public static final DeferredItem<Item> RIFT_AXE = ITEMS.register("rift_axe",
+        id -> new RiftAxe(itemProperties(id).rarity(Rarity.UNCOMMON)));
+    public static final DeferredItem<Item> RIFT_PICKAXE = ITEMS.register("rift_pickaxe",
+        id -> new RiftPickaxe(itemProperties(id).rarity(Rarity.UNCOMMON)));
+
+    // 高阶终局武器（圣殿遗物阶）
     public static final DeferredItem<Item> NIHILITY_SWORD = ITEMS.register("nihility_sword",
-        id -> new NihilitySword(itemProperties(id).rarity(Rarity.UNCOMMON)));
+        id -> new NihilitySword(itemProperties(id).rarity(Rarity.RARE)));
 
     public static final DeferredItem<Item> NIHILITY_DAGGER = ITEMS.register("nihility_dagger",
-        id -> new NihilityDagger(itemProperties(id).rarity(Rarity.UNCOMMON)));
+        id -> new NihilityDagger(itemProperties(id).rarity(Rarity.RARE)));
 
     public static final DeferredItem<Item> NIHILITY_GREATSWORD = ITEMS.register("nihility_greatsword",
-        id -> new NihilityGreatsword(itemProperties(id).rarity(Rarity.RARE)));
+        id -> new NihilityGreatsword(itemProperties(id).rarity(Rarity.EPIC)));
 
     // 工具
     public static final DeferredItem<Item> NIHILITY_PICKAXE = ITEMS.register("nihility_pickaxe",
@@ -289,18 +305,35 @@ public class ModItems {
         id -> new NihilityTooltipItem(itemProperties(id).stacksTo(1).rarity(Rarity.EPIC),
             true, "tooltip.templenihility.nihility_conduit_charm"));
 
-    // 装备
+    // 低阶护甲（空寂护甲）
+    public static final DeferredItem<Item> STILLSTONE_HELMET = ITEMS.register("stillstone_helmet",
+        id -> new NihilityArmor(NihilityArmor.Tier.STILLSTONE, ArmorType.HELMET, itemProperties(id).rarity(Rarity.COMMON)));
+    public static final DeferredItem<Item> STILLSTONE_CHESTPLATE = ITEMS.register("stillstone_chestplate",
+        id -> new NihilityArmor(NihilityArmor.Tier.STILLSTONE, ArmorType.CHESTPLATE, itemProperties(id).rarity(Rarity.COMMON)));
+    public static final DeferredItem<Item> STILLSTONE_LEGGINGS = ITEMS.register("stillstone_leggings",
+        id -> new NihilityArmor(NihilityArmor.Tier.STILLSTONE, ArmorType.LEGGINGS, itemProperties(id).rarity(Rarity.COMMON)));
+    public static final DeferredItem<Item> STILLSTONE_BOOTS = ITEMS.register("stillstone_boots",
+        id -> new NihilityArmor(NihilityArmor.Tier.STILLSTONE, ArmorType.BOOTS, itemProperties(id).rarity(Rarity.COMMON)));
+
+    // 中阶护甲（虚影护甲）
+    public static final DeferredItem<Item> SHADE_HELMET = ITEMS.register("shade_helmet",
+        id -> new NihilityArmor(NihilityArmor.Tier.SHADE, ArmorType.HELMET, itemProperties(id).rarity(Rarity.UNCOMMON)));
+    public static final DeferredItem<Item> SHADE_CHESTPLATE = ITEMS.register("shade_chestplate",
+        id -> new NihilityArmor(NihilityArmor.Tier.SHADE, ArmorType.CHESTPLATE, itemProperties(id).rarity(Rarity.UNCOMMON)));
+    public static final DeferredItem<Item> SHADE_LEGGINGS = ITEMS.register("shade_leggings",
+        id -> new NihilityArmor(NihilityArmor.Tier.SHADE, ArmorType.LEGGINGS, itemProperties(id).rarity(Rarity.UNCOMMON)));
+    public static final DeferredItem<Item> SHADE_BOOTS = ITEMS.register("shade_boots",
+        id -> new NihilityArmor(NihilityArmor.Tier.SHADE, ArmorType.BOOTS, itemProperties(id).rarity(Rarity.UNCOMMON)));
+
+    // 高阶终局护甲（虚无护甲）
     public static final DeferredItem<Item> NIHILITY_HELMET = ITEMS.register("nihility_helmet",
-        id -> new NihilityArmor(ArmorType.HELMET, itemProperties(id).rarity(Rarity.UNCOMMON)));
-
+        id -> new NihilityArmor(NihilityArmor.Tier.NIHILITY, ArmorType.HELMET, itemProperties(id).rarity(Rarity.RARE)));
     public static final DeferredItem<Item> NIHILITY_CHESTPLATE = ITEMS.register("nihility_chestplate",
-        id -> new NihilityArmor(ArmorType.CHESTPLATE, itemProperties(id).rarity(Rarity.UNCOMMON)));
-
+        id -> new NihilityArmor(NihilityArmor.Tier.NIHILITY, ArmorType.CHESTPLATE, itemProperties(id).rarity(Rarity.RARE)));
     public static final DeferredItem<Item> NIHILITY_LEGGINGS = ITEMS.register("nihility_leggings",
-        id -> new NihilityArmor(ArmorType.LEGGINGS, itemProperties(id).rarity(Rarity.UNCOMMON)));
-
+        id -> new NihilityArmor(NihilityArmor.Tier.NIHILITY, ArmorType.LEGGINGS, itemProperties(id).rarity(Rarity.RARE)));
     public static final DeferredItem<Item> NIHILITY_BOOTS = ITEMS.register("nihility_boots",
-        id -> new NihilityArmor(ArmorType.BOOTS, itemProperties(id).rarity(Rarity.UNCOMMON)));
+        id -> new NihilityArmor(NihilityArmor.Tier.NIHILITY, ArmorType.BOOTS, itemProperties(id).rarity(Rarity.RARE)));
 
     static Item.Properties itemProperties(Identifier id) {
         return new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id));
