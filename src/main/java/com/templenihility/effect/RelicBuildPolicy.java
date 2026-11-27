@@ -112,6 +112,38 @@ public final class RelicBuildPolicy {
     /**
      * Rift Dagger Missing Mark detonation bonus: 6.0 + 8% target max HP (capped at +18 bonus).
      */
+    /**
+     * True lethal execute finisher for Blade of Zero against non-boss targets:
+     * triggers at <= 25% remaining HP (or <= 35% with 3 Existence Reduction stacks).
+     */
+    public static boolean shouldLethalZeroExecute(float remainingHealth, float maxHealth,
+                                                  int existenceStacks, boolean interruptImmune) {
+        if (interruptImmune || maxHealth <= 0.0F || remainingHealth <= 0.0F) {
+            return false;
+        }
+        float threshold = existenceStacks >= 3 ? 0.35F : 0.25F;
+        return (remainingHealth / maxHealth) <= threshold;
+    }
+
+    /**
+     * Boundary Greatsword 3-wave escalating damage multipliers (total ~3.45x across 3 hits).
+     */
+    public static float boundaryWaveDamageMultiplier(int wave) {
+        return switch (wave) {
+            case 0 -> 0.90F;
+            case 1 -> 1.10F;
+            default -> 1.45F;
+        };
+    }
+
+    public static float boundaryWaveFlatBonus(int wave) {
+        return switch (wave) {
+            case 0 -> 2.0F;
+            case 1 -> 4.0F;
+            default -> 7.0F;
+        };
+    }
+
     public static float missingMarkExecuteBonus(float targetMaxHealth) {
         float pct = Math.min(18.0F, Math.max(0.0F, targetMaxHealth) * 0.08F);
         return 6.0F + pct;

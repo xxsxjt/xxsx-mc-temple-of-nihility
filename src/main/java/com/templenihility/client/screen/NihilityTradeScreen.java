@@ -1,5 +1,6 @@
 package com.templenihility.client.screen;
 
+import com.templenihility.TempleNihilityMod;
 import com.templenihility.menu.NihilityTradeMenu;
 import com.templenihility.trade.TradeOffer;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -10,24 +11,23 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.util.Mth;
 
-/** 原版村民交易布局的虚无风格交易界面。 */
+/** 虚无黑曜石风格圣殿契约交易界面。 */
 public class NihilityTradeScreen extends AbstractContainerScreen<NihilityTradeMenu> {
-    private static final Identifier BACKGROUND = Identifier.withDefaultNamespace("textures/gui/container/villager.png");
-    private static final Identifier SCROLLER = Identifier.withDefaultNamespace("container/villager/scroller");
-    private static final Identifier SCROLLER_DISABLED = Identifier.withDefaultNamespace("container/villager/scroller_disabled");
-    private static final Identifier TRADE_ARROW = Identifier.withDefaultNamespace("container/villager/trade_arrow");
+    private static final Identifier BACKGROUND = Identifier.fromNamespaceAndPath(
+        TempleNihilityMod.MOD_ID, "textures/gui/nihility_trade.png");
 
-    private static final int OFFER_X = 5;
-    private static final int OFFER_Y = 17;
-    private static final int OFFER_WIDTH = 88;
-    private static final int OFFER_HEIGHT = 20;
-    private static final int SCROLL_X = 94;
-    private static final int SCROLL_Y = 18;
-    private static final int SCROLL_HEIGHT = 139;
+    private static final int OFFER_X = 7;
+    private static final int OFFER_Y = 21;
+    private static final int OFFER_WIDTH = 85;
+    private static final int OFFER_HEIGHT = 19;
+    private static final int SCROLL_X = 95;
+    private static final int SCROLL_Y = 21;
+    private static final int SCROLL_WIDTH = 6;
+    private static final int SCROLL_HEIGHT = 133;
 
     private Button tradeButton;
     private int scrollOffset;
@@ -36,7 +36,7 @@ public class NihilityTradeScreen extends AbstractContainerScreen<NihilityTradeMe
     public NihilityTradeScreen(NihilityTradeMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title, 276, 166);
         this.inventoryLabelX = 108;
-        this.inventoryLabelY = 72;
+        this.inventoryLabelY = 73;
     }
 
     @Override
@@ -44,7 +44,7 @@ public class NihilityTradeScreen extends AbstractContainerScreen<NihilityTradeMe
         super.init();
         tradeButton = addRenderableWidget(Button.builder(Component.translatable("screen.templenihility.trade_button"),
                 button -> sendButton(NihilityTradeMenu.BUTTON_TRADE))
-            .bounds(leftPos + 188, topPos + 58, 80, 20)
+            .bounds(leftPos + 198, topPos + 55, 70, 18)
             .tooltip(Tooltip.create(Component.translatable("screen.templenihility.trade_button_tip")))
             .build());
     }
@@ -63,34 +63,36 @@ public class NihilityTradeScreen extends AbstractContainerScreen<NihilityTradeMe
         super.extractBackground(graphics, mouseX, mouseY, partialTick);
         graphics.blit(RenderPipelines.GUI_TEXTURED, BACKGROUND,
             leftPos, topPos, 0, 0, imageWidth, imageHeight, 512, 256);
-
-        // A restrained cyan accent keeps the panel identifiable without replacing the vanilla container language.
-        graphics.fill(leftPos + 101, topPos + 17, leftPos + 268, topPos + 18, 0xFF24AEB7);
     }
 
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        int rightPanelCenter = 187;
-        int titleX = rightPanelCenter - font.width(title) / 2;
-        graphics.text(font, title, titleX, 6, 0xFF3F3532, false);
-        graphics.centeredText(font, Component.translatable("screen.templenihility.trade_contracts_label"), 49, 6,
-            0xFF3F3532);
-        graphics.text(font, Component.translatable("screen.templenihility.trade_tier", menu.getTier()),
-            108, 18, 0xFF6D7D7D, false);
+        // Left header centered over contracts well
+        graphics.centeredText(font, Component.translatable("screen.templenihility.trade_contracts_label"),
+            53, 8, 0xFFD8EEF2);
 
+        // Right header: trader title on left, tier badge flush right (zero overlap)
+        Component tierLabel = Component.translatable("screen.templenihility.trade_tier", menu.getTier());
+        int tierWidth = font.width(tierLabel);
+        int maxTitleWidth = Math.max(40, 154 - tierWidth);
+        graphics.text(font, compactText(title, maxTitleWidth), 108, 8, 0xFFE6F6F8, false);
+        graphics.text(font, tierLabel, 268 - tierWidth, 8, 0xFF56E0E8, false);
+
+        // Centered slot headers cleanly above slots at y=34
         graphics.centeredText(font, Component.translatable("screen.templenihility.trade_payment"),
-            NihilityTradeMenu.PAYMENT_SLOT_X + 8, 25, 0xFF566064);
+            NihilityTradeMenu.PAYMENT_SLOT_X + 8, 23, 0xFF8FB2BC);
         graphics.centeredText(font, Component.translatable("screen.templenihility.trade_required"),
-            NihilityTradeMenu.REQUIRED_SLOT_X + 8, 25, 0xFF566064);
+            NihilityTradeMenu.REQUIRED_SLOT_X + 8, 23, 0xFF8FB2BC);
         graphics.centeredText(font, Component.translatable("screen.templenihility.trade_result"),
-            NihilityTradeMenu.RESULT_SLOT_X + 8, 25, 0xFF566064);
+            NihilityTradeMenu.RESULT_SLOT_X + 8, 23, 0xFF8FB2BC);
 
         TradeOffer selectedOffer = menu.getSelectedOffer();
         if (selectedOffer != null) {
-            graphics.text(font, Component.translatable("screen.templenihility.trade_selected",
-                    compactOfferName(selectedOffer.getResult(), 76)), 108, 61, 0xFF7C5F54, false);
+            Component selText = Component.translatable("screen.templenihility.trade_selected",
+                compactOfferName(selectedOffer.getResult(), 64));
+            graphics.text(font, compactText(selText, 86), 108, 59, 0xFFA9CCD2, false);
         }
-        graphics.text(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0xFF404040, false);
+        graphics.text(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0xFF8FB2BC, false);
     }
 
     @Override
@@ -103,48 +105,58 @@ public class NihilityTradeScreen extends AbstractContainerScreen<NihilityTradeMe
                 drawOffer(graphics, index, row, offerRowAt(mouseX, mouseY) == row);
             }
         }
-        drawScroller(graphics, mouseX, mouseY);
+        drawScroller(graphics);
         addOfferTooltip(graphics, mouseX, mouseY);
     }
 
     private void drawOffer(GuiGraphicsExtractor graphics, int index, int row, boolean hovered) {
         TradeOffer offer = menu.getOffer(index);
-        int y = OFFER_Y + row * OFFER_HEIGHT;
+        int x = leftPos + OFFER_X;
+        int y = topPos + OFFER_Y + row * OFFER_HEIGHT;
         boolean selected = index == menu.getSelectedIndex();
 
-        if (selected || hovered) {
-            int fill = selected ? 0x3D24AEB7 : 0x2424AEB7;
-            graphics.fill(leftPos + OFFER_X, topPos + y, leftPos + OFFER_X + OFFER_WIDTH,
-                topPos + y + OFFER_HEIGHT, fill);
-            graphics.outline(leftPos + OFFER_X, topPos + y, OFFER_WIDTH, OFFER_HEIGHT,
-                selected ? 0xFF24AEB7 : 0xFF7BA7A9);
+        if (selected) {
+            graphics.fill(x, y, x + OFFER_WIDTH, y + OFFER_HEIGHT, 0x3D24AEB7);
+            graphics.outline(x, y, OFFER_WIDTH, OFFER_HEIGHT, 0xFF24AEB7);
+        } else if (hovered) {
+            graphics.fill(x, y, x + OFFER_WIDTH, y + OFFER_HEIGHT, 0x2424AEB7);
+            graphics.outline(x, y, OFFER_WIDTH, OFFER_HEIGHT, 0xFF4B7A86);
+        } else if (row % 2 == 1) {
+            graphics.fill(x + 1, y, x + OFFER_WIDTH - 1, y + OFFER_HEIGHT, 0x12FFFFFF);
         }
 
-        int itemY = y + 2;
-        graphics.fakeItem(offer.getCost(), leftPos + OFFER_X + 5, topPos + itemY);
-        graphics.itemDecorations(font, offer.getCost(), leftPos + OFFER_X + 5, topPos + itemY);
-        graphics.blitSprite(RenderPipelines.GUI_TEXTURED, TRADE_ARROW,
-            leftPos + OFFER_X + 50, topPos + itemY + 3, 10, 9);
-        graphics.fakeItem(offer.getResult(), leftPos + OFFER_X + 68, topPos + itemY);
-        graphics.itemDecorations(font, offer.getResult(), leftPos + OFFER_X + 68, topPos + itemY);
+        int itemY = y + 1;
+        graphics.fakeItem(offer.getCost(), x + 5, itemY);
+        graphics.itemDecorations(font, offer.getCost(), x + 5, itemY);
+
+        // Crisp custom cyan mini-arrow between cost and result
+        int arrowX = x + 36;
+        int arrowY = y + 9;
+        int shaftColor = selected ? 0xFF56E0E8 : 0xFF24AEB7;
+        graphics.fill(arrowX, arrowY, arrowX + 11, arrowY + 2, shaftColor);
+        graphics.fill(arrowX + 11, arrowY - 2, arrowX + 12, arrowY + 4, shaftColor);
+        graphics.fill(arrowX + 12, arrowY - 1, arrowX + 13, arrowY + 3, 0xFF7FF0F5);
+        graphics.fill(arrowX + 13, arrowY, arrowX + 14, arrowY + 2, 0xFF7FF0F5);
+
+        graphics.fakeItem(offer.getResult(), x + 62, itemY);
+        graphics.itemDecorations(font, offer.getResult(), x + 62, itemY);
     }
 
-    private void drawScroller(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        if (maxScrollOffset() <= 0) {
-            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, SCROLLER_DISABLED,
-                leftPos + SCROLL_X, topPos + SCROLL_Y, 6, 27);
+    private void drawScroller(GuiGraphicsExtractor graphics) {
+        int sx = leftPos + SCROLL_X;
+        int sy = topPos + SCROLL_Y;
+        int maxScroll = maxScrollOffset();
+        if (maxScroll <= 0) {
+            graphics.fill(sx, sy, sx + SCROLL_WIDTH, sy + 24, 0xFF1E2B3D);
+            graphics.outline(sx, sy, SCROLL_WIDTH, 24, 0xFF2C3E56);
             return;
         }
 
-        int steps = menu.getOfferCount() + 1 - NihilityTradeMenu.OFFERS_PER_PAGE;
-        int leftOver = SCROLL_HEIGHT - (27 + (steps - 1) * SCROLL_HEIGHT / steps);
-        int stepHeight = 1 + leftOver / steps + SCROLL_HEIGHT / steps;
-        int scrollerOffset = Math.min(113, scrollOffset * stepHeight);
-        if (scrollOffset == maxScrollOffset()) {
-            scrollerOffset = 113;
-        }
-        graphics.blitSprite(RenderPipelines.GUI_TEXTURED, SCROLLER,
-            leftPos + SCROLL_X, topPos + SCROLL_Y + scrollerOffset, 6, 27);
+        int thumbHeight = Math.max(22, SCROLL_HEIGHT * NihilityTradeMenu.OFFERS_PER_PAGE / menu.getOfferCount());
+        int trackSpan = Math.max(1, SCROLL_HEIGHT - thumbHeight);
+        int offset = Math.round((float) scrollOffset / maxScroll * trackSpan);
+        graphics.fill(sx, sy + offset, sx + SCROLL_WIDTH, sy + offset + thumbHeight, 0xFF24AEB7);
+        graphics.outline(sx, sy + offset, SCROLL_WIDTH, thumbHeight, 0xFF56E0E8);
     }
 
     private void addOfferTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
@@ -195,7 +207,7 @@ public class NihilityTradeScreen extends AbstractContainerScreen<NihilityTradeMe
         if (event.button() == 0) {
             int localX = (int) event.x() - leftPos;
             int localY = (int) event.y() - topPos;
-            if (maxScrollOffset() > 0 && localX >= SCROLL_X && localX <= SCROLL_X + 6
+            if (maxScrollOffset() > 0 && localX >= SCROLL_X && localX <= SCROLL_X + SCROLL_WIDTH
                 && localY >= SCROLL_Y && localY <= SCROLL_Y + SCROLL_HEIGHT) {
                 draggingScroller = true;
                 return true;
@@ -216,7 +228,7 @@ public class NihilityTradeScreen extends AbstractContainerScreen<NihilityTradeMe
         if (draggingScroller && maxScrollOffset() > 0) {
             int fullTop = topPos + SCROLL_Y;
             int fullBottom = fullTop + SCROLL_HEIGHT;
-            float normalized = ((float) event.y() - fullTop - 13.5f) / (fullBottom - fullTop - 27.0f);
+            float normalized = ((float) event.y() - fullTop - 12.0f) / Math.max(1.0f, fullBottom - fullTop - 24.0f);
             scrollOffset = Mth.clamp((int) (normalized * maxScrollOffset() + 0.5f), 0, maxScrollOffset());
             return true;
         }
@@ -230,15 +242,17 @@ public class NihilityTradeScreen extends AbstractContainerScreen<NihilityTradeMe
     }
 
     private Component compactOfferName(ItemStack stack, int maxWidth) {
-        Component hoverName = stack.getHoverName();
-        String name = hoverName.getString();
-        if (font.width(name) <= maxWidth) {
-            return hoverName;
-        }
+        return compactText(stack.getHoverName(), maxWidth);
+    }
 
+    private Component compactText(Component text, int maxWidth) {
+        String raw = text.getString();
+        if (font.width(raw) <= maxWidth) {
+            return text;
+        }
         String suffix = "...";
         int bodyWidth = Math.max(0, maxWidth - font.width(suffix));
-        return Component.literal(font.plainSubstrByWidth(name, bodyWidth) + suffix);
+        return Component.literal(font.plainSubstrByWidth(raw, bodyWidth) + suffix);
     }
 
     private void sendButton(int id) {

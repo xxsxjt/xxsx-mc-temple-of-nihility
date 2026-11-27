@@ -25,10 +25,10 @@ public class NihilityTradeMenu extends AbstractContainerMenu {
     public static final int OFFERS_PER_PAGE = 7;
     public static final int BUTTON_TRADE = 0;
     public static final int BUTTON_SELECT_BASE = 100;
-    public static final int PAYMENT_SLOT_X = 136;
-    public static final int REQUIRED_SLOT_X = 162;
-    public static final int RESULT_SLOT_X = 220;
-    public static final int TRADE_SLOT_Y = 37;
+    public static final int PAYMENT_SLOT_X = 128;
+    public static final int REQUIRED_SLOT_X = 174;
+    public static final int RESULT_SLOT_X = 230;
+    public static final int TRADE_SLOT_Y = 34;
 
     private final SimpleContainer payment = new SimpleContainer(1) {
         @Override
@@ -78,6 +78,7 @@ public class NihilityTradeMenu extends AbstractContainerMenu {
             int index = buttonId - BUTTON_SELECT_BASE;
             if (index >= 0 && index < offers.size()) {
                 data[1] = index;
+                autoFillPaymentForOffer(player, offers.get(index));
                 updatePreview();
                 broadcastFullState();
                 return true;
@@ -210,6 +211,44 @@ public class NihilityTradeMenu extends AbstractContainerMenu {
         updatePreview();
         broadcastFullState();
         return true;
+    }
+
+    private void autoFillPaymentForOffer(Player player, TradeOffer offer) {
+        if (player == null || offer == null) {
+            return;
+        }
+        ItemStack cost = offer.getCost();
+        ItemStack current = payment.getItem(0);
+        if (!current.isEmpty() && !ItemStack.isSameItemSameComponents(current, cost)) {
+            if (!player.getInventory().add(current.copy())) {
+                return;
+            }
+            payment.setItem(0, ItemStack.EMPTY);
+            current = ItemStack.EMPTY;
+        }
+        int maxStack = current.isEmpty() ? cost.getMaxStackSize() : current.getMaxStackSize();
+        int currentCount = current.isEmpty() ? 0 : current.getCount();
+        int space = maxStack - currentCount;
+        if (space <= 0) {
+            return;
+        }
+        Inventory inv = player.getInventory();
+        for (int i = 0; i < inv.getContainerSize() && space > 0; i++) {
+            ItemStack invStack = inv.getItem(i);
+            if (invStack.isEmpty() || !ItemStack.isSameItemSameComponents(invStack, cost)) {
+                continue;
+            }
+            int move = Math.min(space, invStack.getCount());
+            if (current.isEmpty()) {
+                current = invStack.split(move);
+                payment.setItem(0, current);
+            } else {
+                invStack.shrink(move);
+                current.grow(move);
+            }
+            space -= move;
+        }
+        payment.setChanged();
     }
 
     private NihilityCreature getTrader(Player player) {

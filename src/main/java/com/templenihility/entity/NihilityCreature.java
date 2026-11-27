@@ -61,46 +61,58 @@ public abstract class NihilityCreature extends PathfinderMob {
     public static AttributeSupplier.Builder createAttributes(int tier) {
         return PathfinderMob.createMobAttributes()
             .add(Attributes.MAX_HEALTH, switch (tier) {
-                case 1 -> 24.0;
-                case 2 -> 36.0;
-                case 3 -> 54.0;
-                case 4 -> 82.0;
-                default -> 150.0;
+                case 1 -> 44.0;
+                case 2 -> 76.0;
+                case 3 -> 128.0;
+                case 4 -> 220.0;
+                default -> 420.0;
             })
             .add(Attributes.ATTACK_DAMAGE, switch (tier) {
-                case 1 -> 3.0;
-                case 2 -> 5.0;
-                case 3 -> 7.5;
-                case 4 -> 11.0;
-                default -> 18.0;
+                case 1 -> 6.0;
+                case 2 -> 9.0;
+                case 3 -> 13.5;
+                case 4 -> 18.5;
+                default -> 26.0;
             })
             .add(Attributes.ARMOR, switch (tier) {
+                case 1 -> 4.0;
+                case 2 -> 8.0;
+                case 3 -> 12.0;
+                case 4 -> 16.0;
+                default -> 20.0;
+            })
+            .add(Attributes.ARMOR_TOUGHNESS, switch (tier) {
                 case 1 -> 0.0;
                 case 2 -> 2.0;
-                case 3 -> 5.0;
-                case 4 -> 8.0;
-                default -> 14.0;
+                case 3 -> 4.0;
+                case 4 -> 6.0;
+                default -> 10.0;
             })
-            .add(Attributes.ARMOR_TOUGHNESS, tier >= 4 ? tier * 1.5 : 0.0)
-            .add(Attributes.ATTACK_KNOCKBACK, tier >= 3 ? tier * 0.12 : 0.0)
-            .add(Attributes.KNOCKBACK_RESISTANCE, tier >= 4 ? 0.15 + tier * 0.05 : 0.0)
+            .add(Attributes.ATTACK_KNOCKBACK, tier >= 2 ? tier * 0.16 : 0.0)
+            .add(Attributes.KNOCKBACK_RESISTANCE, switch (tier) {
+                case 1 -> 0.15;
+                case 2 -> 0.25;
+                case 3 -> 0.40;
+                case 4 -> 0.65;
+                default -> 0.85;
+            })
             .add(Attributes.MOVEMENT_SPEED, switch (tier) {
-                case 1 -> 0.25;
-                case 2 -> 0.27;
-                case 3 -> 0.29;
-                case 4 -> 0.27;
-                default -> 0.24;
+                case 1 -> 0.28;
+                case 2 -> 0.30;
+                case 3 -> 0.32;
+                case 4 -> 0.31;
+                default -> 0.30;
             })
-            .add(Attributes.FOLLOW_RANGE, 24.0 + tier * 8.0)
+            .add(Attributes.FOLLOW_RANGE, 28.0 + tier * 8.0)
             .add(Attributes.SCALE, 0.9 + tier * 0.09)
-            .add(Attributes.STEP_HEIGHT, tier >= 4 ? 1.0 : 0.6);
+            .add(Attributes.STEP_HEIGHT, tier >= 3 ? 1.0 : 0.6);
     }
 
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new CreatureActionLockGoal(this));
-        this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.0, true));
+        this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.18, true));
         if (getTier() >= 2) {
             this.goalSelector.addGoal(3, new MoveTowardsRestrictionGoal(this, 0.9));
         }

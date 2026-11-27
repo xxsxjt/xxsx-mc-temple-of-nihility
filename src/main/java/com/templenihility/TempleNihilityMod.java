@@ -146,6 +146,10 @@ public class TempleNihilityMod {
             Capabilities.Energy.BLOCK,
             ModBlockEntities.NIHILITY_ENERGY_PRISM.get(),
             (prism, side) -> prism.getEnergyHandler());
+        event.registerBlockEntity(
+            Capabilities.Item.BLOCK,
+            ModBlockEntities.NIHILITY_VAULT.get(),
+            (vault, side) -> new com.templenihility.storage.NihilityVaultItemHandler(vault));
     }
 
     private void registerTicketControllers(RegisterTicketControllersEvent event) {

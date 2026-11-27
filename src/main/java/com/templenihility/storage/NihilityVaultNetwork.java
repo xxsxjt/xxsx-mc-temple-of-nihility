@@ -73,6 +73,22 @@ public final class NihilityVaultNetwork {
         return owner == null || owner.equals(player.getUUID());
     }
 
+    /**
+     * Scans the connected same-owner Void Vault network for automation / capability bridges
+     * (AE2 Storage Bus, Refined Storage External Storage, hoppers/pipes, Easy Autocrafting).
+     */
+    public static List<NihilityVaultBlockEntity> scanForAutomation(ServerLevel level, BlockPos origin) {
+        if (level == null || origin == null || !level.isLoaded(origin)
+            || !(level.getBlockEntity(origin) instanceof NihilityVaultBlockEntity originVault)) {
+            return List.of();
+        }
+        ScanResult scan = scan(level, origin, originVault.getOwner().orElse(null));
+        if (scan.vaults().isEmpty() || scan.exceededLimit()) {
+            return List.of(originVault);
+        }
+        return List.copyOf(scan.vaults());
+    }
+
     private static ScanResult scan(ServerLevel level, BlockPos origin, UUID accessorOwner) {
         List<NihilityVaultBlockEntity> vaults = new ArrayList<>();
         if (!level.isLoaded(origin)

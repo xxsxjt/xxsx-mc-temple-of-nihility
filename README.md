@@ -6,8 +6,8 @@
 
 | 分支 | Minecraft | Loader | Loader 版本 | Mod 版本 | 发布产物 |
 |---|---|---|---|---|---|
-| `main` / `release/neoforge-26.1.2`（主用稳定版） | `26.1.2` | NeoForge | `26.1.2.124+` | `1.0.0-beta.6` | `temple-of-nihility-neoforge-26.1.2-1.0.0-beta.6.jar` |
-| `release/neoforge-26.2`（26.2 并行版） | `26.2` | NeoForge | `26.2.0.93+` | `1.0.0-beta.6` | `temple-of-nihility-neoforge-26.2-1.0.0-beta.6.jar` |
+| `main` / `release/neoforge-26.1.2`（主用稳定版） | `26.1.2` | NeoForge | `26.1.2.124+` | `1.0.0-beta.7` | `temple-of-nihility-neoforge-26.1.2-1.0.0-beta.7.jar` |
+| `release/neoforge-26.2`（26.2 并行版） | `26.2` | NeoForge | `26.2.0.93+` | `1.0.0-beta.7` | `temple-of-nihility-neoforge-26.2-1.0.0-beta.7.jar` |
 
 > 下载时请从 [GitHub Releases](https://github.com/xxsxjt/xxsx-mc-temple-of-nihility/releases) 选择与你的 Minecraft 版本一致的 JAR（`Latest` 默认指向 **NeoForge 26.1.2** 稳定版）。
 
@@ -49,8 +49,8 @@
 ```
 
 构建产物输出于 `build/libs/`：
-- `main` / `release/neoforge-26.1.2`：`build/libs/temple-of-nihility-neoforge-26.1.2-1.0.0-beta.6.jar`
-- `release/neoforge-26.2`：`build/libs/temple-of-nihility-neoforge-26.2-1.0.0-beta.6.jar`
+- `main` / `release/neoforge-26.1.2`：`build/libs/temple-of-nihility-neoforge-26.1.2-1.0.0-beta.7.jar`
+- `release/neoforge-26.2`：`build/libs/temple-of-nihility-neoforge-26.2-1.0.0-beta.7.jar`
 
 ## 开源协议（License）
 

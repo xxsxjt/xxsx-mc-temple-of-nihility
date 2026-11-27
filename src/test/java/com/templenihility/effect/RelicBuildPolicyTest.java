@@ -110,4 +110,23 @@ class RelicBuildPolicyTest {
         assertEquals(30, mixed31.vpMaxBonus());
         assertEquals(0.10, mixed31.dodgeChance(), 0.0001);
     }
+
+    @Test
+    void lethalZeroExecuteHonorsBossImmunityAndStacks() {
+        assertTrue(RelicBuildPolicy.shouldLethalZeroExecute(24.0F, 100.0F, 0, false));
+        assertFalse(RelicBuildPolicy.shouldLethalZeroExecute(30.0F, 100.0F, 0, false));
+        assertTrue(RelicBuildPolicy.shouldLethalZeroExecute(34.0F, 100.0F, 3, false));
+        assertFalse(RelicBuildPolicy.shouldLethalZeroExecute(10.0F, 100.0F, 3, true));
+        assertFalse(RelicBuildPolicy.shouldLethalZeroExecute(0.0F, 100.0F, 3, false));
+    }
+
+    @Test
+    void boundaryWaveDamageEscalatesAcrossAllThreeWaves() {
+        float w0 = RelicBuildPolicy.boundaryWaveDamageMultiplier(0);
+        float w1 = RelicBuildPolicy.boundaryWaveDamageMultiplier(1);
+        float w2 = RelicBuildPolicy.boundaryWaveDamageMultiplier(2);
+        assertTrue(w0 > 0.0F && w1 > w0 && w2 > w1);
+        assertTrue(RelicBuildPolicy.boundaryWaveFlatBonus(2) > RelicBuildPolicy.boundaryWaveFlatBonus(1));
+        assertTrue(RelicBuildPolicy.boundaryWaveFlatBonus(1) > RelicBuildPolicy.boundaryWaveFlatBonus(0));
+    }
 }
