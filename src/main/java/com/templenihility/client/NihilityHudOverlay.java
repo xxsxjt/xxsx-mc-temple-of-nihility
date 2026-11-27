@@ -1,37 +1,44 @@
 package com.templenihility.client;
 
+import com.templenihility.effect.CombatFeedbackPolicy;
 import com.templenihility.effect.CombatFeedbackPolicy.ToastEntry;
 import java.util.List;
+import net.minecraft.client.AttackIndicatorStatus;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 
+/**
+ * Compact Nihility Energy HUD anchored right of the hotbar + coalesced non-spam
+ * combat micro-toasts and subtle peripheral edge shimmer for Phase Dodge / death saves.
+ * Fully bilingual (en_us / zh_cn) and respects vanilla Hotbar Attack Indicator spacing.
+ */
 public final class NihilityHudOverlay {
     private static final int BAR_WIDTH = 94;
     private static final int BAR_HEIGHT = 21;
 
     public static void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.player.isSpectator()) {
+        Player player = mc.player;
+        if (player == null || player.isSpectator()) {
             return;
         }
-        Player player = mc.player;
         int w = graphics.guiWidth();
         int h = graphics.guiHeight();
 
+        // 1. Subtle 2px peripheral screen-edge shimmer on Phase Dodge / Aegis / Death Save
         int edgeTicks = NihilityHudState.edgeFlashTicks();
         if (edgeTicks > 0) {
-            float ea = Math.min(1.0F, edgeTicks / 9.0F);
-            int rgb = NihilityHudState.edgeFlashColor() & 0x00FFFFFF;
-            int outer = withAlpha(rgb, (int) (ea * 135.0F));
-            int inner = withAlpha(rgb, (int) (ea * 48.0F));
-            int marginY = Math.max(12, h / 8);
-            graphics.fill(0, marginY, 2, h - marginY, outer);
-            graphics.fill(2, marginY + 8, 4, h - marginY - 8, inner);
-            graphics.fill(w - 2, marginY, w, h - marginY, outer);
-            graphics.fill(w - 4, marginY + 8, w - 2, h - marginY - 8, inner);
+            float ratio = edgeTicks / 9.0F;
+            int edgeAlpha = (int) (ratio * 110.0F);
+            int edgeCol = withAlpha(NihilityHudState.edgeFlashColor(), edgeAlpha);
+            graphics.fill(0, 0, w, 2, edgeCol);
+            graphics.fill(0, h - 2, w, h, edgeCol);
+            graphics.fill(0, 2, 2, h - 2, edgeCol);
+            graphics.fill(w - 2, 2, w, h - 2, edgeCol);
         }
 
         if (!NihilityHudState.shouldRenderBar(player)) {
@@ -40,40 +47,36 @@ public final class NihilityHudOverlay {
 
         Font font = mc.font;
         float alpha = NihilityHudState.hudAlpha();
-
-        int x = Math.min(w - BAR_WIDTH - 6, w / 2 + 99);
-        int y = h - BAR_HEIGHT - 2;
-
-        int bgColor = withAlpha(0x090B0E, (int) (alpha * 212.0F));
-        int borderRgb = NihilityHudState.overdriveTicks() > 0
-            ? 0xF59E0B
-            : (NihilityHudState.counterTicks() > 0 ? 0xFDE68A : 0x475569);
-        int borderColor = withAlpha(borderRgb, (int) (alpha * 225.0F));
-        graphics.fill(x, y, x + BAR_WIDTH, y + BAR_HEIGHT, bgColor);
-        graphics.outline(x, y, BAR_WIDTH, BAR_HEIGHT, borderColor);
-
-        if (NihilityHudState.counterTicks() > 0) {
-            int cw = Math.max(1, (int) ((BAR_WIDTH - 2) * Math.min(1.0F, NihilityHudState.counterTicks() / 80.0F)));
-            graphics.fill(x + 1, y + 1, x + 1 + cw, y + 2, withAlpha(0xFDE68A, (int) (alpha * 245.0F)));
-        } else if (NihilityHudState.overdriveTicks() > 0) {
-            int ow = Math.max(1, (int) ((BAR_WIDTH - 2) * Math.min(1.0F, NihilityHudState.overdriveTicks() / 160.0F)));
-            graphics.fill(x + 1, y + 1, x + 1 + ow, y + 2, withAlpha(0xF59E0B, (int) (alpha * 245.0F)));
-        }
+        boolean hasHotbarIndicator = mc.options.attackIndicator().get() == AttackIndicatorStatus.HOTBAR;
+        int x = CombatFeedbackPolicy.computeHudAnchorX(w, BAR_WIDTH, hasHotbarIndicator);
+        int y = h - 23;
 
         int power = NihilityHudState.power();
-        int maxPower = NihilityHudState.maxPower();
+        int maxPower = Math.max(1, NihilityHudState.maxPower());
+        boolean lowEnergy = CombatFeedbackPolicy.isLowEnergy(power, maxPower);
+        boolean flashing = NihilityHudState.energyFlashTicks() > 0;
+        int bgCol = withAlpha(0x090B0E, (int) (alpha * 208.0F));
+        int borderRgb = flashing ? 0xE2E8F0 : (lowEnergy ? 0xBE123C : 0x475569);
+        int borderCol = withAlpha(borderRgb, (int) (alpha * 225.0F));
+
+        graphics.fill(x, y, x + BAR_WIDTH, y + BAR_HEIGHT, bgCol);
+        graphics.outline(x, y, BAR_WIDTH, BAR_HEIGHT, borderCol);
+
+        // Energy numeric readout (left)
         String energyText = power + "/" + maxPower;
-        int labelCol = withAlpha(NihilityHudState.energyFlashTicks() > 0 ? 0xFFFFFF : 0xE2E8F0,
-            (int) (alpha * 245.0F));
+        int labelCol = withAlpha(flashing ? 0xFFFFFF : (lowEnergy ? 0xFDA4AF : 0xE2E8F0), (int) (alpha * 245.0F));
         graphics.text(font, energyText, x + 5, y + 4, labelCol, false);
 
+        // Compact active state badge (right side of bar header)
         if (NihilityHudState.counterTicks() > 0) {
-            String tag = "反击";
+            int sec = Math.max(1, (NihilityHudState.counterTicks() + 19) / 20);
+            String tag = Component.translatable("hud.templenihility.counter", sec).getString();
             int tw = font.width(tag);
             graphics.text(font, tag, x + BAR_WIDTH - tw - 4, y + 4,
                 withAlpha(0xFDE68A, (int) (alpha * 255.0F)), false);
         } else if (NihilityHudState.overdriveTicks() > 0) {
-            String tag = "过载";
+            int sec = Math.max(1, (NihilityHudState.overdriveTicks() + 19) / 20);
+            String tag = Component.translatable("hud.templenihility.overdrive", sec).getString();
             int tw = font.width(tag);
             graphics.text(font, tag, x + BAR_WIDTH - tw - 4, y + 4,
                 withAlpha(0xF59E0B, (int) (alpha * 255.0F)), false);
@@ -89,7 +92,7 @@ public final class NihilityHudOverlay {
             }
         } else if (NihilityHudState.soulShieldTenths() > 0) {
             int sh = Math.max(1, (NihilityHudState.soulShieldTenths() + 5) / 10);
-            String tag = "盾" + sh;
+            String tag = Component.translatable("hud.templenihility.shield", sh).getString();
             int tw = font.width(tag);
             graphics.text(font, tag, x + BAR_WIDTH - tw - 4, y + 4,
                 withAlpha(0xFCA5A5, (int) (alpha * 240.0F)), false);
@@ -98,6 +101,7 @@ public final class NihilityHudOverlay {
                 withAlpha(0xC4B5FD, (int) (alpha * 230.0F)));
         }
 
+        // Crisp 3px void-energy progress bar with cold-white sheen
         int trackX = x + 4;
         int trackY = y + BAR_HEIGHT - 6;
         int trackW = BAR_WIDTH - 8;
@@ -105,11 +109,12 @@ public final class NihilityHudOverlay {
         float ratio = Math.max(0.0F, Math.min(1.0F, power / (float) maxPower));
         int fillW = (int) Math.round(trackW * ratio);
         if (fillW > 0) {
-            int fillCore = NihilityHudState.energyFlashTicks() > 0 ? 0xDDD6FE : 0x8B5CF6;
+            int fillCore = flashing ? 0xDDD6FE : (lowEnergy ? 0xE11D48 : 0x8B5CF6);
             graphics.fill(trackX, trackY, trackX + fillW, trackY + 3, withAlpha(fillCore, (int) (alpha * 245.0F)));
             graphics.fill(trackX, trackY, trackX + fillW, trackY + 1, withAlpha(0xF8FAFC, (int) (alpha * 230.0F)));
         }
 
+        // 2. Stacked coalesced combat micro-toasts directly above the energy bar (max 3)
         List<ToastEntry> toasts = NihilityHudState.toasts();
         int toastY = y - 16;
         for (ToastEntry entry : toasts) {
@@ -117,20 +122,22 @@ public final class NihilityHudOverlay {
             if (ta <= 0.04F) {
                 continue;
             }
-            String label = entry.formattedLabel();
+            String localizedBase = Component.translatable(entry.kind().translationKey).getString();
+            String label = entry.formatWithLabel(localizedBase);
             String delta = entry.energyDelta() > 0
                 ? "+" + entry.energyDelta()
                 : (entry.energyDelta() < 0 ? String.valueOf(entry.energyDelta()) : "");
+            int neededW = font.width(label) + (delta.isEmpty() ? 10 : font.width(delta) + 14);
+            int toastW = Math.min(Math.max(BAR_WIDTH, neededW), Math.max(BAR_WIDTH, w - x - 4));
             int accentRgb = entry.kind().accentArgb & 0x00FFFFFF;
-
-            graphics.fill(x, toastY, x + BAR_WIDTH, toastY + 14, withAlpha(0x090B0E, (int) (ta * 215.0F)));
+            graphics.fill(x, toastY, x + toastW, toastY + 14, withAlpha(0x090B0E, (int) (ta * 215.0F)));
             graphics.fill(x, toastY, x + 2, toastY + 14, withAlpha(accentRgb, (int) (ta * 255.0F)));
-            graphics.outline(x, toastY, BAR_WIDTH, 14, withAlpha(0x334155, (int) (ta * 170.0F)));
+            graphics.outline(x, toastY, toastW, 14, withAlpha(0x334155, (int) (ta * 170.0F)));
             graphics.text(font, label, x + 5, toastY + 3, withAlpha(0xF1F5F9, (int) (ta * 250.0F)), false);
             if (!delta.isEmpty()) {
                 int dw = font.width(delta);
                 int dRgb = entry.energyDelta() > 0 ? 0xC4B5FD : 0x94A3B8;
-                graphics.text(font, delta, x + BAR_WIDTH - dw - 4, toastY + 3,
+                graphics.text(font, delta, x + toastW - dw - 4, toastY + 3,
                     withAlpha(dRgb, (int) (ta * 245.0F)), false);
             }
             toastY -= 16;

@@ -2,9 +2,11 @@ package com.templenihility.energy;
 
 import com.templenihility.TempleNihilityMod;
 import com.templenihility.compat.CuriosCompat;
+import com.templenihility.effect.CombatFeedbackPolicy;
 import com.templenihility.effect.RelicBuildPolicy;
 import com.templenihility.item.NihilityArmor;
 import com.templenihility.item.NihilityArmorEvents;
+import com.templenihility.network.NihilityNetwork;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -42,6 +44,17 @@ public final class VoidPower {
         return max;
     }
 
+    public static int effectiveCost(Player player, int amount) {
+        if (amount <= 0) {
+            return 0;
+        }
+        int effectiveAmount = amount;
+        if (effectiveAmount > 1 && CuriosCompat.isChaosOverdriveActive(player)) {
+            effectiveAmount = Math.max(1, (effectiveAmount + 1) / 2);
+        }
+        return effectiveAmount;
+    }
+
     public static int add(Player player, int amount) {
         if (amount <= 0) {
             return get(player);
@@ -51,9 +64,13 @@ public final class VoidPower {
 
     public static int set(Player player, int value) {
         int max = getMax(player);
+        int previous = player.getPersistentData().getIntOr(PLAYER_KEY, 0);
         int clamped = Math.max(0, Math.min(max, value));
         player.getPersistentData().putInt(PLAYER_KEY, clamped);
         syncArmorTooltipPower(player);
+        if (clamped != previous && !player.level().isClientSide()) {
+            NihilityNetwork.syncHud(player);
+        }
         return clamped;
     }
 
@@ -61,16 +78,20 @@ public final class VoidPower {
         if (amount <= 0) {
             return true;
         }
-        int effectiveAmount = amount;
-        if (effectiveAmount > 1 && CuriosCompat.isChaosOverdriveActive(player)) {
-            effectiveAmount = Math.max(1, (effectiveAmount + 1) / 2);
-        }
+        int effectiveAmount = effectiveCost(player, amount);
         int power = get(player);
         if (power < effectiveAmount) {
             return false;
         }
         set(player, power - effectiveAmount);
         return true;
+    }
+
+    public static void copyOnClone(Player original, Player clone, boolean wasDeath) {
+        int prev = Math.max(0, original.getPersistentData().getIntOr(PLAYER_KEY, 0));
+        int retained = CombatFeedbackPolicy.retainedVoidPowerOnClone(prev, wasDeath);
+        clone.getPersistentData().putInt(PLAYER_KEY, Math.min(getMax(clone), retained));
+        syncArmorTooltipPower(clone);
     }
 
     public static boolean canStore(Player player) {
@@ -80,7 +101,7 @@ public final class VoidPower {
     }
 
     public static void syncArmorTooltipPower(Player player) {
-        int power = get(player);
+        int power = Math.max(0, Math.min(getMax(player), player.getPersistentData().getIntOr(PLAYER_KEY, 0)));
         int max = getMax(player);
         for (EquipmentSlot slot : new EquipmentSlot[] {
                 EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {

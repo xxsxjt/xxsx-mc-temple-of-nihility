@@ -43,10 +43,11 @@ public class NihilityAxe extends Item {
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
+        int effectiveCost = VoidPower.effectiveCost(player, SHATTER_CLEAVE_COST);
         if (!VoidPower.tryConsume(player, SHATTER_CLEAVE_COST)) {
             player.sendOverlayMessage(Component.translatable(
                 "message.templenihility.not_enough_void_power",
-                SHATTER_CLEAVE_COST, VoidPower.get(player), VoidPower.getMax(player)));
+                effectiveCost, VoidPower.get(player), VoidPower.getMax(player)));
             return InteractionResult.FAIL;
         }
 
@@ -90,7 +91,7 @@ public class NihilityAxe extends Item {
         player.getCooldowns().addCooldown(stack, SHATTER_CLEAVE_COOLDOWN);
         NihilityVisualEffects.itemUse(player, NihilityVisualEffects.Burst.WAR);
         if (hits > 0) {
-            NihilityNetwork.sendCombatFeedback(player, CombatFeedbackPolicy.Kind.AXE_SHATTER, -SHATTER_CLEAVE_COST, "破界碎甲 ×" + hits);
+            NihilityNetwork.sendCombatFeedback(player, CombatFeedbackPolicy.Kind.AXE_SHATTER, -effectiveCost, hits > 1 ? "×" + hits : "");
         }
         return InteractionResult.SUCCESS_SERVER;
     }

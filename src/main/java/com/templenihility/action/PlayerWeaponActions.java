@@ -226,7 +226,7 @@ public final class PlayerWeaponActions {
                 if (target.level() instanceof ServerLevel serverLevel) {
                     NihilityVisualEffects.weaponHitBurst(serverLevel, target, NihilityVisualEffects.WeaponAction.MISSING_STEP);
                 }
-                attacker.sendOverlayMessage(Component.translatable("message.templenihility.dagger_backstab"));
+                NihilityNetwork.sendCombatFeedback(attacker, CombatFeedbackPolicy.Kind.DAGGER_BACKSTAB, 4, "");
             }
         }
 
@@ -295,8 +295,9 @@ public final class PlayerWeaponActions {
         if (!canPrepare(player, stack, energyCost)) {
             return false;
         }
+        int effectiveCost = VoidPower.effectiveCost(player, energyCost);
         if (!VoidPower.tryConsume(player, energyCost)) {
-            sendNoPower(player, energyCost);
+            sendNoPower(player, effectiveCost);
             return false;
         }
 
@@ -324,8 +325,9 @@ public final class PlayerWeaponActions {
             player.sendOverlayMessage(Component.translatable("message.templenihility.item_cooldown"));
             return false;
         }
-        if (VoidPower.get(player) < energyCost) {
-            sendNoPower(player, energyCost);
+        int effectiveCost = VoidPower.effectiveCost(player, energyCost);
+        if (VoidPower.get(player) < effectiveCost) {
+            sendNoPower(player, effectiveCost);
             return false;
         }
         return true;

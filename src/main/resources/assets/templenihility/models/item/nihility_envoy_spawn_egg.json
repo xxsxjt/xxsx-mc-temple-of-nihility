@@ -1,0 +1,1 @@
+{ "parent": "minecraft:item/generated", "textures": { "layer0": "templenihility:item/nihility_envoy_spawn_egg" } }
