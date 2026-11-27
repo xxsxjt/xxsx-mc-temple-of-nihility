@@ -101,7 +101,6 @@ public class TempleNihilityMod {
         NeoForge.EVENT_BUS.addListener(PlayerWeaponActions::playerCloned);
         NeoForge.EVENT_BUS.addListener(NihilityActionService::playerLoggedOut);
         NeoForge.EVENT_BUS.addListener(GravityFieldManager::levelTick);
-        NeoForge.EVENT_BUS.addListener(TempleCommand::levelTick);
         NeoForge.EVENT_BUS.addListener(VoidPhaseEvents::playerTick);
         NeoForge.EVENT_BUS.addListener(VoidPhaseEvents::incomingDamage);
         NeoForge.EVENT_BUS.addListener(VoidPhaseEvents::invulnerabilityCheck);
@@ -145,6 +144,10 @@ public class TempleNihilityMod {
             Capabilities.Energy.BLOCK,
             ModBlockEntities.NIHILITY_ENERGY_PRISM.get(),
             (prism, side) -> prism.getEnergyHandler());
+        event.registerBlockEntity(
+            Capabilities.Item.BLOCK,
+            ModBlockEntities.NIHILITY_VAULT.get(),
+            (vault, side) -> new com.templenihility.storage.NihilityVaultItemHandler(vault));
     }
 
     private void registerTicketControllers(RegisterTicketControllersEvent event) {

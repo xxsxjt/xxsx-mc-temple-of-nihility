@@ -104,6 +104,59 @@ public final class NihilityVisualEffects {
         sound(level, BlockPos.containing(end), SoundEvents.AMETHYST_BLOCK_BREAK, 0.55F, 1.35F);
     }
 
+    /** Live advancing crescent sword-wave step fired every tick over 10 ticks so the slash visibly flies forward. */
+    public static void zeroSlashWaveStep(ServerLevel level, Vec3 origin, Vec3 direction,
+                                         double waveFront, double reach, int chargeTier, int step) {
+        Vec3 fwd = direction.normalize();
+        Vec3 right = new Vec3(-fwd.z, 0.0, fwd.x);
+        if (right.lengthSqr() < 1.0E-4) right = new Vec3(1.0, 0.0, 0.0);
+        else right = right.normalize();
+        Vec3 up = right.cross(fwd).normalize();
+
+        double arcRadius = 1.65 + chargeTier * 0.35 + step * 0.09;
+        double tilt = (chargeTier % 2 == 0 ? 0.30 : -0.28);
+        Vec3 center = origin.add(fwd.scale(waveFront));
+        int segs = 22 + chargeTier * 4;
+        for (int i = 0; i <= segs; i++) {
+            double t = i / (double) segs * 2.0 - 1.0;
+            double ang = t * 1.18;
+            double bulge = Math.cos(ang) * arcRadius * 0.65;
+            double lateral = Math.sin(ang) * arcRadius;
+            double vertical = lateral * tilt;
+            Vec3 pt = center.add(fwd.scale(bulge)).add(right.scale(lateral)).add(up.scale(vertical));
+            ParticleOptions p = (i % 3 == 0) ? mote() : shard();
+            level.sendParticles(p, pt.x, pt.y, pt.z, 1,
+                fwd.x * 0.14, fwd.y * 0.08, fwd.z * 0.14, 0.025);
+        }
+        // Bright trailing core streak behind the flying crescent
+        Vec3 tail = origin.add(fwd.scale(Math.max(0.2, waveFront - 1.2)));
+        line(level, tail, center, ripple(), 0.42);
+        if (step == 0) {
+            sound(level, BlockPos.containing(origin), SoundEvents.PLAYER_ATTACK_SWEEP, 0.9F, 0.72F + chargeTier * 0.08F);
+            sound(level, BlockPos.containing(origin), SoundEvents.TRIDENT_THROW.value(), 0.55F, 1.35F);
+        } else if (step == 9) {
+            Vec3 end = origin.add(fwd.scale(reach));
+            ring(level, end, 1.1 + chargeTier * 0.28, ripple(), 22, 0.03);
+            cloud(level, end, shard(), 14, 0.35, 0.35, 0.35, 0.05);
+            sound(level, BlockPos.containing(end), SoundEvents.AMETHYST_BLOCK_BREAK, 0.62F, 1.35F);
+        }
+    }
+
+    /** Dramatic Void Execute burst when Blade of Zero triggers Execute / Lethal Finisher. */
+    public static void zeroExecuteBurst(ServerLevel level, LivingEntity target) {
+        Vec3 c = target.position().add(0.0, target.getBbHeight() * 0.55, 0.0);
+        ring(level, c, 1.35, abyss(), 24, 0.055);
+        ring(level, c.add(0.0, 0.35, 0.0), 0.95, mote(), 18, 0.045);
+        cloud(level, c, abyss(), 20, 0.38, 0.45, 0.38, 0.07);
+        for (int i = -6; i <= 6; i++) {
+            double o = i * 0.24;
+            level.sendParticles(mote(), c.x + o, c.y + o * 0.85, c.z - o * 0.5, 1, 0.0, 0.02, 0.0, 0.0);
+            level.sendParticles(abyss(), c.x - o, c.y + o * 0.85, c.z + o * 0.5, 1, 0.0, 0.02, 0.0, 0.0);
+        }
+        sound(level, target.blockPosition(), SoundEvents.WITHER_BREAK_BLOCK, 0.48F, 1.55F);
+        sound(level, target.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, 0.85F, 0.72F);
+    }
+
     public static void boundaryBreakWave(ServerLevel level, Vec3 origin, Vec3 direction, int wave) {
         Vec3 side = new Vec3(-direction.z, 0.0, direction.x);
         double distance = 2.3 + wave * 2.55;
