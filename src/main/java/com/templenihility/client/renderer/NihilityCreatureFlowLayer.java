@@ -16,6 +16,7 @@ import net.minecraft.util.Mth;
 public class NihilityCreatureFlowLayer extends RenderLayer<NihilityRenderState, NihilityCreatureModel> {
     private static final Identifier FLOW_TEXTURE = Identifier.fromNamespaceAndPath(
         TempleNihilityMod.MOD_ID, "textures/entity/nihility_flow.png");
+
     private final NihilityFlowModel flowModel;
 
     public NihilityCreatureFlowLayer(RenderLayerParent<NihilityRenderState, NihilityCreatureModel> parent,
@@ -46,7 +47,19 @@ public class NihilityCreatureFlowLayer extends RenderLayer<NihilityRenderState, 
         int green = Math.round(244 * pulse);
         int blue = Math.round(255 * pulse);
         int alpha = 232;
-        if (state.disposition == Disposition.ALERT) {
+        if (state.tier >= 5 && state.saintWingShieldTicks > 0) {
+            // Radiant golden-cyan refraction shell when 6 wings fold shut
+            red = 255;
+            green = Math.round(236 * pulse);
+            blue = Math.round(165 * pulse);
+            alpha = 255;
+        } else if (state.tier >= 5 && state.saintAstrolabeCharge >= 5) {
+            // Blazing gold-white Astrolabe Judgment overload
+            red = 255;
+            green = 248;
+            blue = Math.round(210 * pulse);
+            alpha = 255;
+        } else if (state.disposition == Disposition.ALERT) {
             red = Math.round(255 * pulse);
             green = Math.round(220 * pulse);
             blue = Math.round(145 * pulse);
@@ -60,7 +73,7 @@ public class NihilityCreatureFlowLayer extends RenderLayer<NihilityRenderState, 
             red = Math.round(218 * pulse);
             green = Math.round(238 * pulse);
             blue = 255;
-            alpha = 215;
+            alpha = 225;
         }
         return (clampByte(alpha) << 24)
             | (clampByte(red) << 16)

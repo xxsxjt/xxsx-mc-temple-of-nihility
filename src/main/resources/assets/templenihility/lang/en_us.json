@@ -545,5 +545,6 @@
   "tooltip.templenihility.stillstone_armor_set_1": "[2pc] +15 max Void Power and +1 VP / 2s (smoothly carries over when upgrading piece-by-piece).",
   "tooltip.templenihility.stillstone_armor_set_2": "[4pc] +30 max Void Power; 10% Phase Dodge on hit (1 VP cost, refunds +5 VP).",
   "tooltip.templenihility.shade_armor_set_1": "[2pc] +25 max Void Power and +1 VP/s (smoothly carries over when upgrading piece-by-piece).",
-  "tooltip.templenihility.shade_armor_set_2": "[4pc] +55 max Void Power, auto-repairs Void gear every 2s; 16% Phase Dodge (refunds +8 VP)."
+  "tooltip.templenihility.shade_armor_set_2": "[4pc] +55 max Void Power, auto-repairs Void gear every 2s; 16% Phase Dodge (refunds +8 VP).",
+  "entity.templenihility.void_spell": "Void Armament"
 }

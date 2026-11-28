@@ -545,5 +545,6 @@
   "tooltip.templenihility.stillstone_armor_set_1": "【2件】虚无能量上限 +15，每 2 秒恢复 1 点能量（支持跨阶混穿继承）。",
   "tooltip.templenihility.stillstone_armor_set_2": "【4件】上限 +30；受击消耗 1 点能量有 10% 概率相位闪避并返还 5 点能量。",
   "tooltip.templenihility.shade_armor_set_1": "【2件】虚无能量上限 +25，每秒恢复 1 点能量（支持跨阶混穿继承）。",
-  "tooltip.templenihility.shade_armor_set_2": "【4件】上限 +55，每 2 秒自动修复虚无装备；受击耗 1 能量有 16% 概率相位闪避并返还 8 点能量。"
+  "tooltip.templenihility.shade_armor_set_2": "【4件】上限 +55，每 2 秒自动修复虚无装备；受击耗 1 能量有 16% 概率相位闪避并返还 8 点能量。",
+  "entity.templenihility.void_spell": "归零武装"
 }

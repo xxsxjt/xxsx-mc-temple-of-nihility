@@ -3,8 +3,10 @@ package com.templenihility.client;
 import com.templenihility.TempleNihilityMod;
 import com.templenihility.client.model.NihilityCreatureModel;
 import com.templenihility.client.model.NihilityFlowModel;
+import com.templenihility.client.model.VoidSpellModel;
 import com.templenihility.client.particle.NihilityParticle;
 import com.templenihility.client.renderer.NihilityCreatureRenderer;
+import com.templenihility.client.renderer.VoidSpellRenderer;
 import com.templenihility.client.screen.NihilityAltarScreen;
 import com.templenihility.client.screen.NihilityTerminalScreen;
 import com.templenihility.client.screen.NihilityTransportCoreScreen;
@@ -155,6 +157,7 @@ public class ModClientEvents {
     private static void registerLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
         event.registerLayerDefinition(NihilityCreatureModel.LAYER_LOCATION, NihilityCreatureModel::createBodyLayer);
         event.registerLayerDefinition(NihilityFlowModel.LAYER_LOCATION, NihilityFlowModel::createBodyLayer);
+        event.registerLayerDefinition(VoidSpellModel.LAYER_LOCATION, VoidSpellModel::createBodyLayer);
     }
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
@@ -171,5 +174,6 @@ public class ModClientEvents {
         event.registerEntityRenderer(ModEntities.NIHILITY_ENVOY.get(), ctx -> new NihilityCreatureRenderer<>(ctx, textures[2]));
         event.registerEntityRenderer(ModEntities.NIHILITY_GRAND_ENVOY.get(), ctx -> new NihilityCreatureRenderer<>(ctx, textures[3]));
         event.registerEntityRenderer(ModEntities.NIHILITY_SAINT.get(), ctx -> new NihilityCreatureRenderer<>(ctx, textures[4]));
+        event.registerEntityRenderer(ModEntities.VOID_SPELL.get(), VoidSpellRenderer::new);
     }
 }

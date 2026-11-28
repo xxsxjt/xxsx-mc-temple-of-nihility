@@ -8,6 +8,7 @@ import com.templenihility.challenge.SaintChallengePolicy.EndReason;
 import com.templenihility.challenge.SaintChallengeService;
 import com.templenihility.entity.CreatureDispositionPolicy.Disposition;
 import com.templenihility.init.ModItems;
+import com.templenihility.init.ModParticles;
 import com.templenihility.world.NihilityVisualEffects;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -21,6 +22,9 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
@@ -40,9 +44,35 @@ import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
+/**
+ * 虚无圣者 (Nihility Saint) — Sovereign Floating Spell-Blade Boss.
+ *
+ * <p>Every floating armament on the Saint has a distinct, visible, interlocking combat function:
+ * <ul>
+ *   <li><b>Twin Hovering Void Greatswords</b>: Detach physically as flying 3D scissor-blades during
+ *       Erasure Line / Cross-Slash and snap forward into an X-Guard whirl to parry close melee rushers.</li>
+ *   <li><b>6 Seraphic Obsidian Blade-Wings</b>: Fan open to fire staggered homing Wing-Feather salvos,
+ *       and physically fold shut into a Phase Refraction Cocoon under burst pressure before snapping
+ *       wide open to fire all absorbed damage back as counter-blades (no cliché half-HP shockwave).</li>
+ *   <li><b>Golden Astrolabe Halo</b>: Charges 0..6 as spells connect; at full 6/6 resonance, channels
+ *       3 sequential sky-falling Astrolabe Judgment Lances onto predicted target positions.</li>
+ * </ul>
+ */
 public class NihilitySaint extends NihilityCreature {
     private static final EntityDataAccessor<Byte> DATA_CHALLENGE_PHASE = SynchedEntityData.defineId(
         NihilitySaint.class, EntityDataSerializers.BYTE);
+    private static final EntityDataAccessor<Boolean> DATA_SWORDS_DEPLOYED = SynchedEntityData.defineId(
+        NihilitySaint.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Integer> DATA_SWORDS_GUARD_TICKS = SynchedEntityData.defineId(
+        NihilitySaint.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_WING_SHIELD_TICKS = SynchedEntityData.defineId(
+        NihilitySaint.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_WING_SALVO_TICKS = SynchedEntityData.defineId(
+        NihilitySaint.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_ASTROLABE_CHARGE = SynchedEntityData.defineId(
+        NihilitySaint.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> DATA_SWORD_LIBERATION = SynchedEntityData.defineId(
+        NihilitySaint.class, EntityDataSerializers.BOOLEAN);
 
     public enum ChallengePhase {
         NONE,
@@ -67,9 +97,20 @@ public class NihilitySaint extends NihilityCreature {
     private int saintActionSequence;
     private Vec3 terminusCenter = Vec3.ZERO;
     private long terminusStartedGameTime = -1L;
-    private boolean awakenedPhaseTwo;
-    private long nextCloseCleaveGameTime;
+
+    // Interlocking Floating-Armament Runtime State
+    private long swordsDeployedUntilGameTime;
+    private long nextSwordGuardGameTime;
     private long nextPhaseBlinkGameTime;
+    private long nextWingSalvoGameTime;
+    private int pendingWingFeathers;
+    private int wingSalvoTotal;
+    private float recentBurstDamage;
+    private long burstDamageWindowStart;
+    private long nextWingShieldGameTime;
+    private float wingShieldAbsorbed;
+    private int pendingAstrolabeLances;
+    private long nextAstrolabeLanceGameTime;
 
     private final ServerBossEvent bossEvent = new ServerBossEvent(
         UUID.randomUUID(),
@@ -86,7 +127,7 @@ public class NihilitySaint extends NihilityCreature {
     @Override
     protected void registerGoals() {
         super.registerGoals();
-        this.goalSelector.addGoal(1, new SaintCombatControlGoal(this));
+        this.goalSelector.addGoal(1, new SaintSovereignCombatGoal(this));
     }
 
     @Override
@@ -107,7 +148,9 @@ public class NihilitySaint extends NihilityCreature {
         if (combatActive) {
             this.bossEvent.setProgress(Math.max(0.0F, Math.min(1.0F, getHealth() / Math.max(1.0F, getMaxHealth()))));
             this.bossEvent.setName(getDisplayName());
-            this.bossEvent.setColor(awakenedPhaseTwo ? BossEvent.BossBarColor.BLUE : BossEvent.BossBarColor.WHITE);
+            this.bossEvent.setColor(isWingShieldActive()
+                ? BossEvent.BossBarColor.YELLOW
+                : (isSwordLiberation() ? BossEvent.BossBarColor.BLUE : BossEvent.BossBarColor.WHITE));
         }
     }
 
@@ -118,13 +161,59 @@ public class NihilitySaint extends NihilityCreature {
 
     @Override
     protected double actionCooldownScale() {
-        return awakenedPhaseTwo ? 0.70 : 1.0;
+        return isSwordLiberation() ? 0.72 : 1.0;
     }
 
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(DATA_CHALLENGE_PHASE, (byte) ChallengePhase.NONE.ordinal());
+        builder.define(DATA_SWORDS_DEPLOYED, false);
+        builder.define(DATA_SWORDS_GUARD_TICKS, 0);
+        builder.define(DATA_WING_SHIELD_TICKS, 0);
+        builder.define(DATA_WING_SALVO_TICKS, 0);
+        builder.define(DATA_ASTROLABE_CHARGE, 0);
+        builder.define(DATA_SWORD_LIBERATION, false);
+    }
+
+    public boolean areSwordsDeployed() {
+        return entityData.get(DATA_SWORDS_DEPLOYED);
+    }
+
+    public int getSwordsGuardTicks() {
+        return Math.max(0, entityData.get(DATA_SWORDS_GUARD_TICKS));
+    }
+
+    public int getWingShieldTicks() {
+        return Math.max(0, entityData.get(DATA_WING_SHIELD_TICKS));
+    }
+
+    public boolean isWingShieldActive() {
+        return getWingShieldTicks() > 0;
+    }
+
+    public int getWingSalvoTicks() {
+        return Math.max(0, entityData.get(DATA_WING_SALVO_TICKS));
+    }
+
+    public int getAstrolabeCharge() {
+        return Math.max(0, Math.min(6, entityData.get(DATA_ASTROLABE_CHARGE)));
+    }
+
+    public boolean isSwordLiberation() {
+        return entityData.get(DATA_SWORD_LIBERATION);
+    }
+
+    public void onSpellHitTarget(LivingEntity target, int chargeGain) {
+        if (level().isClientSide() || !isAlive()) {
+            return;
+        }
+        int mult = isSwordLiberation() ? 2 : 1;
+        int next = Math.min(6, getAstrolabeCharge() + chargeGain * mult);
+        entityData.set(DATA_ASTROLABE_CHARGE, next);
+        if (next >= 6 && pendingAstrolabeLances <= 0) {
+            triggerAstrolabeJudgment();
+        }
     }
 
     @Override
@@ -132,7 +221,7 @@ public class NihilitySaint extends NihilityCreature {
         super.tick();
         if (!level().isClientSide() && isAlive() && level() instanceof ServerLevel serverLevel) {
             tickRitualChallenge(serverLevel);
-            tickAwakeningCheck(serverLevel);
+            tickFloatingArmaments(serverLevel);
             tickSaintActionTelegraph();
             tickMissingZones(serverLevel);
             tickVoidTerminus(serverLevel);
@@ -143,34 +232,194 @@ public class NihilitySaint extends NihilityCreature {
         }
     }
 
-    private void tickAwakeningCheck(ServerLevel level) {
-        if (!getDisposition().isCombat() && !isRitualChallengeActive()) {
-            if (awakenedPhaseTwo && getHealth() >= getMaxHealth() * 0.95F) {
-                awakenedPhaseTwo = false;
-            }
-            return;
-        }
-        if (awakenedPhaseTwo || getMaxHealth() <= 0.0F || getHealth() > getMaxHealth() * 0.50F) {
-            return;
-        }
-        // Phase-2 Void Awakening: cleanse debuffs, restore 12% HP, unleash 10-block Void Nullification Shockwave!
-        awakenedPhaseTwo = true;
-        removeAllEffects();
-        heal(getMaxHealth() * 0.12F);
-        resetCreatureActionCooldown(level.getGameTime());
+    private void tickFloatingArmaments(ServerLevel level) {
+        long gameTime = level.getGameTime();
+        boolean combatActive = isRitualChallengeActive() || (getDisposition().isCombat() && getTarget() != null);
 
-        List<LivingEntity> enemies = collectCombatTargets(level, position(), 10.5);
-        for (LivingEntity enemy : enemies) {
-            dealVoidStrike(level, enemy, 48.0F, 1.8F, true);
-            Vec3 away = enemy.position().subtract(position()).multiply(1.0, 0.0, 1.0);
-            if (away.lengthSqr() > 1.0E-5) {
-                away = away.normalize();
-                enemy.setDeltaMovement(away.x * 1.45, Math.max(0.38, enemy.getDeltaMovement().y + 0.25), away.z * 1.45);
-                enemy.hurtMarked = true;
-            }
-            enemy.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 80, 1, false, false));
+        // Quiet, dignified Sword Liberation escalation below 45% HP (NO cliché shockwave!)
+        boolean shouldLiberate = combatActive && getMaxHealth() > 0.0F && getHealth() <= getMaxHealth() * 0.45F;
+        if (shouldLiberate && !isSwordLiberation()) {
+            entityData.set(DATA_SWORD_LIBERATION, true);
+            level.playSound(null, getX(), getY(), getZ(),
+                SoundEvents.BEACON_ACTIVATE, SoundSource.HOSTILE, 1.1F, 1.45F);
+        } else if (!combatActive && isSwordLiberation() && getHealth() >= getMaxHealth() * 0.92F) {
+            entityData.set(DATA_SWORD_LIBERATION, false);
+            entityData.set(DATA_ASTROLABE_CHARGE, 0);
         }
-        NihilityVisualEffects.saintVoidTerminusActivate(this, position());
+
+        // Sync Twin Swords physical recall timer
+        if (areSwordsDeployed() && gameTime >= swordsDeployedUntilGameTime) {
+            entityData.set(DATA_SWORDS_DEPLOYED, false);
+        }
+
+        // Decrement close-quarters sword X-guard ticks
+        int guard = getSwordsGuardTicks();
+        if (guard > 0) {
+            entityData.set(DATA_SWORDS_GUARD_TICKS, guard - 1);
+        }
+
+        // 6-Wing Phase Refraction Cocoon: absorbs 80% burst dmg, then snaps wide open firing counter-feathers!
+        int shield = getWingShieldTicks();
+        if (shield > 0) {
+            int nextShield = shield - 1;
+            entityData.set(DATA_WING_SHIELD_TICKS, nextShield);
+            if (tickCount % 3 == 0) {
+                level.sendParticles(ModParticles.NIHILITY_RIPPLE.get(),
+                    getX(), getY() + 1.3, getZ(), 2, 0.55, 0.55, 0.55, 0.02);
+            }
+            if (nextShield == 0) {
+                releaseRefractedWingCounter(level);
+            }
+        }
+
+        // Staggered 6-Wing Homing Feather Salvo (1 feather per wing every 2 ticks!)
+        int salvo = getWingSalvoTicks();
+        if (salvo > 0) {
+            entityData.set(DATA_WING_SALVO_TICKS, salvo - 1);
+        }
+        if (pendingWingFeathers > 0 && tickCount % 2 == 0) {
+            LivingEntity target = getTarget();
+            if (target != null && target.isAlive()) {
+                int index = wingSalvoTotal - pendingWingFeathers;
+                fireSingleWingFeather(level, target, index, wingSalvoTotal, 18.0F);
+                pendingWingFeathers--;
+            } else {
+                pendingWingFeathers = 0;
+            }
+        }
+
+        // Astrolabe Halo 6/6 Overdrive: drop 3 sequential sky-falling Judgment Lances!
+        if (pendingAstrolabeLances > 0 && gameTime >= nextAstrolabeLanceGameTime) {
+            LivingEntity target = getTarget();
+            if (target != null && target.isAlive()) {
+                Vec3 predicted = target.position().add(target.getDeltaMovement().multiply(7.0, 0.0, 7.0));
+                VoidSpellEntity lance = VoidSpellEntity.createJudgmentLance(
+                    level, this, predicted, isSwordLiberation() ? 58.0F : 50.0F);
+                level.addFreshEntity(lance);
+                pendingAstrolabeLances--;
+                nextAstrolabeLanceGameTime = gameTime + 11L;
+                if (pendingAstrolabeLances <= 0) {
+                    entityData.set(DATA_ASTROLABE_CHARGE, 0);
+                }
+            } else {
+                pendingAstrolabeLances = 0;
+                entityData.set(DATA_ASTROLABE_CHARGE, 0);
+            }
+        }
+
+        // Autonomous mid-range Wing-Feather Salvo when fighting actively
+        if (combatActive && !isWingShieldActive() && !hasActiveCreatureAction()
+            && pendingWingFeathers <= 0 && gameTime >= nextWingSalvoGameTime) {
+            LivingEntity target = getTarget();
+            if (target != null && target.isAlive()) {
+                double distSq = distanceToSqr(target);
+                if (distSq >= 3.2 * 3.2 && distSq <= 24.0 * 24.0) {
+                    startWingFeatherSalvo(level, gameTime);
+                }
+            }
+        }
+    }
+
+    private void startWingFeatherSalvo(ServerLevel level, long gameTime) {
+        wingSalvoTotal = isSwordLiberation() ? 8 : 6;
+        pendingWingFeathers = wingSalvoTotal;
+        entityData.set(DATA_WING_SALVO_TICKS, wingSalvoTotal * 2 + 8);
+        nextWingSalvoGameTime = gameTime + (isSwordLiberation() ? 52L : 68L);
+        level.playSound(null, getX(), getY(), getZ(),
+            SoundEvents.ELYTRA_FLYING, SoundSource.HOSTILE, 0.85F, 1.65F);
+    }
+
+    private void fireSingleWingFeather(ServerLevel level, LivingEntity target, int index, int total, float baseDmg) {
+        Vec3 forward = target.position().subtract(position()).multiply(1.0, 0.0, 1.0);
+        if (forward.lengthSqr() < 1.0E-5) {
+            forward = getLookAngle().multiply(1.0, 0.0, 1.0);
+        }
+        forward = forward.normalize();
+        Vec3 right = new Vec3(-forward.z, 0.0, forward.x);
+
+        boolean leftWing = (index % 2) == 0;
+        int tierSlot = (index / 2) % 3; // upper / mid / lower wing!
+        double sideSign = leftWing ? -1.0 : 1.0;
+        double lateral = 1.05 + tierSlot * 0.25;
+        double height = 2.15 - tierSlot * 0.42;
+
+        Vec3 spawnPos = position()
+            .add(right.scale(sideSign * lateral))
+            .add(0.0, height, 0.0)
+            .subtract(forward.scale(0.35));
+
+        Vec3 toTarget = target.position().add(0.0, target.getBbHeight() * 0.5, 0.0).subtract(spawnPos).normalize();
+        Vec3 fanVelocity = toTarget.scale(1.05)
+            .add(right.scale(sideSign * (0.28 + tierSlot * 0.08)))
+            .add(0.0, 0.14 - tierSlot * 0.05, 0.0);
+
+        VoidSpellEntity feather = VoidSpellEntity.createWingFeather(
+            level, this, target, spawnPos, fanVelocity, baseDmg);
+        level.addFreshEntity(feather);
+        level.sendParticles(ModParticles.NIHILITY_MOTE.get(),
+            spawnPos.x, spawnPos.y, spawnPos.z, 4, 0.12, 0.12, 0.12, 0.03);
+        level.playSound(null, spawnPos.x, spawnPos.y, spawnPos.z,
+            SoundEvents.TRIDENT_THROW.value(), SoundSource.HOSTILE, 0.45F, 1.55F + tierSlot * 0.12F);
+    }
+
+    private void activateWingRefractionShield(ServerLevel level, long gameTime) {
+        entityData.set(DATA_WING_SHIELD_TICKS, 38);
+        wingShieldAbsorbed = 0.0F;
+        recentBurstDamage = 0.0F;
+        nextWingShieldGameTime = gameTime + 180L;
+        level.playSound(null, getX(), getY(), getZ(),
+            SoundEvents.SHIELD_BLOCK.value(), SoundSource.HOSTILE, 1.1F, 0.72F);
+        level.sendParticles(ModParticles.NIHILITY_RIPPLE.get(),
+            getX(), getY() + 1.3, getZ(), 14, 0.65, 0.65, 0.65, 0.04);
+    }
+
+    private void releaseRefractedWingCounter(ServerLevel level) {
+        LivingEntity primary = getTarget();
+        List<LivingEntity> targets = collectCombatTargets(level, position(), 18.0);
+        int count = Math.min(8, Math.max(6, 6 + (int) (wingShieldAbsorbed / 40.0F)));
+        float counterDmg = Math.min(34.0F, 18.0F + wingShieldAbsorbed * 0.12F);
+        for (int i = 0; i < count; i++) {
+            LivingEntity chosen = !targets.isEmpty() ? targets.get(i % targets.size()) : primary;
+            double angle = i * (Math.PI * 2.0 / count);
+            Vec3 spawnPos = position().add(Math.cos(angle) * 1.1, 1.5, Math.sin(angle) * 1.1);
+            Vec3 vel = new Vec3(Math.cos(angle) * 1.15, 0.12, Math.sin(angle) * 1.15);
+            VoidSpellEntity feather = VoidSpellEntity.createWingFeather(
+                level, this, chosen, spawnPos, vel, counterDmg);
+            level.addFreshEntity(feather);
+        }
+        level.playSound(null, getX(), getY(), getZ(),
+            SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 1.1F, 1.35F);
+        wingShieldAbsorbed = 0.0F;
+    }
+
+    private void triggerAstrolabeJudgment() {
+        pendingAstrolabeLances = isSwordLiberation() ? 4 : 3;
+        nextAstrolabeLanceGameTime = level().getGameTime() + 4L;
+        if (level() instanceof ServerLevel serverLevel) {
+            serverLevel.playSound(null, getX(), getY(), getZ(),
+                SoundEvents.BEACON_POWER_SELECT, SoundSource.HOSTILE, 1.2F, 1.5F);
+        }
+    }
+
+    private void deployTwinFloatingSwords(ServerLevel level, LivingEntity target, float swordDmg) {
+        Vec3 forward = target != null
+            ? target.position().subtract(position()).multiply(1.0, 0.0, 1.0)
+            : getLookAngle().multiply(1.0, 0.0, 1.0);
+        if (forward.lengthSqr() < 1.0E-5) {
+            forward = new Vec3(0.0, 0.0, 1.0);
+        }
+        forward = forward.normalize();
+        Vec3 right = new Vec3(-forward.z, 0.0, forward.x);
+
+        Vec3 leftOrigin = position().subtract(right.scale(1.15)).add(0.0, 1.55, 0.0);
+        Vec3 rightOrigin = position().add(right.scale(1.15)).add(0.0, 1.55, 0.0);
+
+        level.addFreshEntity(VoidSpellEntity.createFloatingSword(level, this, target, leftOrigin, -1.0, swordDmg));
+        level.addFreshEntity(VoidSpellEntity.createFloatingSword(level, this, target, rightOrigin, 1.0, swordDmg));
+        entityData.set(DATA_SWORDS_DEPLOYED, true);
+        swordsDeployedUntilGameTime = level.getGameTime() + 30L;
+        level.playSound(null, getX(), getY(), getZ(),
+            SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.HOSTILE, 1.2F, 0.72F);
     }
 
     private List<LivingEntity> collectCombatTargets(ServerLevel level, Vec3 center, double radius) {
@@ -234,7 +483,10 @@ public class NihilitySaint extends NihilityCreature {
         challengeStartGameTime = serverLevel.getGameTime();
         challengeExpiresGameTime = challengeStartGameTime + SaintChallengePolicy.DURATION_TICKS;
         saintActionSequence = 0;
-        awakenedPhaseTwo = false;
+        entityData.set(DATA_SWORD_LIBERATION, false);
+        entityData.set(DATA_ASTROLABE_CHARGE, 0);
+        entityData.set(DATA_WING_SHIELD_TICKS, 0);
+        entityData.set(DATA_SWORDS_DEPLOYED, false);
         clearMissingZones();
         setChallengePhase(ChallengePhase.DECLARATION);
         setTarget(null);
@@ -292,6 +544,9 @@ public class NihilitySaint extends NihilityCreature {
 
     @Override
     protected ActionType selectCreatureAction(LivingEntity target, long gameTime) {
+        if (isWingShieldActive()) {
+            return ActionType.NONE;
+        }
         boolean challengeActive = getChallengePhase() == ChallengePhase.ACTIVE && isRitualChallengeActive();
         boolean hostileCombat = getDisposition() == Disposition.HOSTILE && target != null && target.isAlive();
         if (!challengeActive && !hostileCombat) {
@@ -359,7 +614,6 @@ public class NihilitySaint extends NihilityCreature {
         }
         long elapsed = level().getGameTime() - getCreatureActionStartGameTime();
         if (getCreatureAction() == ActionType.SAINT_ERASURE_LINE) {
-            // Smoothly track mobile bosses during the first 60% of windup, then lock cleanly before release!
             LivingEntity actionTarget = getCreatureActionTarget();
             if (actionTarget != null && actionTarget.isAlive()
                 && elapsed <= (ActionType.SAINT_ERASURE_LINE.windupTicks() * 3L) / 5L) {
@@ -379,6 +633,10 @@ public class NihilitySaint extends NihilityCreature {
         terminusCenter = position();
         terminusStartedGameTime = level.getGameTime();
         heal(getMaxHealth() * 0.025F);
+        // Channel the Astrolabe Halo into an immediate Judgment Lance alongside Void Terminus!
+        if (target != null && target.isAlive()) {
+            level.addFreshEntity(VoidSpellEntity.createJudgmentLance(level, this, target.position(), 52.0F));
+        }
         NihilityVisualEffects.saintVoidTerminusActivate(this, terminusCenter);
         if (target instanceof ServerPlayer player) {
             player.sendSystemMessage(Component.translatable("message.templenihility.saint_void_terminus_start"));
@@ -410,13 +668,15 @@ public class NihilitySaint extends NihilityCreature {
             if (!safe) {
                 dealVoidStrike(level, victim, dmg, 1.15F, true);
             } else if (!(victim instanceof Player) && tickCount % 20 == 0 && distanceSquared <= 3.5 * 3.5) {
-                // Prevent melee bosses from face-tanking inside the safe eye without taking pressure
                 dealVoidStrike(level, victim, dmg * 0.70F, 0.85F, false);
             }
         }
     }
 
     private void applyErasureLine(ServerLevel level, LivingEntity primaryTarget) {
+        // Physically detach & launch the Twin Hovering Greatswords in a scissor-cross alongside the Erasure beam!
+        deployTwinFloatingSwords(level, primaryTarget, isSwordLiberation() ? 42.0F : 36.0F);
+
         boolean anyHit = false;
         List<LivingEntity> candidates = collectCombatTargets(level, lockedActionOrigin,
             SaintActionPolicy.ERASURE_LINE_LENGTH + 2.5);
@@ -426,8 +686,9 @@ public class NihilitySaint extends NihilityCreature {
                     victim.getX(), victim.getZ(),
                     lockedActionOrigin.x, lockedActionOrigin.z,
                     lockedActionDirection.x, lockedActionDirection.z);
-            if (hit && dealVoidStrike(level, victim, SaintActionPolicy.ERASURE_LINE_DAMAGE, 1.55F, true)) {
+            if (hit && dealVoidStrike(level, victim, SaintActionPolicy.ERASURE_LINE_DAMAGE, 1.45F, true)) {
                 anyHit = true;
+                onSpellHitTarget(victim, 2);
                 Vec3 side = new Vec3(-lockedActionDirection.z, 0.0, lockedActionDirection.x);
                 double sign = victim.position().subtract(lockedActionOrigin).dot(side) >= 0.0 ? 1.0 : -1.0;
                 victim.push(side.x * sign * 0.65, 0.18, side.z * sign * 0.65);
@@ -458,10 +719,16 @@ public class NihilitySaint extends NihilityCreature {
     private void activateMissingZones(ServerLevel level) {
         missingZonesUntilGameTime = level.getGameTime() + SaintActionPolicy.MISSING_ZONE_DURATION_TICKS;
         NihilityVisualEffects.saintMissingZonesActivate(this, missingZoneCenters);
+        // Drop an Astrolabe Judgment Lance on the center Missing Zone for dramatic synergy!
+        if (missingZoneCenters.length > 0) {
+            level.addFreshEntity(VoidSpellEntity.createJudgmentLance(level, this, missingZoneCenters[0], 44.0F));
+        }
         for (Vec3 center : missingZoneCenters) {
             for (LivingEntity victim : collectCombatTargets(level, center, SaintActionPolicy.MISSING_ZONE_RADIUS + 0.5)) {
                 if (Math.abs(victim.getY() - center.y) <= 3.5) {
-                    dealVoidStrike(level, victim, SaintActionPolicy.MISSING_ZONE_BURST_DAMAGE, 1.25F, true);
+                    if (dealVoidStrike(level, victim, SaintActionPolicy.MISSING_ZONE_BURST_DAMAGE, 1.15F, true)) {
+                        onSpellHitTarget(victim, 1);
+                    }
                     victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 50, 1, false, false));
                 }
             }
@@ -496,7 +763,7 @@ public class NihilitySaint extends NihilityCreature {
                         victim.hurtMarked = true;
                     }
                     if (damageTick) {
-                        dealVoidStrike(level, victim, SaintActionPolicy.MISSING_ZONE_DAMAGE, 0.95F, true);
+                        dealVoidStrike(level, victim, SaintActionPolicy.MISSING_ZONE_DAMAGE, 0.90F, true);
                     }
                 }
             }
@@ -506,27 +773,32 @@ public class NihilitySaint extends NihilityCreature {
         }
     }
 
-    /** Close-quarters AoE Void Cleave so melee bosses chasing Saint take brutal counterattacks. */
-    private void performCloseVoidCleave(ServerLevel level, LivingEntity primary) {
+    /** Twin Hovering Greatswords snap forward into a spinning X-guard slash when rushers get close! */
+    private void performTwinSwordGuardSlash(ServerLevel level, LivingEntity primary) {
         this.swing(InteractionHand.MAIN_HAND);
+        entityData.set(DATA_SWORDS_GUARD_TICKS, 16);
         float baseAtk = (float) getAttributeValue(Attributes.ATTACK_DAMAGE);
-        float cleaveDmg = baseAtk * (awakenedPhaseTwo ? 1.25F : 1.10F);
+        float slashDmg = baseAtk * (isSwordLiberation() ? 1.15F : 0.95F);
         List<LivingEntity> nearby = collectCombatTargets(level, position(), 4.8);
         for (LivingEntity enemy : nearby) {
-            dealVoidStrike(level, enemy, cleaveDmg, 1.05F, true);
+            if (dealVoidStrike(level, enemy, slashDmg, 1.05F, true)) {
+                onSpellHitTarget(enemy, 1);
+            }
             Vec3 away = enemy.position().subtract(position()).multiply(1.0, 0.0, 1.0);
             if (away.lengthSqr() > 1.0E-5) {
                 away = away.normalize();
-                enemy.setDeltaMovement(away.x * 0.78, Math.max(0.22, enemy.getDeltaMovement().y + 0.14), away.z * 0.78);
+                enemy.setDeltaMovement(away.x * 0.85, Math.max(0.24, enemy.getDeltaMovement().y + 0.14), away.z * 0.85);
                 enemy.hurtMarked = true;
             }
         }
+        level.playSound(null, getX(), getY(), getZ(),
+            SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.HOSTILE, 1.0F, 1.15F);
         if (primary != null) {
             NihilityVisualEffects.zeroExecuteBurst(level, primary);
         }
     }
 
-    /** Tactical Void Phase Blink to flank/reposition out of melee stunlock or close gaps instantly. */
+    /** Phase Blink glide to keep commanding spellcaster spacing instead of walking like a villager! */
     private boolean tryPhaseBlinkAround(ServerLevel level, LivingEntity target, double desiredRange) {
         Vec3 from = position();
         Vec3 toTarget = target.position().subtract(from).multiply(1.0, 0.0, 1.0);
@@ -534,7 +806,7 @@ public class NihilitySaint extends NihilityCreature {
             ? Math.atan2(toTarget.z, toTarget.x)
             : Math.toRadians(getYRot());
         AABB box = getBoundingBox();
-        double[] angleOffsets = {Math.PI, Math.PI * 0.75, -Math.PI * 0.75, Math.PI * 0.5, -Math.PI * 0.5};
+        double[] angleOffsets = {Math.PI, Math.PI * 0.72, -Math.PI * 0.72, Math.PI * 0.45, -Math.PI * 0.45};
         for (double offset : angleOffsets) {
             double ang = baseAngle + offset;
             Vec3 candidate = target.position().add(Math.cos(ang) * desiredRange, 0.0, Math.sin(ang) * desiredRange);
@@ -588,7 +860,10 @@ public class NihilitySaint extends NihilityCreature {
         getNavigation().stop();
         cancelCreatureAction();
         clearMissingZones();
-        awakenedPhaseTwo = false;
+        entityData.set(DATA_SWORD_LIBERATION, false);
+        entityData.set(DATA_ASTROLABE_CHARGE, 0);
+        entityData.set(DATA_WING_SHIELD_TICKS, 0);
+        entityData.set(DATA_SWORDS_DEPLOYED, false);
         nextChallengeGameTime = serverLevel.getGameTime() + SaintChallengePolicy.RETRY_COOLDOWN_TICKS;
         NihilityVisualEffects.saintChallengeEnd(this, false);
         clearChallengeState();
@@ -645,7 +920,31 @@ public class NihilitySaint extends NihilityCreature {
                 return false;
             }
         }
-        return super.hurtServer(level, source, amount);
+        // If 6-Wing Phase Refraction Cocoon is folded shut, absorb 80% into counter-blade energy!
+        boolean bypass = source.is(DamageTypeTags.BYPASSES_INVULNERABILITY);
+        if (!bypass && isWingShieldActive() && amount > 0.0F) {
+            wingShieldAbsorbed = Math.min(260.0F, wingShieldAbsorbed + amount * 0.80F);
+            level.playSound(null, getX(), getY(), getZ(),
+                SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.HOSTILE, 0.9F, 1.35F);
+            amount *= 0.20F;
+        }
+        float beforeHp = getHealth();
+        boolean hurt = super.hurtServer(level, source, amount);
+        if (hurt && !bypass && isAlive() && !isWingShieldActive()) {
+            float lost = Math.max(0.0F, beforeHp - getHealth());
+            long gameTime = level.getGameTime();
+            if (gameTime - burstDamageWindowStart > 80L) {
+                burstDamageWindowStart = gameTime;
+                recentBurstDamage = lost;
+            } else {
+                recentBurstDamage += lost;
+            }
+            // Organic pressure response: heavy burst triggers 6-Wing Phase Refraction Cocoon!
+            if (recentBurstDamage >= 130.0F && gameTime >= nextWingShieldGameTime && !hasActiveCreatureAction()) {
+                activateWingRefractionShield(level, gameTime);
+            }
+        }
+        return hurt;
     }
 
     @Override
@@ -720,17 +1019,18 @@ public class NihilitySaint extends NihilityCreature {
     }
 
     /**
-     * Active close-quarters + mid-range combat controller for NihilitySaint.
-     * Replaces the old passive retreat goal so Saint fiercely cleaves close enemies,
-     * Phase-Blinks out of stunlock pressure, and closes distance aggressively.
+     * Sovereign Spell-Blade positioning & defense controller:
+     * Maintains regal mid-range orbit while channeling Wing-Feathers & Astrolabe Lances,
+     * snaps Twin Hovering Swords into a front X-Guard slash when melee enemies rush in,
+     * and Phase-Blinks effortlessly to avoid ever being corner-locked.
      */
-    private static final class SaintCombatControlGoal extends Goal {
-        private static final double CLOSE_CLEAVE_RANGE = 4.4;
-        private static final double MAX_STANDOFF = 7.4;
-        private static final double BLINK_ENGAGE_RANGE = 11.5;
+    private static final class SaintSovereignCombatGoal extends Goal {
+        private static final double CLOSE_GUARD_RANGE = 4.6;
+        private static final double MAX_STANDOFF = 9.5;
+        private static final double BLINK_ENGAGE_RANGE = 13.5;
         private final NihilitySaint saint;
 
-        SaintCombatControlGoal(NihilitySaint saint) {
+        SaintSovereignCombatGoal(NihilitySaint saint) {
             this.saint = saint;
             this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
         }
@@ -757,22 +1057,22 @@ public class NihilitySaint extends NihilityCreature {
                 return;
             }
             saint.getLookControl().setLookAt(target, 60.0F, 60.0F);
-            if (saint.getCreatureActionPhase() != Phase.IDLE) {
+            if (saint.isWingShieldActive()) {
+                // Hold majestic levitating guard posture while the 6 wings absorb incoming burst
                 saint.getNavigation().stop();
                 return;
             }
             long gameTime = serverLevel.getGameTime();
             double dist = saint.distanceTo(target);
-            if (dist <= CLOSE_CLEAVE_RANGE) {
-                // Immediately punish melee rushers with sweeping Void Cleave + knockback!
-                if (gameTime >= saint.nextCloseCleaveGameTime) {
-                    saint.nextCloseCleaveGameTime = gameTime + (saint.awakenedPhaseTwo ? 14L : 18L);
-                    saint.performCloseVoidCleave(serverLevel, target);
+            if (dist <= CLOSE_GUARD_RANGE) {
+                // Snap Twin Hovering Greatswords into spinning X-Guard slash!
+                if (!saint.areSwordsDeployed() && gameTime >= saint.nextSwordGuardGameTime) {
+                    saint.nextSwordGuardGameTime = gameTime + (saint.isSwordLiberation() ? 18L : 22L);
+                    saint.performTwinSwordGuardSlash(serverLevel, target);
                 }
-                // Phase-Blink to flanking standoff so no boss can pin Saint in melee!
                 if (gameTime >= saint.nextPhaseBlinkGameTime) {
-                    saint.nextPhaseBlinkGameTime = gameTime + (saint.awakenedPhaseTwo ? 36L : 46L);
-                    if (saint.tryPhaseBlinkAround(serverLevel, target, 5.5)) {
+                    saint.nextPhaseBlinkGameTime = gameTime + (saint.isSwordLiberation() ? 38L : 48L);
+                    if (saint.tryPhaseBlinkAround(serverLevel, target, 6.8)) {
                         return;
                     }
                 }
@@ -780,22 +1080,22 @@ public class NihilitySaint extends NihilityCreature {
                 if (away.lengthSqr() > 1.0E-4) {
                     away = away.normalize();
                     Vec3 side = new Vec3(-away.z, 0.0, away.x);
-                    Vec3 strafe = saint.position().add(away.scale(1.8)).add(side.scale(1.6));
-                    saint.getNavigation().moveTo(strafe.x, strafe.y, strafe.z, 1.25);
+                    Vec3 glide = saint.position().add(away.scale(2.2)).add(side.scale(1.8));
+                    saint.getNavigation().moveTo(glide.x, glide.y, glide.z, 1.22);
                 }
             } else if (dist > BLINK_ENGAGE_RANGE && gameTime >= saint.nextPhaseBlinkGameTime) {
                 saint.nextPhaseBlinkGameTime = gameTime + 45L;
-                saint.tryPhaseBlinkAround(serverLevel, target, 5.8);
+                saint.tryPhaseBlinkAround(serverLevel, target, 7.2);
             } else if (dist > MAX_STANDOFF) {
-                saint.getNavigation().moveTo(target, 1.28);
+                saint.getNavigation().moveTo(target, 1.24);
             } else {
-                // Strafe cleanly at optimal combat range while casting Void skills
+                // Smooth sovereign orbit glide at optimal spell-blade range (5..9 blocks)
                 Vec3 toTarget = target.position().subtract(saint.position()).multiply(1.0, 0.0, 1.0);
                 if (toTarget.lengthSqr() > 1.0E-4) {
                     toTarget = toTarget.normalize();
-                    double dir = ((saint.tickCount / 40) & 1) == 0 ? 1.0 : -1.0;
-                    Vec3 strafe = saint.position().add(-toTarget.z * dir * 2.2, 0.0, toTarget.x * dir * 2.2);
-                    saint.getNavigation().moveTo(strafe.x, strafe.y, strafe.z, 1.08);
+                    double dir = ((saint.tickCount / 45) & 1) == 0 ? 1.0 : -1.0;
+                    Vec3 orbit = saint.position().add(-toTarget.z * dir * 2.6, 0.0, toTarget.x * dir * 2.6);
+                    saint.getNavigation().moveTo(orbit.x, orbit.y, orbit.z, 1.06);
                 }
             }
         }
