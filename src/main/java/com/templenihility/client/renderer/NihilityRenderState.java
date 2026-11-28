@@ -16,4 +16,12 @@ public class NihilityRenderState extends LivingEntityRenderState {
     public int ritualShieldCharges;
     public boolean projectileGuarding;
     public boolean projectileDeflecting;
+
+    // NihilitySaint floating-armament synced visual states
+    public boolean saintSwordsDeployed;
+    public int saintSwordsGuardTicks;
+    public int saintWingShieldTicks;
+    public int saintWingSalvoTicks;
+    public int saintAstrolabeCharge;
+    public boolean saintSwordLiberation;
 }

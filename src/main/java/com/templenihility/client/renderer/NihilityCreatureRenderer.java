@@ -7,6 +7,7 @@ import com.templenihility.entity.NihilityCreature;
 import com.templenihility.entity.NihilityEnvoy;
 import com.templenihility.entity.NihilityFollower;
 import com.templenihility.entity.NihilityGrandEnvoy;
+import com.templenihility.entity.NihilitySaint;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.resources.Identifier;
@@ -46,6 +47,21 @@ public class NihilityCreatureRenderer<T extends NihilityCreature>
             && follower.isProjectileGuarding();
         state.projectileDeflecting = entity instanceof NihilityEnvoy envoy
             && envoy.isProjectileDeflecting();
+        if (entity instanceof NihilitySaint saint) {
+            state.saintSwordsDeployed = saint.areSwordsDeployed();
+            state.saintSwordsGuardTicks = saint.getSwordsGuardTicks();
+            state.saintWingShieldTicks = saint.getWingShieldTicks();
+            state.saintWingSalvoTicks = saint.getWingSalvoTicks();
+            state.saintAstrolabeCharge = saint.getAstrolabeCharge();
+            state.saintSwordLiberation = saint.isSwordLiberation();
+        } else {
+            state.saintSwordsDeployed = false;
+            state.saintSwordsGuardTicks = 0;
+            state.saintWingShieldTicks = 0;
+            state.saintWingSalvoTicks = 0;
+            state.saintAstrolabeCharge = 0;
+            state.saintSwordLiberation = false;
+        }
     }
 
     @Override
@@ -61,10 +77,20 @@ public class NihilityCreatureRenderer<T extends NihilityCreature>
             case 2 -> 1.04f;
             case 3 -> 1.08f;
             case 4 -> 1.16f;
-            default -> 1.28f;
+            default -> 1.30f;
         };
-        float lift = tier >= 3 ? -0.14f - (tier - 3) * 0.06f : 0.0f;
-        float bob = Mth.sin(state.ageInTicks * 0.08f + tier) * (tier >= 3 ? 0.055f : 0.02f);
+        float lift = tier >= 3 ? -0.16f - (tier - 3) * 0.08f : 0.0f;
+        if (tier >= 5) {
+            // Saint floats visibly higher as a sovereign spellcaster, ascending further in Sword Liberation / Salvo
+            lift -= 0.14f;
+            if (state.saintSwordLiberation) {
+                lift -= 0.18f;
+            }
+            if (state.saintWingSalvoTicks > 0) {
+                lift -= 0.10f;
+            }
+        }
+        float bob = Mth.sin(state.ageInTicks * 0.09f + tier) * (tier >= 5 ? 0.085f : (tier >= 3 ? 0.055f : 0.02f));
         poseStack.translate(0.0f, lift + bob, 0.0f);
         poseStack.scale(s, s, s);
     }

@@ -273,15 +273,18 @@ public class NihilityCreatureModel extends EntityModel<NihilityRenderState> {
         this.wingMR.visible = isSaint;
         this.wingLL.visible = isSaint;
         this.wingLR.visible = isSaint;
-        this.swordLeft.visible = isSaint;
-        this.swordRight.visible = isSaint;
+        boolean saintSwordsDocked = isSaint && !state.saintSwordsDeployed;
+        this.swordLeft.visible = saintSwordsDocked;
+        this.swordRight.visible = saintSwordsDocked;
 
         this.haloGroup.visible = tier >= 4;
         this.haloBot.visible = isSaint;
         this.crownSpire.visible = isSaint;
 
         // Clean baseline reset
-        float hover = tier >= 3 ? Mth.sin(age * 0.09f) * 0.55f : Mth.sin(age * 0.08f) * 0.18f;
+        float hover = isSaint
+            ? Mth.sin(age * 0.085f) * (state.saintSwordLiberation ? 1.15f : 0.85f) - (state.saintSwordLiberation ? 1.4f : 0.6f)
+            : (tier >= 3 ? Mth.sin(age * 0.09f) * 0.55f : Mth.sin(age * 0.08f) * 0.18f);
         this.head.y = 0.5f + hover;
         this.body.y = 0.5f + hover;
         this.rightArm.y = 1.8f + hover;
@@ -299,14 +302,38 @@ public class NihilityCreatureModel extends EntityModel<NihilityRenderState> {
         this.cape.xRot = 0.18f + speed * 0.35f + Mth.sin(age * 0.11f) * 0.08f;
         this.robeSkirt.xRot = speed * 0.18f + Mth.sin(age * 0.08f) * 0.04f;
 
-        this.rightArm.xRot = Mth.cos(walk * 0.6662f + Mth.PI) * speed * 0.55f - (tier == 2 ? 0.35f : 0.08f);
-        this.leftArm.xRot = Mth.cos(walk * 0.6662f) * speed * 0.55f - 0.08f;
-        this.rightArm.yRot = 0.0f;
-        this.leftArm.yRot = 0.0f;
-        this.rightArm.zRot = 0.08f + Mth.sin(age * 0.07f) * 0.04f;
-        this.leftArm.zRot = -0.08f - Mth.sin(age * 0.07f) * 0.04f;
-        this.rightLeg.xRot = Mth.cos(walk * 0.6662f) * 0.5f * speed;
-        this.leftLeg.xRot = Mth.cos(walk * 0.6662f + Mth.PI) * 0.5f * speed;
+        if (isSaint) {
+            // Sovereign aerial levitation — tucked drifting legs, forward glide lean, spell-conductor arms (zero villager walking!)
+            float legDrift = Mth.sin(age * 0.08f) * 0.09f;
+            this.rightLeg.y = 12.2f + hover * 0.65f;
+            this.leftLeg.y = 12.2f + hover * 0.65f;
+            this.rightLeg.xRot = 0.24f + speed * 0.34f + legDrift;
+            this.leftLeg.xRot = 0.40f + speed * 0.38f - legDrift;
+            this.rightLeg.zRot = 0.06f;
+            this.leftLeg.zRot = -0.06f;
+            this.body.xRot = 0.08f + speed * 0.22f + Mth.sin(age * 0.055f) * 0.04f;
+            this.cape.xRot = 0.44f + speed * 0.52f + Mth.sin(age * 0.13f) * 0.14f;
+            this.robeSkirt.xRot = 0.28f + speed * 0.32f + Mth.sin(age * 0.10f) * 0.08f;
+            this.rightArm.xRot = -0.34f + Mth.sin(age * 0.09f) * 0.09f;
+            this.leftArm.xRot = -0.34f - Mth.sin(age * 0.09f) * 0.09f;
+            this.rightArm.yRot = 0.0f;
+            this.leftArm.yRot = 0.0f;
+            this.rightArm.zRot = 0.30f + Mth.sin(age * 0.08f) * 0.08f;
+            this.leftArm.zRot = -0.30f - Mth.sin(age * 0.08f) * 0.08f;
+        } else {
+            this.rightLeg.y = 12.0f;
+            this.leftLeg.y = 12.0f;
+            this.rightLeg.zRot = 0.0f;
+            this.leftLeg.zRot = 0.0f;
+            this.rightArm.xRot = Mth.cos(walk * 0.6662f + Mth.PI) * speed * 0.55f - (tier == 2 ? 0.35f : 0.08f);
+            this.leftArm.xRot = Mth.cos(walk * 0.6662f) * speed * 0.55f - 0.08f;
+            this.rightArm.yRot = 0.0f;
+            this.leftArm.yRot = 0.0f;
+            this.rightArm.zRot = 0.08f + Mth.sin(age * 0.07f) * 0.04f;
+            this.leftArm.zRot = -0.08f - Mth.sin(age * 0.07f) * 0.04f;
+            this.rightLeg.xRot = Mth.cos(walk * 0.6662f) * 0.5f * speed;
+            this.leftLeg.xRot = Mth.cos(walk * 0.6662f + Mth.PI) * 0.5f * speed;
+        }
 
         // T1 Focus Crystal gentle orbit
         this.focusOrb.y = 5.2f + Mth.sin(age * 0.14f) * 1.1f;
@@ -337,32 +364,40 @@ public class NihilityCreatureModel extends EntityModel<NihilityRenderState> {
             shields[i].xRot = 0.1f * Mth.sin(age * 0.09f + i);
         }
 
-        // T4/T5 Celestial Astrolabe Halo baseline
-        this.haloGroup.y = -5.2f + hover;
-        this.haloGroup.zRot = age * (isSaint ? 0.045f : 0.03f);
-        this.haloGroup.xRot = 0.08f * Mth.sin(age * 0.06f);
+        // T4/T5 Celestial Astrolabe Halo — spin & overhead crown tilt reflect Astrolabe Charge (0..6) & Sword Liberation
+        float saintHaloRate = 0.048f + state.saintAstrolabeCharge * 0.045f + (state.saintSwordLiberation ? 0.06f : 0.0f);
+        this.haloGroup.y = -5.2f + hover - (isSaint && state.saintSwordLiberation ? 2.2f : (isSaint ? state.saintAstrolabeCharge * 0.22f : 0.0f));
+        this.haloGroup.zRot = age * (isSaint ? saintHaloRate : 0.03f);
+        this.haloGroup.xRot = isSaint && state.saintSwordLiberation
+            ? 0.48f + 0.08f * Mth.sin(age * 0.09f)
+            : (isSaint ? 0.10f + state.saintAstrolabeCharge * 0.04f + 0.06f * Mth.sin(age * 0.06f) : 0.08f * Mth.sin(age * 0.06f));
         this.crownSpire.zRot = -this.haloGroup.zRot; // Keeps spire vertical!
         this.crownSpire.y = -1.0f + Mth.sin(age * 0.12f) * 0.45f;
 
         // T5 Saint 6 Seraphic Blade-Wings baseline
         float wingBreath = Mth.sin(age * 0.1f) * 0.09f;
-        float wingSpread = 1.0f;
-        float wingSweepBack = 0.28f;
+        float wingSpread = state.saintSwordLiberation ? 1.24f : 1.0f;
+        float wingSweepBack = state.saintSwordLiberation ? 0.16f : 0.28f;
+        float wingYawFold = 0.0f;
+        float wingZShift = 0.0f;
 
-        // T5 Saint Twin Hovering Void Greatswords baseline
-        this.swordLeft.x = 14.5f + Mth.sin(age * 0.07f) * 0.8f;
-        this.swordLeft.y = 1.0f + hover + Mth.sin(age * 0.12f) * 1.1f;
-        this.swordLeft.z = 2.8f;
-        this.swordLeft.xRot = 0.08f + Mth.sin(age * 0.08f) * 0.06f;
+        // T5 Saint Twin Hovering Void Greatswords baseline (tighter, aggressive forward cant in Sword Liberation)
+        float swordOrbitX = state.saintSwordLiberation ? 12.2f : 14.5f;
+        float swordOrbitZ = state.saintSwordLiberation ? -1.4f : 2.8f;
+        float swordForwardPitch = state.saintSwordLiberation ? 0.42f : 0.08f;
+        this.swordLeft.x = swordOrbitX + Mth.sin(age * 0.07f) * 0.85f;
+        this.swordLeft.y = 1.0f + hover + Mth.sin(age * 0.12f) * 1.15f;
+        this.swordLeft.z = swordOrbitZ;
+        this.swordLeft.xRot = swordForwardPitch + Mth.sin(age * 0.08f) * 0.07f;
         this.swordLeft.yRot = -0.22f;
-        this.swordLeft.zRot = 0.26f;
+        this.swordLeft.zRot = state.saintSwordLiberation ? 0.36f : 0.26f;
 
-        this.swordRight.x = -14.5f - Mth.sin(age * 0.07f) * 0.8f;
-        this.swordRight.y = 1.0f + hover + Mth.cos(age * 0.12f) * 1.1f;
-        this.swordRight.z = 2.8f;
-        this.swordRight.xRot = 0.08f + Mth.cos(age * 0.08f) * 0.06f;
+        this.swordRight.x = -swordOrbitX - Mth.sin(age * 0.07f) * 0.85f;
+        this.swordRight.y = 1.0f + hover + Mth.cos(age * 0.12f) * 1.15f;
+        this.swordRight.z = swordOrbitZ;
+        this.swordRight.xRot = swordForwardPitch + Mth.cos(age * 0.08f) * 0.07f;
         this.swordRight.yRot = 0.22f;
-        this.swordRight.zRot = -0.26f;
+        this.swordRight.zRot = state.saintSwordLiberation ? -0.36f : -0.26f;
 
         // Disposition stances
         if (state.disposition == Disposition.TRADING) {
@@ -593,7 +628,54 @@ public class NihilityCreatureModel extends EntityModel<NihilityRenderState> {
             this.swordRight.zRot = -0.72f;
         }
 
-        // Apply final 6-wing seraphic spread & breathing!
+        // Saint Live Armament States — each floating piece visibly performs its exact combat role!
+        if (isSaint) {
+            if (state.saintSwordsGuardTicks > 0 && saintSwordsDocked) {
+                // Close-quarters X-Guard Sword Counter: both swords snap forward in front of Saint and whirl in a scissor cross!
+                float guardSpin = age * 0.78f;
+                this.rightArm.xRot = -1.32f;
+                this.rightArm.yRot = 0.52f;
+                this.leftArm.xRot = -1.32f;
+                this.leftArm.yRot = -0.52f;
+                this.swordLeft.x = 3.2f + Mth.cos(guardSpin) * 2.2f;
+                this.swordLeft.y = 2.0f + hover + Mth.sin(guardSpin) * 1.6f;
+                this.swordLeft.z = -9.6f;
+                this.swordLeft.xRot = 1.48f;
+                this.swordLeft.zRot = 0.88f + Mth.sin(guardSpin) * 0.65f;
+                this.swordRight.x = -3.2f - Mth.cos(guardSpin) * 2.2f;
+                this.swordRight.y = 2.0f + hover - Mth.sin(guardSpin) * 1.6f;
+                this.swordRight.z = -9.6f;
+                this.swordRight.xRot = 1.48f;
+                this.swordRight.zRot = -0.88f - Mth.sin(guardSpin) * 0.65f;
+            }
+            if (state.saintWingShieldTicks > 0) {
+                // 「六翼合拢 · 相位折射茧」: all 6 obsidian wings fold tightly forward around torso forming a prism cocoon!
+                wingSpread = 0.24f;
+                wingSweepBack = -1.08f;
+                wingYawFold = 0.92f;
+                wingZShift = -2.4f;
+                wingBreath = Mth.sin(age * 0.9f) * 0.035f;
+                this.head.xRot = 0.18f;
+                this.rightArm.xRot = -1.08f;
+                this.rightArm.yRot = 0.68f;
+                this.rightArm.zRot = -0.18f;
+                this.leftArm.xRot = -1.08f;
+                this.leftArm.yRot = -0.68f;
+                this.leftArm.zRot = 0.18f;
+            } else if (state.saintWingSalvoTicks > 0) {
+                // 「六翼齐射 · 归零羽刃」: all 6 wings flare wide & cant forward, vibrating with staggered feather launches!
+                wingSpread = 1.56f;
+                wingSweepBack = -0.34f;
+                wingYawFold = 0.22f;
+                wingBreath = Mth.sin(age * 1.45f) * 0.14f;
+                this.rightArm.xRot = -1.42f;
+                this.leftArm.xRot = -1.42f;
+                this.rightArm.zRot = 0.78f;
+                this.leftArm.zRot = -0.78f;
+            }
+        }
+
+        // Apply final 6-wing seraphic spread, fold, & breathing!
         this.wingUL.y = 1.5f + hover;
         this.wingUR.y = 1.5f + hover;
         this.wingML.y = 4.5f + hover;
@@ -601,19 +683,32 @@ public class NihilityCreatureModel extends EntityModel<NihilityRenderState> {
         this.wingLL.y = 7.8f + hover;
         this.wingLR.y = 7.8f + hover;
 
+        this.wingUL.z = 4.6f + wingZShift;
+        this.wingUR.z = 4.6f + wingZShift;
+        this.wingML.z = 4.9f + wingZShift;
+        this.wingMR.z = 4.9f + wingZShift;
+        this.wingLL.z = 5.2f + wingZShift;
+        this.wingLR.z = 5.2f + wingZShift;
+
         this.wingUL.zRot = (0.58f + wingBreath) * wingSpread;
         this.wingUR.zRot = -(0.58f + wingBreath) * wingSpread;
         this.wingUL.xRot = -wingSweepBack;
         this.wingUR.xRot = -wingSweepBack;
+        this.wingUL.yRot = wingYawFold;
+        this.wingUR.yRot = -wingYawFold;
 
         this.wingML.zRot = (1.08f + wingBreath * 1.15f) * wingSpread;
         this.wingMR.zRot = -(1.08f + wingBreath * 1.15f) * wingSpread;
         this.wingML.xRot = -wingSweepBack * 0.85f;
         this.wingMR.xRot = -wingSweepBack * 0.85f;
+        this.wingML.yRot = wingYawFold * 0.9f;
+        this.wingMR.yRot = -wingYawFold * 0.9f;
 
         this.wingLL.zRot = (1.62f + wingBreath * 0.9f) * wingSpread;
         this.wingLR.zRot = -(1.62f + wingBreath * 0.9f) * wingSpread;
         this.wingLL.xRot = -wingSweepBack * 0.7f;
         this.wingLR.xRot = -wingSweepBack * 0.7f;
+        this.wingLL.yRot = wingYawFold * 0.75f;
+        this.wingLR.yRot = -wingYawFold * 0.75f;
     }
 }

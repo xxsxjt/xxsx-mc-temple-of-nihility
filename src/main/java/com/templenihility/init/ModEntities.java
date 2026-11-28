@@ -36,6 +36,11 @@ public class ModEntities {
         ENTITIES.registerEntityType("nihility_saint", NihilitySaint::new, MobCategory.CREATURE,
             builder -> builder.sized(1.0f, 2.5f));
 
+    // 归零圣者与法系单位的实体法术武装（离体浮游巨剑 / 六翼羽刃 / 星盘审判光矛）
+    public static final DeferredHolder<EntityType<?>, EntityType<VoidSpellEntity>> VOID_SPELL =
+        ENTITIES.registerEntityType("void_spell", VoidSpellEntity::new, MobCategory.MISC,
+            builder -> builder.sized(0.75f, 0.75f).clientTrackingRange(8).updateInterval(1));
+
     public static void register(IEventBus eventBus) {
         ENTITIES.register(eventBus);
     }
