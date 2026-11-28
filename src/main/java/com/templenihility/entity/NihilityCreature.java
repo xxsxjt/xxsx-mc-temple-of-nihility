@@ -122,7 +122,9 @@ public abstract class NihilityCreature extends PathfinderMob {
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new CreatureActionLockGoal(this));
-        this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.24, true));
+        if (usesDefaultMeleeGoal()) {
+            this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.24, true));
+        }
         if (getTier() >= 2) {
             this.goalSelector.addGoal(3, new MoveTowardsRestrictionGoal(this, 0.95));
         }
@@ -429,6 +431,10 @@ public abstract class NihilityCreature extends PathfinderMob {
     }
 
     public abstract int getTier();
+
+    protected boolean usesDefaultMeleeGoal() {
+        return true;
+    }
 
     protected ActionType selectCreatureAction(LivingEntity target, long gameTime) {
         return ActionType.NONE;

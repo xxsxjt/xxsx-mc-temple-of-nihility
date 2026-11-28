@@ -17,7 +17,24 @@ public class NihilityRenderState extends LivingEntityRenderState {
     public boolean projectileGuarding;
     public boolean projectileDeflecting;
 
-    // NihilitySaint floating-armament synced visual states
+    // Tier 1 Believer (Focus-Crystal Caster)
+    public int believerCastingTicks;
+    public int believerPulseTicks;
+
+    // Tier 2 Follower (Heavy Halberd Vanguard)
+    public int followerHalberdStance;
+    public int followerStanceTicks;
+
+    // Tier 3 Envoy (Spatial Monolith Assassin)
+    public boolean envoyMonolithsDeployed;
+    public int envoyBackstabTicks;
+
+    // Tier 4 Grand Envoy (Quad-Aegis Commander)
+    public int grandEnvoyDeployedShields;
+    public int grandEnvoyCommandTicks;
+    public boolean grandEnvoyDomainActive;
+
+    // Tier 5 Saint (Floating Armament Sovereign)
     public boolean saintSwordsDeployed;
     public int saintSwordsGuardTicks;
     public int saintWingShieldTicks;
