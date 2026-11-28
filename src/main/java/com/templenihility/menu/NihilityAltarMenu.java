@@ -24,6 +24,7 @@ public class NihilityAltarMenu extends AbstractContainerMenu {
     public static final int OUTPUT_SLOT = 1;
     public static final int PREVIEW_SLOT = 2;
     public static final int PLAYER_INV_START = 3;
+
     public static final int BUTTON_PERFORM_RITUAL = 0;
     public static final int BUTTON_TOGGLE_SAINT_CHALLENGE = 1;
 
@@ -54,11 +55,12 @@ public class NihilityAltarMenu extends AbstractContainerMenu {
         this.data[9] = Status.NO_INPUT.ordinal();
         this.data[10] = StartStatus.PLAYER_INVALID.ordinal();
 
-        addSlot(new InputSlot(altar, INPUT_SLOT, 56, 35));
-        addSlot(new OutputSlot(altar, OUTPUT_SLOT, 116, 35));
+        // Centered Void Altar slots matching redesigned 192x212 dark Void Obsidian layout
+        addSlot(new InputSlot(altar, INPUT_SLOT, 46, 42));
+        addSlot(new OutputSlot(altar, OUTPUT_SLOT, 130, 42));
         addSlot(new PreviewSlot(preview, 0, -1000, -1000));
-        addStandardInventorySlots(inventory, 8, 84);
 
+        addStandardInventorySlots(inventory, 15, 132);
         refreshAllData();
         for (int i = 0; i < data.length; i++) {
             addDataSlot(DataSlot.shared(data, i));
@@ -68,10 +70,10 @@ public class NihilityAltarMenu extends AbstractContainerMenu {
     @Override
     public boolean clickMenuButton(Player player, int buttonId) {
         if (buttonId == BUTTON_PERFORM_RITUAL && blockEntity != null) {
-            boolean changed = blockEntity.performRitual(player);
+            boolean done = blockEntity.performRitual(player);
             refreshAllData();
             broadcastFullState();
-            return changed;
+            return done;
         }
         if (buttonId == BUTTON_TOGGLE_SAINT_CHALLENGE
             && blockEntity != null
@@ -112,7 +114,6 @@ public class NihilityAltarMenu extends AbstractContainerMenu {
         if (!slot.hasItem()) {
             return ItemStack.EMPTY;
         }
-
         ItemStack source = slot.getItem();
         ItemStack original = source.copy();
         if (index == PREVIEW_SLOT) {
@@ -125,7 +126,6 @@ public class NihilityAltarMenu extends AbstractContainerMenu {
         } else if (!moveItemStackTo(source, INPUT_SLOT, INPUT_SLOT + 1, false)) {
             return ItemStack.EMPTY;
         }
-
         if (source.isEmpty()) {
             slot.setByPlayer(ItemStack.EMPTY);
         } else {
@@ -185,7 +185,6 @@ public class NihilityAltarMenu extends AbstractContainerMenu {
         }
         int[] source = blockEntity.getStructureData();
         System.arraycopy(source, 0, data, 0, Math.min(source.length, 5));
-
         NihilityRitualService.RitualPlan plan = NihilityRitualService.inspect(
             level,
             altar.getItem(INPUT_SLOT),
@@ -205,7 +204,6 @@ public class NihilityAltarMenu extends AbstractContainerMenu {
             preview.setItem(0, ItemStack.EMPTY);
             return;
         }
-
         var recipe = plan.requiredRecipe();
         data[5] = 1;
         data[6] = recipe.inputCount();

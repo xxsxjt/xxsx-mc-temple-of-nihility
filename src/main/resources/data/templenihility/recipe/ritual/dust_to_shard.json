@@ -1,7 +1,7 @@
 {
   "type": "templenihility:nihility_ritual",
   "input": "templenihility:nihility_dust",
-  "input_count": 8,
+  "input_count": 4,
   "result": {
     "id": "templenihility:nihility_shard",
     "count": 1
