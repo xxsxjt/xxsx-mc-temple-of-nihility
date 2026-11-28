@@ -28,7 +28,7 @@ class SaintActionPolicyTest {
         assertTrue(SaintActionPolicy.lineHits(8.0, 0.0, 0.0, 0.0, 1.0, 0.0));
         assertFalse(SaintActionPolicy.lineHits(8.0, 2.0, 0.0, 0.0, 1.0, 0.0));
         assertFalse(SaintActionPolicy.lineHits(-1.0, 0.0, 0.0, 0.0, 1.0, 0.0));
-        assertFalse(SaintActionPolicy.lineHits(20.0, 0.0, 0.0, 0.0, 1.0, 0.0));
+        assertFalse(SaintActionPolicy.lineHits(SaintActionPolicy.ERASURE_LINE_LENGTH + 2.0, 0.0, 0.0, 0.0, 1.0, 0.0));
     }
 
     @Test

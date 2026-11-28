@@ -1,17 +1,18 @@
 package com.templenihility.action;
 
 public final class CreatureActionPolicy {
+
     public enum ActionType {
         NONE(0, 0, 0, 0),
-        FOLLOWER_INTERCEPT(8, 3, 10, 80),
-        ENVOY_BACKSTEP(5, 1, 8, 70),
-        ENVOY_RIFT_DIRECTION(12, 1, 10, 120),
-        GRAND_ENVOY_DOMAIN(20, 1, 14, 300),
-        GRAND_ENVOY_RECALL(12, 1, 12, 220),
-        GRAND_ENVOY_SHIELD(16, 1, 18, 260),
-        SAINT_ERASURE_LINE(20, 1, 12, 100),
-        SAINT_MISSING_ZONE(16, 1, 12, 120),
-        SAINT_VOID_TERMINUS(14, 1, 10, 300);
+        FOLLOWER_INTERCEPT(6, 4, 6, 48),
+        ENVOY_BACKSTEP(4, 1, 6, 45),
+        ENVOY_RIFT_DIRECTION(8, 1, 8, 65),
+        GRAND_ENVOY_DOMAIN(14, 1, 10, 180),
+        GRAND_ENVOY_RECALL(10, 1, 8, 130),
+        GRAND_ENVOY_SHIELD(12, 1, 10, 140),
+        SAINT_ERASURE_LINE(14, 1, 8, 52),
+        SAINT_MISSING_ZONE(12, 1, 8, 62),
+        SAINT_VOID_TERMINUS(12, 1, 8, 140);
 
         private final int windupTicks;
         private final int activeTicks;

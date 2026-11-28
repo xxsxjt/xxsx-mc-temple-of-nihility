@@ -3,20 +3,20 @@ package com.templenihility.action;
 import com.templenihility.action.CreatureActionPolicy.ActionType;
 
 public final class SaintActionPolicy {
-    public static final double ERASURE_LINE_LENGTH = 18.0;
-    public static final double ERASURE_LINE_HALF_WIDTH = 1.15;
-    public static final float ERASURE_LINE_DAMAGE = 20.0F;
-    public static final double MISSING_ZONE_RADIUS = 2.2;
+    public static final double ERASURE_LINE_LENGTH = 22.0;
+    public static final double ERASURE_LINE_HALF_WIDTH = 1.75;
+    public static final float ERASURE_LINE_DAMAGE = 44.0F;
+    public static final double MISSING_ZONE_RADIUS = 2.4;
     public static final int MISSING_ZONE_DURATION_TICKS = 6 * 20;
-    public static final float MISSING_ZONE_DAMAGE = 7.0F;
+    public static final float MISSING_ZONE_BURST_DAMAGE = 24.0F;
+    public static final float MISSING_ZONE_DAMAGE = 16.0F;
 
-    // 归零终式：低生命阶段招式。多段安全区逐步缩小，玩家必须随安全区收缩逃向中心。
-    // 安全区规律可读（半径线性收缩），不做全屏随机秒杀。
-    public static final double LOW_HEALTH_FRACTION = 0.30;
+    // 归零终式：半血觉醒阶段招式。多段安全区逐步缩小，玩家需随安全区收缩切入中心。
+    public static final double LOW_HEALTH_FRACTION = 0.55;
     public static final double TERMINUS_START_RADIUS = 12.0;
     public static final double TERMINUS_END_RADIUS = 2.0;
     public static final int TERMINUS_DURATION_TICKS = 6 * 20;
-    public static final float TERMINUS_MAX_DAMAGE = 10.0F;
+    public static final float TERMINUS_MAX_DAMAGE = 26.0F;
     public static final int TERMINUS_ACTIVE_EVERY = 3;
 
     public static ActionType select(int sequence, double targetDistanceSquared) {
@@ -53,10 +53,10 @@ public final class SaintActionPolicy {
             return TERMINUS_MAX_DAMAGE;
         }
         double clamped = Math.max(0.0, Math.min(1.0, progress));
-        return (float) (1.5 + (TERMINUS_MAX_DAMAGE - 1.5) * clamped);
+        return (float) (8.0 + (TERMINUS_MAX_DAMAGE - 8.0) * clamped);
     }
 
-    /** 给定进度与到中心距离，判断玩家是否处于安全区内。 */
+    /** 给定进度与到中心距离，判断目标是否处于安全区内。 */
     public static boolean isInTerminusSafeZone(double distanceSquared, double progress) {
         if (!Double.isFinite(distanceSquared) || distanceSquared < 0.0) {
             return false;
