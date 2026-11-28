@@ -3,7 +3,7 @@ plugins {
     id 'net.neoforged.moddev' version '2.0.148'
 }
 
-version = '1.0.0-beta.7'
+version = '1.0.0-beta.8'
 group = 'com.templenihility'
 base.archivesName = 'temple-of-nihility-neoforge-26.2'
 
@@ -175,6 +175,10 @@ def verifyResourcesAndLanguages = tasks.register('verifyResourcesAndLanguages') 
             }
         }
 
+        def tomlText = file('src/main/resources/META-INF/neoforge.mods.toml').getText('UTF-8')
+        if (!tomlText.contains("version=\"${project.version}\"")) {
+            throw new GradleException("neoforge.mods.toml version mismatch: expected version=\"${project.version}\"")
+        }
         def zhFile = file('src/main/resources/assets/templenihility/lang/zh_cn.json').canonicalFile
         def enFile = file('src/main/resources/assets/templenihility/lang/en_us.json').canonicalFile
         def zh = parsed[zhFile] as Map
