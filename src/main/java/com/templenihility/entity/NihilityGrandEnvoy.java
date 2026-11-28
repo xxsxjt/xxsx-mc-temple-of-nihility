@@ -16,6 +16,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -25,7 +26,6 @@ import net.minecraft.world.phys.Vec3;
 public class NihilityGrandEnvoy extends NihilityCreature {
     private static final EntityDataAccessor<Integer> DATA_SHIELD_CHARGES = SynchedEntityData.defineId(
         NihilityGrandEnvoy.class, EntityDataSerializers.INT);
-
     private BlockPos domainOrigin = BlockPos.ZERO;
     private long domainUntilGameTime;
 
@@ -104,6 +104,7 @@ public class NihilityGrandEnvoy extends NihilityCreature {
 
     private void activateRitualShield() {
         setRitualShieldCharges(GrandEnvoyActionPolicy.SHIELD_CHARGES);
+        heal(getMaxHealth() * 0.06F);
         NihilityVisualEffects.grandEnvoyShieldRaised(this, GrandEnvoyActionPolicy.SHIELD_CHARGES);
     }
 
@@ -123,7 +124,7 @@ public class NihilityGrandEnvoy extends NihilityCreature {
             }
             Vec3 destination = findRecallDestination(level, ally, recalled);
             if (destination == null) {
-                ally.getNavigation().moveTo(this, 1.15);
+                ally.getNavigation().moveTo(this, 1.2);
                 continue;
             }
             Vec3 from = ally.position();
@@ -132,6 +133,7 @@ public class NihilityGrandEnvoy extends NihilityCreature {
             ally.hurtMarked = true;
             ally.getNavigation().stop();
             ally.setTarget(target);
+            ally.heal(ally.getMaxHealth() * 0.20F);
             NihilityVisualEffects.grandEnvoyRecall(this, ally, from, destination);
             recalled++;
         }
@@ -176,11 +178,23 @@ public class NihilityGrandEnvoy extends NihilityCreature {
         boolean shielded = charges > 0
             && amount > 0.0F
             && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY);
+        float incoming = amount;
         boolean hurt = super.hurtServer(level, source,
             shielded ? GrandEnvoyActionPolicy.shieldedDamage(amount) : amount);
         if (hurt && shielded) {
             setRitualShieldCharges(charges - 1);
             NihilityVisualEffects.grandEnvoyShieldImpact(this, charges - 1);
+            // Ritual Shield backlash punishes melee bosses hacking into the Grand Envoy!
+            if (source.getEntity() instanceof LivingEntity attacker
+                && attacker != this
+                && !(attacker instanceof NihilityCreature)
+                && attacker.isAlive()
+                && distanceToSqr(attacker) <= 7.0 * 7.0) {
+                float reflectBase = Math.max(
+                    (float) getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.75F,
+                    Math.min(60.0F, incoming * GrandEnvoyActionPolicy.SHIELD_REFLECT_MULTIPLIER));
+                dealVoidStrike(level, attacker, reflectBase, 1.0F, true);
+            }
         }
         return hurt;
     }

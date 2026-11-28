@@ -8,10 +8,13 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
@@ -22,7 +25,6 @@ import net.minecraft.world.phys.Vec3;
 public class NihilityEnvoy extends NihilityCreature {
     private static final EntityDataAccessor<Long> DATA_DEFLECT_UNTIL = SynchedEntityData.defineId(
         NihilityEnvoy.class, EntityDataSerializers.LONG);
-
     private long nextProjectileDeflectGameTime;
 
     public NihilityEnvoy(EntityType<? extends PathfinderMob> entityType, Level level) {
@@ -55,10 +57,10 @@ public class NihilityEnvoy extends NihilityCreature {
     @Override
     protected ActionType selectCreatureAction(LivingEntity target, long gameTime) {
         double distanceSquared = distanceToSqr(target);
-        if (distanceSquared <= 3.25 * 3.25) {
+        if (distanceSquared <= 3.5 * 3.5) {
             return ActionType.ENVOY_BACKSTEP;
         }
-        return distanceSquared >= 4.0 * 4.0 && distanceSquared <= 9.0 * 9.0
+        return distanceSquared >= 3.5 * 3.5 && distanceSquared <= 14.0 * 14.0
             ? ActionType.ENVOY_RIFT_DIRECTION
             : ActionType.NONE;
     }
@@ -72,7 +74,7 @@ public class NihilityEnvoy extends NihilityCreature {
     }
 
     public boolean tryDeflectProjectile(Projectile projectile) {
-        if (projectile == null || !projectile.isAlive() || hasActiveCreatureAction()) {
+        if (projectile == null || !projectile.isAlive()) {
             return false;
         }
         Entity owner = projectile.getOwner();
@@ -84,25 +86,23 @@ public class NihilityEnvoy extends NihilityCreature {
             friendlyProjectile)) {
             return false;
         }
-
         Vec3 incoming = projectile.getDeltaMovement();
         Vec3 reflected;
         if (owner != null && owner.isAlive()) {
             Vec3 target = owner.position().add(0.0, owner.getBbHeight() * 0.55, 0.0);
             reflected = target.subtract(projectile.position());
             if (reflected.lengthSqr() > 1.0E-6) {
-                double speed = Math.max(0.6, Math.min(2.5, incoming.length() * 1.05));
+                double speed = Math.max(0.85, Math.min(3.0, incoming.length() * 1.35));
                 reflected = reflected.normalize().scale(speed);
             } else {
-                reflected = incoming.scale(-1.0);
+                reflected = incoming.scale(-1.25);
             }
         } else {
-            reflected = incoming.scale(-1.0);
+            reflected = incoming.scale(-1.25);
         }
         if (reflected.lengthSqr() <= 1.0E-6) {
             return false;
         }
-
         nextProjectileDeflectGameTime = gameTime + CreatureProjectileDefensePolicy.ENVOY_DEFLECT_COOLDOWN_TICKS;
         entityData.set(DATA_DEFLECT_UNTIL,
             gameTime + CreatureProjectileDefensePolicy.ENVOY_DEFLECT_REACTION_TICKS);
@@ -120,12 +120,18 @@ public class NihilityEnvoy extends NihilityCreature {
 
     private void applyRiftDirection(ServerLevel level, LivingEntity target) {
         Vec3 origin = target.position();
-        if (distanceToSqr(target) > 12.0 * 12.0) {
+        if (distanceToSqr(target) > 16.0 * 16.0) {
             NihilityVisualEffects.envoyRiftDirection(this, target, origin, origin, false);
             return;
         }
+        // Spatial Void Tear deals real combat damage + Void Erosion in addition to displacement!
+        float riftDamage = (float) getAttributeValue(Attributes.ATTACK_DAMAGE) * 1.45F;
+        dealVoidStrike(level, target, riftDamage, 1.3F, true);
+        target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 50, 1, false, false));
+
         Vec3 forward = target.position().subtract(position()).multiply(1.0, 0.0, 1.0);
         if (forward.lengthSqr() <= 1.0E-6) {
+            NihilityVisualEffects.envoyRiftDirection(this, target, origin, origin, true);
             return;
         }
         forward = forward.normalize();
@@ -133,17 +139,16 @@ public class NihilityEnvoy extends NihilityCreature {
         if (((getId() + level.getGameTime()) & 1L) == 0L) {
             side = side.scale(-1.0);
         }
-
         Vec3 destination = findRiftDestination(level, target, side);
         if (destination == null) {
-            NihilityVisualEffects.envoyRiftDirection(this, target, origin, origin, false);
+            NihilityVisualEffects.envoyRiftDirection(this, target, origin, origin, true);
             return;
         }
         target.teleportTo(destination.x, destination.y, destination.z);
         Vec3 actualDestination = target.position();
         boolean moved = actualDestination.distanceToSqr(origin) >= 0.25;
         if (moved) {
-            target.setDeltaMovement(target.getDeltaMovement().scale(0.35));
+            target.setDeltaMovement(target.getDeltaMovement().scale(0.25));
             target.hurtMarked = true;
         }
         NihilityVisualEffects.envoyRiftDirection(this, target, origin, actualDestination, moved);

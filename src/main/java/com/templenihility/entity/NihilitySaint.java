@@ -1,36 +1,43 @@
 package com.templenihility.entity;
 
-import com.templenihility.challenge.SaintChallengePolicy;
-import com.templenihility.challenge.SaintChallengePolicy.EndReason;
-import com.templenihility.challenge.SaintChallengeService;
 import com.templenihility.action.CreatureActionPolicy.ActionType;
 import com.templenihility.action.CreatureActionPolicy.Phase;
 import com.templenihility.action.SaintActionPolicy;
+import com.templenihility.challenge.SaintChallengePolicy;
+import com.templenihility.challenge.SaintChallengePolicy.EndReason;
+import com.templenihility.challenge.SaintChallengeService;
 import com.templenihility.entity.CreatureDispositionPolicy.Disposition;
 import com.templenihility.init.ModItems;
 import com.templenihility.world.NihilityVisualEffects;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.UUID;
-import net.minecraft.server.level.ServerBossEvent;
-import net.minecraft.world.BossEvent;
-import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.BossEvent;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 public class NihilitySaint extends NihilityCreature {
@@ -60,6 +67,10 @@ public class NihilitySaint extends NihilityCreature {
     private int saintActionSequence;
     private Vec3 terminusCenter = Vec3.ZERO;
     private long terminusStartedGameTime = -1L;
+    private boolean awakenedPhaseTwo;
+    private long nextCloseCleaveGameTime;
+    private long nextPhaseBlinkGameTime;
+
     private final ServerBossEvent bossEvent = new ServerBossEvent(
         UUID.randomUUID(),
         Component.translatable("entity.templenihility.nihility_saint"),
@@ -75,7 +86,7 @@ public class NihilitySaint extends NihilityCreature {
     @Override
     protected void registerGoals() {
         super.registerGoals();
-        this.goalSelector.addGoal(1, new SaintTacticalSpacingGoal(this));
+        this.goalSelector.addGoal(1, new SaintCombatControlGoal(this));
     }
 
     @Override
@@ -96,12 +107,18 @@ public class NihilitySaint extends NihilityCreature {
         if (combatActive) {
             this.bossEvent.setProgress(Math.max(0.0F, Math.min(1.0F, getHealth() / Math.max(1.0F, getMaxHealth()))));
             this.bossEvent.setName(getDisplayName());
+            this.bossEvent.setColor(awakenedPhaseTwo ? BossEvent.BossBarColor.BLUE : BossEvent.BossBarColor.WHITE);
         }
     }
 
     @Override
     public int getTier() {
         return 5;
+    }
+
+    @Override
+    protected double actionCooldownScale() {
+        return awakenedPhaseTwo ? 0.70 : 1.0;
     }
 
     @Override
@@ -115,6 +132,7 @@ public class NihilitySaint extends NihilityCreature {
         super.tick();
         if (!level().isClientSide() && isAlive() && level() instanceof ServerLevel serverLevel) {
             tickRitualChallenge(serverLevel);
+            tickAwakeningCheck(serverLevel);
             tickSaintActionTelegraph();
             tickMissingZones(serverLevel);
             tickVoidTerminus(serverLevel);
@@ -123,6 +141,65 @@ public class NihilitySaint extends NihilityCreature {
         } else if (!level().isClientSide() && !isAlive()) {
             this.bossEvent.setVisible(false);
         }
+    }
+
+    private void tickAwakeningCheck(ServerLevel level) {
+        if (!getDisposition().isCombat() && !isRitualChallengeActive()) {
+            if (awakenedPhaseTwo && getHealth() >= getMaxHealth() * 0.95F) {
+                awakenedPhaseTwo = false;
+            }
+            return;
+        }
+        if (awakenedPhaseTwo || getMaxHealth() <= 0.0F || getHealth() > getMaxHealth() * 0.50F) {
+            return;
+        }
+        // Phase-2 Void Awakening: cleanse debuffs, restore 12% HP, unleash 10-block Void Nullification Shockwave!
+        awakenedPhaseTwo = true;
+        removeAllEffects();
+        heal(getMaxHealth() * 0.12F);
+        resetCreatureActionCooldown(level.getGameTime());
+
+        List<LivingEntity> enemies = collectCombatTargets(level, position(), 10.5);
+        for (LivingEntity enemy : enemies) {
+            dealVoidStrike(level, enemy, 48.0F, 1.8F, true);
+            Vec3 away = enemy.position().subtract(position()).multiply(1.0, 0.0, 1.0);
+            if (away.lengthSqr() > 1.0E-5) {
+                away = away.normalize();
+                enemy.setDeltaMovement(away.x * 1.45, Math.max(0.38, enemy.getDeltaMovement().y + 0.25), away.z * 1.45);
+                enemy.hurtMarked = true;
+            }
+            enemy.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 80, 1, false, false));
+        }
+        NihilityVisualEffects.saintVoidTerminusActivate(this, position());
+    }
+
+    private List<LivingEntity> collectCombatTargets(ServerLevel level, Vec3 center, double radius) {
+        if (isRitualChallengeActive()) {
+            ServerPlayer player = challengePlayerId == null
+                ? null
+                : level.getServer().getPlayerList().getPlayer(challengePlayerId);
+            if (player != null && player.isAlive() && player.level() == level
+                && player.distanceToSqr(center) <= radius * radius) {
+                return List.of(player);
+            }
+            return List.of();
+        }
+        double radiusSq = radius * radius;
+        AABB area = new AABB(center, center).inflate(radius, 4.5, radius);
+        List<LivingEntity> result = new ArrayList<>();
+        LivingEntity primary = getTarget();
+        for (LivingEntity candidate : level.getEntitiesOfClass(LivingEntity.class, area,
+            e -> e.isAlive() && e != this && !(e instanceof NihilityCreature) && e.distanceToSqr(center) <= radiusSq)) {
+            if (candidate instanceof ServerPlayer sp && (sp.isCreative() || sp.isSpectator())) {
+                continue;
+            }
+            if (candidate == primary
+                || canAttack(candidate)
+                || (candidate instanceof net.minecraft.world.entity.Mob mob && mob.getTarget() instanceof NihilityCreature)) {
+                result.add(candidate);
+            }
+        }
+        return result;
     }
 
     public ChallengePhase getChallengePhase() {
@@ -152,12 +229,12 @@ public class NihilitySaint extends NihilityCreature {
         if (!canBeginRitualChallenge(player) || !(level() instanceof ServerLevel serverLevel)) {
             return false;
         }
-
         challengePlayerId = player.getUUID();
         challengeOrigin = hasHome() ? getHomePosition() : blockPosition();
         challengeStartGameTime = serverLevel.getGameTime();
         challengeExpiresGameTime = challengeStartGameTime + SaintChallengePolicy.DURATION_TICKS;
         saintActionSequence = 0;
+        awakenedPhaseTwo = false;
         clearMissingZones();
         setChallengePhase(ChallengePhase.DECLARATION);
         setTarget(null);
@@ -183,7 +260,6 @@ public class NihilitySaint extends NihilityCreature {
         if (!isRitualChallengeActive()) {
             return;
         }
-
         ServerPlayer player = level.getServer().getPlayerList().getPlayer(challengePlayerId);
         EndReason endReason = currentChallengeEndReason(level, player);
         if (endReason != EndReason.NONE) {
@@ -230,16 +306,22 @@ public class NihilitySaint extends NihilityCreature {
     @Override
     protected void onCreatureActionStarted(ActionType action, LivingEntity target) {
         if (action == ActionType.SAINT_ERASURE_LINE) {
-            lockedActionOrigin = position();
-            lockedActionDirection = target.position().subtract(lockedActionOrigin).multiply(1.0, 0.0, 1.0);
-            if (lockedActionDirection.lengthSqr() <= 1.0E-6) {
-                lockedActionDirection = getLookAngle().multiply(1.0, 0.0, 1.0);
-            }
-            if (lockedActionDirection.lengthSqr() > 1.0E-6) {
-                lockedActionDirection = lockedActionDirection.normalize();
-            }
+            updateErasureAim(target);
         } else if (action == ActionType.SAINT_MISSING_ZONE) {
             prepareMissingZones(target);
+        } else if (action == ActionType.SAINT_VOID_TERMINUS) {
+            terminusCenter = position();
+        }
+    }
+
+    private void updateErasureAim(LivingEntity target) {
+        lockedActionOrigin = position();
+        lockedActionDirection = target.position().subtract(lockedActionOrigin).multiply(1.0, 0.0, 1.0);
+        if (lockedActionDirection.lengthSqr() <= 1.0E-6) {
+            lockedActionDirection = getLookAngle().multiply(1.0, 0.0, 1.0);
+        }
+        if (lockedActionDirection.lengthSqr() > 1.0E-6) {
+            lockedActionDirection = lockedActionDirection.normalize();
         }
     }
 
@@ -263,8 +345,7 @@ public class NihilitySaint extends NihilityCreature {
             applyErasureLine(level, target);
             saintActionSequence++;
         } else if (action == ActionType.SAINT_MISSING_ZONE) {
-            missingZonesUntilGameTime = level.getGameTime() + SaintActionPolicy.MISSING_ZONE_DURATION_TICKS;
-            NihilityVisualEffects.saintMissingZonesActivate(this, missingZoneCenters);
+            activateMissingZones(level);
             saintActionSequence++;
         } else if (action == ActionType.SAINT_VOID_TERMINUS) {
             startVoidTerminus(level, target);
@@ -276,8 +357,17 @@ public class NihilitySaint extends NihilityCreature {
         if (getCreatureActionPhase() != Phase.WINDUP) {
             return;
         }
-        if (getCreatureAction() == ActionType.SAINT_ERASURE_LINE && tickCount % 4 == 0) {
-            NihilityVisualEffects.saintErasureLineTelegraph(this, lockedActionOrigin, lockedActionDirection);
+        long elapsed = level().getGameTime() - getCreatureActionStartGameTime();
+        if (getCreatureAction() == ActionType.SAINT_ERASURE_LINE) {
+            // Smoothly track mobile bosses during the first 60% of windup, then lock cleanly before release!
+            LivingEntity actionTarget = getCreatureActionTarget();
+            if (actionTarget != null && actionTarget.isAlive()
+                && elapsed <= (ActionType.SAINT_ERASURE_LINE.windupTicks() * 3L) / 5L) {
+                updateErasureAim(actionTarget);
+            }
+            if (tickCount % 3 == 0) {
+                NihilityVisualEffects.saintErasureLineTelegraph(this, lockedActionOrigin, lockedActionDirection);
+            }
         } else if (getCreatureAction() == ActionType.SAINT_MISSING_ZONE && tickCount % 4 == 0) {
             NihilityVisualEffects.saintMissingZonesTelegraph(this, missingZoneCenters);
         } else if (getCreatureAction() == ActionType.SAINT_VOID_TERMINUS && tickCount % 4 == 0) {
@@ -288,6 +378,7 @@ public class NihilitySaint extends NihilityCreature {
     private void startVoidTerminus(ServerLevel level, LivingEntity target) {
         terminusCenter = position();
         terminusStartedGameTime = level.getGameTime();
+        heal(getMaxHealth() * 0.025F);
         NihilityVisualEffects.saintVoidTerminusActivate(this, terminusCenter);
         if (target instanceof ServerPlayer player) {
             player.sendSystemMessage(Component.translatable("message.templenihility.saint_void_terminus_start"));
@@ -304,40 +395,47 @@ public class NihilitySaint extends NihilityCreature {
             return;
         }
         double progress = (double) elapsed / SaintActionPolicy.TERMINUS_DURATION_TICKS;
-        LivingEntity victim = isRitualChallengeActive() && challengePlayerId != null
-            ? level.getServer().getPlayerList().getPlayer(challengePlayerId)
-            : getTarget();
         double radius = SaintActionPolicy.terminusSafeRadius(progress);
         if (tickCount % 10 == 0) {
             NihilityVisualEffects.saintVoidTerminusPulse(this, terminusCenter, radius);
         }
-        if (victim != null && victim.isAlive() && victim.level() == level && getDisposition().isCombat()) {
+        if (!getDisposition().isCombat() || tickCount % 10 != 0) {
+            return;
+        }
+        float dmg = SaintActionPolicy.terminusDamage(progress);
+        List<LivingEntity> enemies = collectCombatTargets(level, terminusCenter, 22.0);
+        for (LivingEntity victim : enemies) {
             double distanceSquared = victim.distanceToSqr(terminusCenter);
             boolean safe = SaintActionPolicy.isInTerminusSafeZone(distanceSquared, progress);
-            if (!safe && tickCount % 20 == 0) {
-                victim.hurtServer(level, damageSources().mobAttack(this),
-                    SaintActionPolicy.terminusDamage(progress));
+            if (!safe) {
+                dealVoidStrike(level, victim, dmg, 1.15F, true);
+            } else if (!(victim instanceof Player) && tickCount % 20 == 0 && distanceSquared <= 3.5 * 3.5) {
+                // Prevent melee bosses from face-tanking inside the safe eye without taking pressure
+                dealVoidStrike(level, victim, dmg * 0.70F, 0.85F, false);
             }
         }
     }
 
-    private void applyErasureLine(ServerLevel level, LivingEntity target) {
-        boolean validTarget = target != null && target.isAlive()
-            && (!isRitualChallengeActive() || (target instanceof ServerPlayer p && isChallengeParticipant(p)));
-        boolean hit = validTarget
-            && Math.abs(target.getY() - lockedActionOrigin.y) <= 3.5
-            && SaintActionPolicy.lineHits(
-                target.getX(), target.getZ(),
-                lockedActionOrigin.x, lockedActionOrigin.z,
-                lockedActionDirection.x, lockedActionDirection.z);
-        if (hit && target.hurtServer(level, damageSources().mobAttack(this),
-            SaintActionPolicy.ERASURE_LINE_DAMAGE)) {
-            Vec3 side = new Vec3(-lockedActionDirection.z, 0.0, lockedActionDirection.x);
-            double sign = target.position().subtract(lockedActionOrigin).dot(side) >= 0.0 ? 1.0 : -1.0;
-            target.push(side.x * sign * 0.48, 0.12, side.z * sign * 0.48);
+    private void applyErasureLine(ServerLevel level, LivingEntity primaryTarget) {
+        boolean anyHit = false;
+        List<LivingEntity> candidates = collectCombatTargets(level, lockedActionOrigin,
+            SaintActionPolicy.ERASURE_LINE_LENGTH + 2.5);
+        for (LivingEntity victim : candidates) {
+            boolean hit = Math.abs(victim.getY() - lockedActionOrigin.y) <= 4.0
+                && SaintActionPolicy.lineHits(
+                    victim.getX(), victim.getZ(),
+                    lockedActionOrigin.x, lockedActionOrigin.z,
+                    lockedActionDirection.x, lockedActionDirection.z);
+            if (hit && dealVoidStrike(level, victim, SaintActionPolicy.ERASURE_LINE_DAMAGE, 1.55F, true)) {
+                anyHit = true;
+                Vec3 side = new Vec3(-lockedActionDirection.z, 0.0, lockedActionDirection.x);
+                double sign = victim.position().subtract(lockedActionOrigin).dot(side) >= 0.0 ? 1.0 : -1.0;
+                victim.push(side.x * sign * 0.65, 0.18, side.z * sign * 0.65);
+                victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 50, 1, false, false));
+            }
         }
         NihilityVisualEffects.saintErasureLineResolve(
-            this, lockedActionOrigin, lockedActionDirection, hit);
+            this, lockedActionOrigin, lockedActionDirection, anyHit);
     }
 
     private void prepareMissingZones(LivingEntity target) {
@@ -352,9 +450,22 @@ public class NihilitySaint extends NihilityCreature {
         Vec3 side = new Vec3(-forward.z, 0.0, forward.x);
         missingZoneCenters = new Vec3[] {
             targetPos,
-            targetPos.add(side.scale(3.6)).add(forward.scale(1.0)),
-            targetPos.subtract(side.scale(3.6)).add(forward.scale(1.0))
+            targetPos.add(side.scale(3.4)).add(forward.scale(0.8)),
+            targetPos.subtract(side.scale(3.4)).add(forward.scale(0.8))
         };
+    }
+
+    private void activateMissingZones(ServerLevel level) {
+        missingZonesUntilGameTime = level.getGameTime() + SaintActionPolicy.MISSING_ZONE_DURATION_TICKS;
+        NihilityVisualEffects.saintMissingZonesActivate(this, missingZoneCenters);
+        for (Vec3 center : missingZoneCenters) {
+            for (LivingEntity victim : collectCombatTargets(level, center, SaintActionPolicy.MISSING_ZONE_RADIUS + 0.5)) {
+                if (Math.abs(victim.getY() - center.y) <= 3.5) {
+                    dealVoidStrike(level, victim, SaintActionPolicy.MISSING_ZONE_BURST_DAMAGE, 1.25F, true);
+                    victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 50, 1, false, false));
+                }
+            }
+        }
     }
 
     private void tickMissingZones(ServerLevel level) {
@@ -365,41 +476,82 @@ public class NihilitySaint extends NihilityCreature {
             }
             return;
         }
-        LivingEntity victim = isRitualChallengeActive() && challengePlayerId != null
-            ? level.getServer().getPlayerList().getPlayer(challengePlayerId)
-            : getTarget();
-        if (victim == null || !victim.isAlive() || victim.level() != level) {
-            clearMissingZones();
-            return;
-        }
-
-        Vec3 containingCenter = null;
-        for (Vec3 center : missingZoneCenters) {
-            if (Math.abs(victim.getY() - center.y) <= 3.0
-                && SaintActionPolicy.zoneContains(victim.getX(), victim.getZ(), center.x, center.z)) {
-                containingCenter = center;
-                break;
-            }
-        }
-        if (containingCenter != null && tickCount % 2 == 0) {
-            Vec3 outward = victim.position().subtract(containingCenter).multiply(1.0, 0.0, 1.0);
-            if (outward.lengthSqr() <= 1.0E-6) {
-                outward = victim.position().subtract(position()).multiply(1.0, 0.0, 1.0);
-            }
-            if (outward.lengthSqr() > 1.0E-6) {
-                outward = outward.normalize().scale(0.14);
-                Vec3 movement = victim.getDeltaMovement();
-                victim.setDeltaMovement(movement.x + outward.x,
-                    Math.max(0.12, movement.y), movement.z + outward.z);
-                victim.hurtMarked = true;
-            }
-            if (tickCount % 20 == 0) {
-                victim.hurtServer(level, damageSources().mobAttack(this), SaintActionPolicy.MISSING_ZONE_DAMAGE);
+        if (tickCount % 2 == 0) {
+            boolean damageTick = tickCount % 12 == 0;
+            for (Vec3 center : missingZoneCenters) {
+                for (LivingEntity victim : collectCombatTargets(level, center, SaintActionPolicy.MISSING_ZONE_RADIUS + 0.4)) {
+                    if (Math.abs(victim.getY() - center.y) > 3.5
+                        || !SaintActionPolicy.zoneContains(victim.getX(), victim.getZ(), center.x, center.z)) {
+                        continue;
+                    }
+                    Vec3 outward = victim.position().subtract(center).multiply(1.0, 0.0, 1.0);
+                    if (outward.lengthSqr() <= 1.0E-6) {
+                        outward = victim.position().subtract(position()).multiply(1.0, 0.0, 1.0);
+                    }
+                    if (outward.lengthSqr() > 1.0E-6) {
+                        outward = outward.normalize().scale(0.18);
+                        Vec3 movement = victim.getDeltaMovement();
+                        victim.setDeltaMovement(movement.x + outward.x,
+                            Math.max(0.14, movement.y), movement.z + outward.z);
+                        victim.hurtMarked = true;
+                    }
+                    if (damageTick) {
+                        dealVoidStrike(level, victim, SaintActionPolicy.MISSING_ZONE_DAMAGE, 0.95F, true);
+                    }
+                }
             }
         }
         if (tickCount % 10 == 0) {
             NihilityVisualEffects.saintMissingZonesPulse(this, missingZoneCenters);
         }
+    }
+
+    /** Close-quarters AoE Void Cleave so melee bosses chasing Saint take brutal counterattacks. */
+    private void performCloseVoidCleave(ServerLevel level, LivingEntity primary) {
+        this.swing(InteractionHand.MAIN_HAND);
+        float baseAtk = (float) getAttributeValue(Attributes.ATTACK_DAMAGE);
+        float cleaveDmg = baseAtk * (awakenedPhaseTwo ? 1.25F : 1.10F);
+        List<LivingEntity> nearby = collectCombatTargets(level, position(), 4.8);
+        for (LivingEntity enemy : nearby) {
+            dealVoidStrike(level, enemy, cleaveDmg, 1.05F, true);
+            Vec3 away = enemy.position().subtract(position()).multiply(1.0, 0.0, 1.0);
+            if (away.lengthSqr() > 1.0E-5) {
+                away = away.normalize();
+                enemy.setDeltaMovement(away.x * 0.78, Math.max(0.22, enemy.getDeltaMovement().y + 0.14), away.z * 0.78);
+                enemy.hurtMarked = true;
+            }
+        }
+        if (primary != null) {
+            NihilityVisualEffects.zeroExecuteBurst(level, primary);
+        }
+    }
+
+    /** Tactical Void Phase Blink to flank/reposition out of melee stunlock or close gaps instantly. */
+    private boolean tryPhaseBlinkAround(ServerLevel level, LivingEntity target, double desiredRange) {
+        Vec3 from = position();
+        Vec3 toTarget = target.position().subtract(from).multiply(1.0, 0.0, 1.0);
+        double baseAngle = toTarget.lengthSqr() > 1.0E-5
+            ? Math.atan2(toTarget.z, toTarget.x)
+            : Math.toRadians(getYRot());
+        AABB box = getBoundingBox();
+        double[] angleOffsets = {Math.PI, Math.PI * 0.75, -Math.PI * 0.75, Math.PI * 0.5, -Math.PI * 0.5};
+        for (double offset : angleOffsets) {
+            double ang = baseAngle + offset;
+            Vec3 candidate = target.position().add(Math.cos(ang) * desiredRange, 0.0, Math.sin(ang) * desiredRange);
+            for (double dy : new double[] {0.0, 1.0, -1.0}) {
+                Vec3 test = candidate.add(0.0, dy, 0.0);
+                AABB moved = box.move(test.subtract(from)).deflate(0.04);
+                if (level.noCollision(this, moved) && level.noBorderCollision(this, moved)) {
+                    teleportTo(test.x, test.y, test.z);
+                    setDeltaMovement(Vec3.ZERO);
+                    hurtMarked = true;
+                    getNavigation().stop();
+                    NihilityVisualEffects.missingStep(level, from, test);
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private void clearMissingZones() {
@@ -425,7 +577,6 @@ public class NihilitySaint extends NihilityCreature {
             clearChallengeState();
             return;
         }
-
         ServerPlayer player = challengePlayerId == null
             ? null
             : serverLevel.getServer().getPlayerList().getPlayer(challengePlayerId);
@@ -437,6 +588,7 @@ public class NihilitySaint extends NihilityCreature {
         getNavigation().stop();
         cancelCreatureAction();
         clearMissingZones();
+        awakenedPhaseTwo = false;
         nextChallengeGameTime = serverLevel.getGameTime() + SaintChallengePolicy.RETRY_COOLDOWN_TICKS;
         NihilityVisualEffects.saintChallengeEnd(this, false);
         clearChallengeState();
@@ -567,18 +719,27 @@ public class NihilitySaint extends NihilityCreature {
         }
     }
 
-    private static final class SaintTacticalSpacingGoal extends Goal {
-        private static final double MIN_STANDOFF = 4.4;
-        private static final double MAX_STANDOFF = 6.8;
+    /**
+     * Active close-quarters + mid-range combat controller for NihilitySaint.
+     * Replaces the old passive retreat goal so Saint fiercely cleaves close enemies,
+     * Phase-Blinks out of stunlock pressure, and closes distance aggressively.
+     */
+    private static final class SaintCombatControlGoal extends Goal {
+        private static final double CLOSE_CLEAVE_RANGE = 4.4;
+        private static final double MAX_STANDOFF = 7.4;
+        private static final double BLINK_ENGAGE_RANGE = 11.5;
         private final NihilitySaint saint;
 
-        SaintTacticalSpacingGoal(NihilitySaint saint) {
+        SaintCombatControlGoal(NihilitySaint saint) {
             this.saint = saint;
             this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
         }
 
         @Override
         public boolean canUse() {
+            if (saint.hasActiveCreatureAction()) {
+                return false;
+            }
             LivingEntity target = saint.getTarget();
             return target != null && target.isAlive()
                 && (saint.isRitualChallengeActive() || saint.getDisposition().isCombat());
@@ -592,24 +753,50 @@ public class NihilitySaint extends NihilityCreature {
         @Override
         public void tick() {
             LivingEntity target = saint.getTarget();
-            if (target == null) return;
-            saint.getLookControl().setLookAt(target, 45.0F, 45.0F);
+            if (target == null || !(saint.level() instanceof ServerLevel serverLevel)) {
+                return;
+            }
+            saint.getLookControl().setLookAt(target, 60.0F, 60.0F);
             if (saint.getCreatureActionPhase() != Phase.IDLE) {
                 saint.getNavigation().stop();
                 return;
             }
+            long gameTime = serverLevel.getGameTime();
             double dist = saint.distanceTo(target);
-            if (dist < MIN_STANDOFF) {
+            if (dist <= CLOSE_CLEAVE_RANGE) {
+                // Immediately punish melee rushers with sweeping Void Cleave + knockback!
+                if (gameTime >= saint.nextCloseCleaveGameTime) {
+                    saint.nextCloseCleaveGameTime = gameTime + (saint.awakenedPhaseTwo ? 14L : 18L);
+                    saint.performCloseVoidCleave(serverLevel, target);
+                }
+                // Phase-Blink to flanking standoff so no boss can pin Saint in melee!
+                if (gameTime >= saint.nextPhaseBlinkGameTime) {
+                    saint.nextPhaseBlinkGameTime = gameTime + (saint.awakenedPhaseTwo ? 36L : 46L);
+                    if (saint.tryPhaseBlinkAround(serverLevel, target, 5.5)) {
+                        return;
+                    }
+                }
                 Vec3 away = saint.position().subtract(target.position()).multiply(1.0, 0.0, 1.0);
                 if (away.lengthSqr() > 1.0E-4) {
                     away = away.normalize();
-                    Vec3 retreat = saint.position().add(away.scale(2.6));
-                    saint.getNavigation().moveTo(retreat.x, retreat.y, retreat.z, 1.05);
+                    Vec3 side = new Vec3(-away.z, 0.0, away.x);
+                    Vec3 strafe = saint.position().add(away.scale(1.8)).add(side.scale(1.6));
+                    saint.getNavigation().moveTo(strafe.x, strafe.y, strafe.z, 1.25);
                 }
+            } else if (dist > BLINK_ENGAGE_RANGE && gameTime >= saint.nextPhaseBlinkGameTime) {
+                saint.nextPhaseBlinkGameTime = gameTime + 45L;
+                saint.tryPhaseBlinkAround(serverLevel, target, 5.8);
             } else if (dist > MAX_STANDOFF) {
-                saint.getNavigation().moveTo(target, 1.0);
+                saint.getNavigation().moveTo(target, 1.28);
             } else {
-                saint.getNavigation().stop();
+                // Strafe cleanly at optimal combat range while casting Void skills
+                Vec3 toTarget = target.position().subtract(saint.position()).multiply(1.0, 0.0, 1.0);
+                if (toTarget.lengthSqr() > 1.0E-4) {
+                    toTarget = toTarget.normalize();
+                    double dir = ((saint.tickCount / 40) & 1) == 0 ? 1.0 : -1.0;
+                    Vec3 strafe = saint.position().add(-toTarget.z * dir * 2.2, 0.0, toTarget.x * dir * 2.2);
+                    saint.getNavigation().moveTo(strafe.x, strafe.y, strafe.z, 1.08);
+                }
             }
         }
     }

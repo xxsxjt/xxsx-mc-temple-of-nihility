@@ -4,7 +4,7 @@ license="AGPL-3.0-only"
 
 [[mods]]
 modId="templenihility"
-version="1.0.0-beta.8"
+version="1.0.0-beta.9"
 displayName="Temple of Nihility"
 logoFile="logo.png"
 logoBlur=false

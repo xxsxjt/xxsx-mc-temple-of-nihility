@@ -4,23 +4,27 @@ import com.templenihility.action.CreatureActionLockGoal;
 import com.templenihility.action.CreatureActionPolicy;
 import com.templenihility.action.CreatureActionPolicy.ActionType;
 import com.templenihility.action.CreatureActionPolicy.Phase;
+import com.templenihility.action.CreatureCombatPolicy;
 import com.templenihility.compat.CuriosCompat;
 import com.templenihility.config.ModConfig;
 import com.templenihility.entity.CreatureDispositionPolicy.Disposition;
 import com.templenihility.init.ModItems;
-import net.minecraft.world.item.ItemStack;
 import com.templenihility.menu.NihilityTradeMenu;
 import com.templenihility.world.NihilityVisualEffects;
+import java.util.List;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -29,9 +33,12 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 public abstract class NihilityCreature extends PathfinderMob {
     private static final int ALERT_DURATION_TICKS = 30 * 20;
@@ -53,6 +60,9 @@ public abstract class NihilityCreature extends PathfinderMob {
     private int tradingPlayerId = -1;
     private long nextCreatureActionGameTime;
     private boolean creatureActionApplied;
+    private long lastPressureHitGameTime;
+    private int rapidPressureHits;
+    private long nextVoidRepulseGameTime;
 
     protected NihilityCreature(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
@@ -61,60 +71,60 @@ public abstract class NihilityCreature extends PathfinderMob {
     public static AttributeSupplier.Builder createAttributes(int tier) {
         return PathfinderMob.createMobAttributes()
             .add(Attributes.MAX_HEALTH, switch (tier) {
-                case 1 -> 44.0;
-                case 2 -> 76.0;
-                case 3 -> 128.0;
-                case 4 -> 220.0;
-                default -> 420.0;
+                case 1 -> 80.0;
+                case 2 -> 160.0;
+                case 3 -> 280.0;
+                case 4 -> 520.0;
+                default -> 960.0;
             })
             .add(Attributes.ATTACK_DAMAGE, switch (tier) {
-                case 1 -> 6.0;
-                case 2 -> 9.0;
-                case 3 -> 13.5;
-                case 4 -> 18.5;
-                default -> 26.0;
+                case 1 -> 10.0;
+                case 2 -> 16.0;
+                case 3 -> 24.0;
+                case 4 -> 34.0;
+                default -> 48.0;
             })
             .add(Attributes.ARMOR, switch (tier) {
-                case 1 -> 4.0;
-                case 2 -> 8.0;
-                case 3 -> 12.0;
-                case 4 -> 16.0;
-                default -> 20.0;
+                case 1 -> 8.0;
+                case 2 -> 12.0;
+                case 3 -> 16.0;
+                case 4 -> 20.0;
+                default -> 24.0;
             })
             .add(Attributes.ARMOR_TOUGHNESS, switch (tier) {
-                case 1 -> 0.0;
-                case 2 -> 2.0;
-                case 3 -> 4.0;
-                case 4 -> 6.0;
-                default -> 10.0;
+                case 1 -> 2.0;
+                case 2 -> 4.0;
+                case 3 -> 8.0;
+                case 4 -> 12.0;
+                default -> 16.0;
             })
-            .add(Attributes.ATTACK_KNOCKBACK, tier >= 2 ? tier * 0.16 : 0.0)
+            .add(Attributes.ATTACK_KNOCKBACK, tier >= 2 ? tier * 0.22 : 0.1)
             .add(Attributes.KNOCKBACK_RESISTANCE, switch (tier) {
-                case 1 -> 0.15;
-                case 2 -> 0.25;
-                case 3 -> 0.40;
-                case 4 -> 0.65;
-                default -> 0.85;
+                case 1 -> 0.30;
+                case 2 -> 0.45;
+                case 3 -> 0.65;
+                case 4 -> 0.85;
+                default -> 1.00;
             })
             .add(Attributes.MOVEMENT_SPEED, switch (tier) {
-                case 1 -> 0.28;
-                case 2 -> 0.30;
-                case 3 -> 0.32;
-                case 4 -> 0.31;
-                default -> 0.30;
+                case 1 -> 0.30;
+                case 2 -> 0.33;
+                case 3 -> 0.36;
+                case 4 -> 0.35;
+                default -> 0.38;
             })
-            .add(Attributes.FOLLOW_RANGE, 28.0 + tier * 8.0)
+            .add(Attributes.FOLLOW_RANGE, 32.0 + tier * 8.0)
             .add(Attributes.SCALE, 0.9 + tier * 0.09)
-            .add(Attributes.STEP_HEIGHT, tier >= 3 ? 1.0 : 0.6);
+            .add(Attributes.STEP_HEIGHT, tier >= 3 ? 1.25 : 0.6);
     }
 
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new CreatureActionLockGoal(this));
-        this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.18, true));
+        this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.24, true));
         if (getTier() >= 2) {
-            this.goalSelector.addGoal(3, new MoveTowardsRestrictionGoal(this, 0.9));
+            this.goalSelector.addGoal(3, new MoveTowardsRestrictionGoal(this, 0.95));
         }
         this.goalSelector.addGoal(4, new LookAtPlayerGoal(this, Player.class, 8.0f));
         this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
@@ -138,8 +148,28 @@ public abstract class NihilityCreature extends PathfinderMob {
         if (!level().isClientSide() && isAlive()) {
             updateDispositionState();
             tickCreatureAction();
+            tickVoidResilience();
             if (tickCount % 6 == 0) {
                 NihilityVisualEffects.creatureFlow(this);
+            }
+        }
+    }
+
+    private void tickVoidResilience() {
+        int tier = getTier();
+        if (tier >= 4 && tickCount % 40 == 0) {
+            // High-tier guardians cleanse crippling status spam (Wither / Poison / Slowness / Weakness / Levitation)
+            removeEffect(MobEffects.WITHER);
+            removeEffect(MobEffects.POISON);
+            removeEffect(MobEffects.WEAKNESS);
+            removeEffect(MobEffects.LEVITATION);
+            if (tier >= 5) {
+                removeEffect(MobEffects.SLOWNESS);
+                removeEffect(MobEffects.MINING_FATIGUE);
+            }
+            if (getHealth() < getMaxHealth()) {
+                float regen = tier >= 5 ? getMaxHealth() * 0.012F : getMaxHealth() * 0.008F;
+                heal(regen);
             }
         }
     }
@@ -150,10 +180,12 @@ public abstract class NihilityCreature extends PathfinderMob {
         }
 
         long gameTime = level().getGameTime();
+        boolean nonPlayerThreat = !(target instanceof Player);
         if (alertTargetId == target.getId()) {
             alertUntilGameTime = gameTime + ALERT_DURATION_TICKS;
-            if (getTarget() != null) {
+            if (getTarget() != null || nonPlayerThreat) {
                 setTarget(target);
+                setAggressive(true);
                 setDisposition(Disposition.HOSTILE);
             }
             return false;
@@ -162,8 +194,10 @@ public abstract class NihilityCreature extends PathfinderMob {
         endActiveTrade();
         alertTargetId = target.getId();
         alertUntilGameTime = gameTime + ALERT_DURATION_TICKS;
-        if (getTarget() != null) {
+        if (getTarget() != null || nonPlayerThreat) {
+            // Against hostile modded bosses/mobs, retaliate IMMEDIATELY with zero freeze delay!
             setTarget(target);
+            setAggressive(true);
             setDisposition(Disposition.HOSTILE);
             return true;
         }
@@ -270,15 +304,39 @@ public abstract class NihilityCreature extends PathfinderMob {
         }
     }
 
+    protected boolean isEnvironmentalDamageImmune(DamageSource source) {
+        if (getTier() < 3) {
+            return false;
+        }
+        return source.is(DamageTypeTags.IS_FALL)
+            || source.is(DamageTypeTags.IS_FIRE)
+            || source.is(DamageTypeTags.IS_DROWNING)
+            || source.is(DamageTypeTags.IS_LIGHTNING)
+            || source.is(DamageTypeTags.IS_FREEZING);
+    }
+
     @Override
     public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
+        if (!source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+            if (isEnvironmentalDamageImmune(source)) {
+                return false;
+            }
+            if (source.getEntity() instanceof NihilityCreature) {
+                return false;
+            }
+            double healthFraction = getMaxHealth() > 0.0F ? (double) getHealth() / getMaxHealth() : 1.0;
+            amount = CreatureCombatPolicy.mitigatedDamage(getTier(), amount, getMaxHealth(), healthFraction);
+        }
         boolean hurt = super.hurtServer(level, source, amount);
         if (hurt && source.getEntity() instanceof LivingEntity attacker && attacker != this) {
-            if (hasActiveCreatureAction() && getCreatureActionPhase() == Phase.WINDUP && amount >= 4.0F) {
+            if (hasActiveCreatureAction()
+                && getCreatureActionPhase() == Phase.WINDUP
+                && CreatureCombatPolicy.canInterruptWindup(getTier(), amount, getMaxHealth())) {
                 clearCreatureAction();
             }
             if (isAlive()) {
                 becomeHostileTo(attacker);
+                tryTriggerVoidRepulse(level, attacker);
             }
             if (shouldRallyAfterHurt(attacker)) {
                 rallyNearby(attacker);
@@ -287,9 +345,82 @@ public abstract class NihilityCreature extends PathfinderMob {
         return hurt;
     }
 
+    private void tryTriggerVoidRepulse(ServerLevel level, LivingEntity attacker) {
+        if (getTier() < 3 || distanceToSqr(attacker) > 5.0 * 5.0) {
+            return;
+        }
+        long gameTime = level.getGameTime();
+        if (gameTime - lastPressureHitGameTime <= 35L) {
+            rapidPressureHits++;
+        } else {
+            rapidPressureHits = 1;
+        }
+        lastPressureHitGameTime = gameTime;
+
+        if (rapidPressureHits < 2 || gameTime < nextVoidRepulseGameTime) {
+            return;
+        }
+        rapidPressureHits = 0;
+        nextVoidRepulseGameTime = gameTime + (getTier() >= 5 ? 55L : 75L);
+
+        double radius = getTier() >= 5 ? 5.5 : 4.5;
+        float baseAtk = (float) getAttributeValue(Attributes.ATTACK_DAMAGE);
+        float burstDmg = CreatureCombatPolicy.retaliationBurstDamage(getTier(), baseAtk);
+        AABB box = getBoundingBox().inflate(radius, 3.0, radius);
+        List<LivingEntity> enemies = level.getEntitiesOfClass(LivingEntity.class, box,
+            e -> e.isAlive() && e != this && !(e instanceof NihilityCreature) && canAttack(e));
+        for (LivingEntity enemy : enemies) {
+            if (enemy instanceof ServerPlayer sp && (sp.isCreative() || sp.isSpectator())) {
+                continue;
+            }
+            dealVoidStrike(level, enemy, burstDmg, 1.0F, true);
+            Vec3 away = enemy.position().subtract(position()).multiply(1.0, 0.0, 1.0);
+            if (away.lengthSqr() > 1.0E-5) {
+                away = away.normalize();
+                double knock = getTier() >= 5 ? 1.15 : 0.85;
+                enemy.setDeltaMovement(away.x * knock, Math.max(0.28, enemy.getDeltaMovement().y + 0.18), away.z * knock);
+                enemy.hurtMarked = true;
+            }
+            enemy.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 35, 1, false, false));
+        }
+        NihilityVisualEffects.zeroExecuteBurst(level, attacker);
+        NihilityVisualEffects.creatureMeleeStrike(this, attacker);
+    }
+
+    /**
+     * Unified strike helper combining base physical/skill damage with armor-piercing Void Erosion
+     * true damage so Temple guardians deal meaningful damage to tanky modded bosses without
+     * unfairly one-shotting players.
+     */
+    public boolean dealVoidStrike(ServerLevel level, LivingEntity target, float baseDamage,
+                                  float erosionMultiplier, boolean resetInvuln) {
+        if (target == null || !target.isAlive() || target instanceof NihilityCreature) {
+            return false;
+        }
+        if (resetInvuln) {
+            target.invulnerableTime = 0;
+        }
+        boolean hit = target.hurtServer(level, damageSources().mobAttack(this), Math.max(1.0F, baseDamage));
+        float erosion = CreatureCombatPolicy.voidErosionBonus(
+            getTier(), target.getMaxHealth(), target instanceof Player, erosionMultiplier);
+        if (erosion > 0.0F && target.isAlive()) {
+            target.invulnerableTime = 0;
+            boolean magicHit = target.hurtServer(level, damageSources().indirectMagic(this, this), erosion);
+            hit = hit || magicHit;
+        }
+        if (hit) {
+            NihilityVisualEffects.creatureMeleeStrike(this, target);
+        }
+        return hit;
+    }
+
     @Override
     public boolean doHurtTarget(ServerLevel level, Entity target) {
         this.swing(InteractionHand.MAIN_HAND);
+        if (target instanceof LivingEntity living && !(living instanceof NihilityCreature)) {
+            float atk = (float) getAttributeValue(Attributes.ATTACK_DAMAGE);
+            return dealVoidStrike(level, living, atk, 0.85F, false);
+        }
         boolean hit = super.doHurtTarget(level, target);
         if (hit && target != null) {
             NihilityVisualEffects.creatureMeleeStrike(this, target);
@@ -316,6 +447,14 @@ public abstract class NihilityCreature extends PathfinderMob {
     }
 
     protected void onCreatureActionStarted(ActionType action, LivingEntity target) {
+    }
+
+    protected double actionCooldownScale() {
+        return 1.0;
+    }
+
+    protected final void resetCreatureActionCooldown(long gameTime) {
+        nextCreatureActionGameTime = gameTime;
     }
 
     protected final boolean markCreatureActionApplied() {
@@ -351,7 +490,6 @@ public abstract class NihilityCreature extends PathfinderMob {
         if (!(level() instanceof ServerLevel serverLevel)) {
             return;
         }
-
         long gameTime = serverLevel.getGameTime();
         ActionType action = getCreatureAction();
         if (action == ActionType.NONE) {
@@ -372,7 +510,6 @@ public abstract class NihilityCreature extends PathfinderMob {
             clearCreatureAction();
             return;
         }
-
         long elapsed = gameTime - getCreatureActionStartGameTime();
         Phase phase = CreatureActionPolicy.phase(action, elapsed);
         setCreatureActionPhase(phase);
@@ -380,7 +517,6 @@ public abstract class NihilityCreature extends PathfinderMob {
             clearCreatureAction();
             return;
         }
-
         getLookControl().setLookAt(target, 50.0F, 50.0F);
         getNavigation().stop();
         if (phase == Phase.ACTIVE) {
@@ -390,7 +526,9 @@ public abstract class NihilityCreature extends PathfinderMob {
 
     private void startCreatureAction(ActionType action, LivingEntity target, long gameTime) {
         creatureActionApplied = false;
-        nextCreatureActionGameTime = gameTime + action.cooldownTicks();
+        long scaledCooldown = Math.max(action.totalTicks() + 6L,
+            Math.round(action.cooldownTicks() * actionCooldownScale()));
+        nextCreatureActionGameTime = gameTime + scaledCooldown;
         entityData.set(DATA_ACTION, (byte) action.ordinal());
         entityData.set(DATA_ACTION_PHASE, (byte) Phase.WINDUP.ordinal());
         entityData.set(DATA_ACTION_START, gameTime);
@@ -403,7 +541,7 @@ public abstract class NihilityCreature extends PathfinderMob {
     private void applyCreatureAction(ServerLevel level, ActionType action, LivingEntity target, long elapsed) {
         switch (action) {
             case FOLLOWER_INTERCEPT -> applyFollowerIntercept(level, target, elapsed);
-            case ENVOY_BACKSTEP -> applyEnvoyBackstep(target);
+            case ENVOY_BACKSTEP -> applyEnvoyBackstep(level, target);
             case ENVOY_RIFT_DIRECTION, GRAND_ENVOY_DOMAIN, GRAND_ENVOY_RECALL, GRAND_ENVOY_SHIELD,
                  SAINT_ERASURE_LINE, SAINT_MISSING_ZONE, SAINT_VOID_TERMINUS ->
                 applyCustomCreatureAction(level, action, target, elapsed);
@@ -414,40 +552,57 @@ public abstract class NihilityCreature extends PathfinderMob {
 
     private void applyFollowerIntercept(ServerLevel level, LivingEntity target, long elapsed) {
         if (elapsed == ActionType.FOLLOWER_INTERCEPT.windupTicks()) {
-            net.minecraft.world.phys.Vec3 direction = target.position().subtract(position()).multiply(1.0, 0.0, 1.0);
+            Vec3 direction = target.position().subtract(position()).multiply(1.0, 0.0, 1.0);
             if (direction.lengthSqr() > 1.0E-6) {
                 direction = direction.normalize();
-                setDeltaMovement(direction.x * 0.72, Math.max(0.08, getDeltaMovement().y), direction.z * 0.72);
+                setDeltaMovement(direction.x * 0.96, Math.max(0.14, getDeltaMovement().y), direction.z * 0.96);
                 hurtMarked = true;
             }
             NihilityVisualEffects.creatureIntercept(this, target, false);
         }
-
-        if (!creatureActionApplied && distanceToSqr(target) <= 2.8 * 2.8) {
+        if (!creatureActionApplied && distanceToSqr(target) <= 3.4 * 3.4) {
             creatureActionApplied = true;
-            if (doHurtTarget(level, target)) {
-                net.minecraft.world.phys.Vec3 push = target.position().subtract(position()).multiply(1.0, 0.0, 1.0);
+            float dmg = (float) getAttributeValue(Attributes.ATTACK_DAMAGE) * 1.35F;
+            if (dealVoidStrike(level, target, dmg, 1.15F, true)) {
+                Vec3 push = target.position().subtract(position()).multiply(1.0, 0.0, 1.0);
                 if (push.lengthSqr() > 1.0E-6) {
-                    push = push.normalize().scale(0.35);
-                    target.push(push.x, 0.08, push.z);
+                    push = push.normalize().scale(0.55);
+                    target.push(push.x, 0.14, push.z);
                 }
+                target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 40, 1, false, false));
                 NihilityVisualEffects.creatureIntercept(this, target, true);
             }
         }
     }
 
-    private void applyEnvoyBackstep(LivingEntity target) {
+    private void applyEnvoyBackstep(ServerLevel level, LivingEntity target) {
         if (creatureActionApplied) {
             return;
         }
         creatureActionApplied = true;
-        net.minecraft.world.phys.Vec3 away = position().subtract(target.position()).multiply(1.0, 0.0, 1.0);
+        // Leave a Void Afterimage Burst at close quarters before leaping back!
+        float burstDmg = (float) getAttributeValue(Attributes.ATTACK_DAMAGE) * 1.35F;
+        AABB burstArea = getBoundingBox().inflate(3.8, 2.5, 3.8);
+        for (LivingEntity enemy : level.getEntitiesOfClass(LivingEntity.class, burstArea,
+            e -> e.isAlive() && e != this && !(e instanceof NihilityCreature) && canAttack(e))) {
+            if (enemy instanceof ServerPlayer sp && (sp.isCreative() || sp.isSpectator())) {
+                continue;
+            }
+            dealVoidStrike(level, enemy, burstDmg, 1.1F, true);
+            enemy.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 45, 1, false, false));
+            Vec3 push = enemy.position().subtract(position()).multiply(1.0, 0.0, 1.0);
+            if (push.lengthSqr() > 1.0E-5) {
+                push = push.normalize().scale(0.65);
+                enemy.push(push.x, 0.16, push.z);
+            }
+        }
+        Vec3 away = position().subtract(target.position()).multiply(1.0, 0.0, 1.0);
         if (away.lengthSqr() <= 1.0E-6) {
             away = getLookAngle().multiply(-1.0, 0.0, -1.0);
         }
         if (away.lengthSqr() > 1.0E-6) {
             away = away.normalize();
-            setDeltaMovement(away.x * 0.82, Math.max(0.12, getDeltaMovement().y), away.z * 0.82);
+            setDeltaMovement(away.x * 1.05, Math.max(0.22, getDeltaMovement().y), away.z * 1.05);
             hurtMarked = true;
         }
         NihilityVisualEffects.creatureBackstep(this, target);
@@ -534,12 +689,10 @@ public abstract class NihilityCreature extends PathfinderMob {
             return InteractionResult.PASS;
         }
         if (this.level().isClientSide()) return InteractionResult.CONSUME;
-
         if (!canTradeWith(player)) {
             player.sendSystemMessage(Component.translatable("message.templenihility.trade_busy"));
             return InteractionResult.FAIL;
         }
-
         if (player instanceof ServerPlayer serverPlayer) {
             int tier = getTier();
             tradingPlayerId = player.getId();
