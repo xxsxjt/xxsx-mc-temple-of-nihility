@@ -5,6 +5,7 @@ import com.templenihility.TempleNihilityMod;
 import com.templenihility.client.model.NihilityCreatureModel;
 import com.templenihility.client.model.NihilityFlowModel;
 import com.templenihility.entity.CreatureDispositionPolicy.Disposition;
+import com.templenihility.entity.NihilityFollower;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
@@ -47,28 +48,26 @@ public class NihilityCreatureFlowLayer extends RenderLayer<NihilityRenderState, 
         int green = Math.round(244 * pulse);
         int blue = Math.round(255 * pulse);
         int alpha = 232;
+
         if (state.tier >= 5 && state.saintWingShieldTicks > 0) {
-            // Radiant golden-cyan refraction shell when 6 wings fold shut
-            red = 255;
-            green = Math.round(236 * pulse);
-            blue = Math.round(165 * pulse);
-            alpha = 255;
+            red = 255; green = Math.round(236 * pulse); blue = Math.round(165 * pulse); alpha = 255;
         } else if (state.tier >= 5 && state.saintAstrolabeCharge >= 5) {
-            // Blazing gold-white Astrolabe Judgment overload
-            red = 255;
-            green = 248;
-            blue = Math.round(210 * pulse);
-            alpha = 255;
+            red = 255; green = 248; blue = Math.round(210 * pulse); alpha = 255;
+        } else if (state.tier == 4 && (state.grandEnvoyDomainActive || state.ritualShieldCharges > 0)) {
+            red = 255; green = Math.round(238 * pulse); blue = Math.round(170 * pulse); alpha = 255;
+        } else if (state.tier == 3 && state.envoyBackstabTicks > 0) {
+            red = 175; green = 250; blue = 255; alpha = 255;
+        } else if (state.tier == 2 && state.followerHalberdStance == NihilityFollower.STANCE_GUARD_PARRY) {
+            red = 255; green = Math.round(228 * pulse); blue = Math.round(150 * pulse); alpha = 255;
+        } else if (state.tier == 1 && (state.believerCastingTicks > 0 || state.believerPulseTicks > 0)) {
+            red = 165; green = 252; blue = 255; alpha = 255;
         } else if (state.disposition == Disposition.ALERT) {
             red = Math.round(255 * pulse);
             green = Math.round(220 * pulse);
             blue = Math.round(145 * pulse);
             alpha = 245;
         } else if (state.disposition == Disposition.CHALLENGE) {
-            red = 248;
-            green = 252;
-            blue = 255;
-            alpha = 255;
+            red = 248; green = 252; blue = 255; alpha = 255;
         } else if (state.disposition == Disposition.HOSTILE) {
             red = Math.round(218 * pulse);
             green = Math.round(238 * pulse);

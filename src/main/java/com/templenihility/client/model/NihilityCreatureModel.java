@@ -5,6 +5,7 @@ import com.templenihility.action.CreatureActionPolicy.ActionType;
 import com.templenihility.action.CreatureActionPolicy.Phase;
 import com.templenihility.client.renderer.NihilityRenderState;
 import com.templenihility.entity.CreatureDispositionPolicy.Disposition;
+import com.templenihility.entity.NihilityFollower;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
@@ -256,15 +257,16 @@ public class NihilityCreatureModel extends EntityModel<NihilityRenderState> {
         this.rightPauldron.visible = tier == 2 || tier >= 4;
         this.focusOrb.visible = tier == 1;
         this.halberd.visible = tier == 2;
-        this.orbitLeft.visible = tier == 3;
-        this.orbitRight.visible = tier == 3;
+        boolean envoyMonolithsDocked = tier == 3 && !state.envoyMonolithsDeployed;
+        this.orbitLeft.visible = envoyMonolithsDocked;
+        this.orbitRight.visible = envoyMonolithsDocked;
 
         boolean showShields = tier == 4;
-        int activeShields = state.ritualShieldCharges > 0 ? Math.min(4, state.ritualShieldCharges + 1) : 4;
-        this.shield0.visible = showShields && activeShields >= 1;
-        this.shield1.visible = showShields && activeShields >= 2;
-        this.shield2.visible = showShields && activeShields >= 3;
-        this.shield3.visible = showShields && activeShields >= 4;
+        int dockedShields = Math.max(0, 4 - state.grandEnvoyDeployedShields);
+        this.shield0.visible = showShields && dockedShields >= 1;
+        this.shield1.visible = showShields && dockedShields >= 2;
+        this.shield2.visible = showShields && dockedShields >= 3;
+        this.shield3.visible = showShields && dockedShields >= 4;
 
         boolean isSaint = tier >= 5;
         this.wingUL.visible = isSaint;
@@ -302,64 +304,87 @@ public class NihilityCreatureModel extends EntityModel<NihilityRenderState> {
         this.cape.xRot = 0.18f + speed * 0.35f + Mth.sin(age * 0.11f) * 0.08f;
         this.robeSkirt.xRot = speed * 0.18f + Mth.sin(age * 0.08f) * 0.04f;
 
-        if (isSaint) {
-            // Sovereign aerial levitation — tucked drifting legs, forward glide lean, spell-conductor arms (zero villager walking!)
+        if (tier >= 3) {
+            // Tiers 3..5 (Envoy / Grand Envoy / Saint): True aerial levitation — tucked drifting legs, flowing cape, zero villager walking!
             float legDrift = Mth.sin(age * 0.08f) * 0.09f;
             this.rightLeg.y = 12.2f + hover * 0.65f;
             this.leftLeg.y = 12.2f + hover * 0.65f;
-            this.rightLeg.xRot = 0.24f + speed * 0.34f + legDrift;
-            this.leftLeg.xRot = 0.40f + speed * 0.38f - legDrift;
+            this.rightLeg.xRot = (tier == 3 ? 0.32f : 0.24f) + speed * 0.36f + legDrift;
+            this.leftLeg.xRot = (tier == 3 ? 0.46f : 0.38f) + speed * 0.40f - legDrift;
             this.rightLeg.zRot = 0.06f;
             this.leftLeg.zRot = -0.06f;
-            this.body.xRot = 0.08f + speed * 0.22f + Mth.sin(age * 0.055f) * 0.04f;
-            this.cape.xRot = 0.44f + speed * 0.52f + Mth.sin(age * 0.13f) * 0.14f;
-            this.robeSkirt.xRot = 0.28f + speed * 0.32f + Mth.sin(age * 0.10f) * 0.08f;
+            this.body.xRot = (tier == 3 ? 0.14f : 0.07f) + speed * 0.22f + Mth.sin(age * 0.055f) * 0.04f;
+            this.cape.xRot = 0.42f + speed * 0.55f + Mth.sin(age * 0.13f) * 0.14f;
+            this.robeSkirt.xRot = 0.26f + speed * 0.32f + Mth.sin(age * 0.10f) * 0.08f;
             this.rightArm.xRot = -0.34f + Mth.sin(age * 0.09f) * 0.09f;
             this.leftArm.xRot = -0.34f - Mth.sin(age * 0.09f) * 0.09f;
             this.rightArm.yRot = 0.0f;
             this.leftArm.yRot = 0.0f;
-            this.rightArm.zRot = 0.30f + Mth.sin(age * 0.08f) * 0.08f;
-            this.leftArm.zRot = -0.30f - Mth.sin(age * 0.08f) * 0.08f;
+            this.rightArm.zRot = (isSaint ? 0.30f : 0.22f) + Mth.sin(age * 0.08f) * 0.07f;
+            this.leftArm.zRot = -(isSaint ? 0.30f : 0.22f) - Mth.sin(age * 0.08f) * 0.07f;
+        } else if (tier == 2) {
+            // Tier 2 Follower: Grounded heavy armored halberd vanguard — powerful wide stride & couched polearm stance!
+            this.rightLeg.y = 12.0f;
+            this.leftLeg.y = 12.0f;
+            this.rightLeg.zRot = 0.05f;
+            this.leftLeg.zRot = -0.05f;
+            this.rightLeg.xRot = Mth.cos(walk * 0.6662f) * 0.72f * speed;
+            this.leftLeg.xRot = Mth.cos(walk * 0.6662f + Mth.PI) * 0.72f * speed;
+            this.body.xRot = 0.08f + speed * 0.14f;
+            this.rightArm.xRot = -0.62f + Mth.cos(walk * 0.6662f + Mth.PI) * speed * 0.28f;
+            this.rightArm.yRot = -0.20f;
+            this.rightArm.zRot = 0.14f;
+            this.leftArm.xRot = -0.45f + Mth.cos(walk * 0.6662f) * speed * 0.32f;
+            this.leftArm.yRot = 0.22f;
+            this.leftArm.zRot = -0.14f;
         } else {
+            // Tier 1 Believer: Light robe-gliding crystal caster — graceful reduced leg swing & conducting hand!
             this.rightLeg.y = 12.0f;
             this.leftLeg.y = 12.0f;
             this.rightLeg.zRot = 0.0f;
             this.leftLeg.zRot = 0.0f;
-            this.rightArm.xRot = Mth.cos(walk * 0.6662f + Mth.PI) * speed * 0.55f - (tier == 2 ? 0.35f : 0.08f);
-            this.leftArm.xRot = Mth.cos(walk * 0.6662f) * speed * 0.55f - 0.08f;
-            this.rightArm.yRot = 0.0f;
-            this.leftArm.yRot = 0.0f;
-            this.rightArm.zRot = 0.08f + Mth.sin(age * 0.07f) * 0.04f;
-            this.leftArm.zRot = -0.08f - Mth.sin(age * 0.07f) * 0.04f;
-            this.rightLeg.xRot = Mth.cos(walk * 0.6662f) * 0.5f * speed;
-            this.leftLeg.xRot = Mth.cos(walk * 0.6662f + Mth.PI) * 0.5f * speed;
+            this.rightLeg.xRot = Mth.cos(walk * 0.6662f) * 0.28f * speed + 0.08f;
+            this.leftLeg.xRot = Mth.cos(walk * 0.6662f + Mth.PI) * 0.28f * speed + 0.08f;
+            this.rightArm.xRot = -0.48f + Mth.sin(age * 0.11f) * 0.08f;
+            this.rightArm.yRot = 0.14f;
+            this.rightArm.zRot = 0.12f;
+            this.leftArm.xRot = -0.35f;
+            this.leftArm.yRot = -0.22f;
+            this.leftArm.zRot = -0.10f;
         }
 
-        // T1 Focus Crystal gentle orbit
+        // T1 Focus Crystal baseline orbit (resets cleanly every frame)
+        this.focusOrb.x = -7.2f + Mth.cos(age * 0.10f) * 0.9f;
         this.focusOrb.y = 5.2f + Mth.sin(age * 0.14f) * 1.1f;
-        this.focusOrb.yRot = age * 0.09f;
+        this.focusOrb.z = -1.5f + Mth.sin(age * 0.10f) * 0.9f;
+        this.focusOrb.xRot = 0.0f;
+        this.focusOrb.yRot = age * 0.11f;
         this.focusOrb.zRot = 0.25f;
 
         // T3 Envoy twin orbiting runic tablets
-        float orbPhase = age * 0.075f;
+        float orbPhase = age * 0.085f;
         this.orbitLeft.x = 7.6f + Mth.cos(orbPhase) * 1.2f;
-        this.orbitLeft.y = 4.5f + Mth.sin(orbPhase * 1.3f) * 1.6f;
+        this.orbitLeft.y = 4.5f + hover + Mth.sin(orbPhase * 1.3f) * 1.6f;
+        this.orbitLeft.z = 1.5f;
+        this.orbitLeft.xRot = 0.0f;
         this.orbitLeft.yRot = orbPhase * 1.4f;
         this.orbitLeft.zRot = 0.14f;
         this.orbitRight.x = -7.6f - Mth.cos(orbPhase) * 1.2f;
-        this.orbitRight.y = 4.5f - Mth.sin(orbPhase * 1.3f) * 1.6f;
+        this.orbitRight.y = 4.5f + hover - Mth.sin(orbPhase * 1.3f) * 1.6f;
+        this.orbitRight.z = 1.5f;
+        this.orbitRight.xRot = 0.0f;
         this.orbitRight.yRot = -orbPhase * 1.4f;
         this.orbitRight.zRot = -0.14f;
 
-        // T4 Grand Envoy 4 orbiting Aegis Shield Pillars
-        float shieldSpeed = state.ritualShieldCharges > 0 ? 0.095f : 0.055f;
-        float shieldRadius = state.ritualShieldCharges > 0 ? 11.2f : 9.8f;
+        // T4 Grand Envoy 4 orbiting Aegis Shield Pillars (expand wide in Domain, tighten in Ritual Shield!)
+        float shieldSpeed = state.grandEnvoyDomainActive ? 0.115f : (state.ritualShieldCharges > 0 ? 0.095f : 0.055f);
+        float shieldRadius = state.grandEnvoyDomainActive ? 14.8f : (state.ritualShieldCharges > 0 ? 10.6f : 9.8f);
         ModelPart[] shields = { this.shield0, this.shield1, this.shield2, this.shield3 };
         for (int i = 0; i < 4; i++) {
             float a = age * shieldSpeed + i * Mth.HALF_PI;
             shields[i].x = Mth.cos(a) * shieldRadius;
             shields[i].z = Mth.sin(a) * shieldRadius;
-            shields[i].y = 5.0f + Mth.sin(age * 0.11f + i * 1.4f) * 1.3f;
+            shields[i].y = 4.5f + hover + Mth.sin(age * 0.11f + i * 1.4f) * 1.3f;
             shields[i].yRot = -a + Mth.HALF_PI;
             shields[i].xRot = 0.1f * Mth.sin(age * 0.09f + i);
         }
@@ -626,6 +651,100 @@ public class NihilityCreatureModel extends EntityModel<NihilityRenderState> {
             this.swordRight.z = -4.5f - 7.0f * snapEase;
             this.swordRight.xRot = 0.85f + 0.8f * snapEase;
             this.swordRight.zRot = -0.72f;
+        }
+
+        // Tier 1 Believer: Focus-Crystal Salvo Channel & Void Repulsion Pulse!
+        if (tier == 1) {
+            if (state.believerPulseTicks > 0) {
+                this.rightArm.xRot = -1.25f;
+                this.leftArm.xRot = -1.25f;
+                this.rightArm.zRot = 1.05f;
+                this.leftArm.zRot = -1.05f;
+                this.focusOrb.x = 0.0f;
+                this.focusOrb.y = 3.5f;
+                this.focusOrb.z = -9.5f;
+                this.focusOrb.yRot = age * 0.95f;
+            } else if (state.believerCastingTicks > 0) {
+                this.body.xRot = -0.10f;
+                this.rightArm.xRot = -1.52f + Mth.sin(age * 0.55f) * 0.12f;
+                this.rightArm.yRot = 0.18f;
+                this.leftArm.xRot = -0.78f;
+                this.leftArm.yRot = -0.35f;
+                this.focusOrb.x = -2.4f + Mth.sin(age * 0.45f) * 0.8f;
+                this.focusOrb.y = 2.8f + Mth.cos(age * 0.45f) * 0.6f;
+                this.focusOrb.z = -8.6f;
+                this.focusOrb.yRot = age * 0.68f;
+                this.focusOrb.zRot = 0.0f;
+            }
+        }
+
+        // Tier 2 Follower: Heavy Halberd Sweep, Parry Block & Counter-Cleave Choreography!
+        if (tier == 2 && state.followerHalberdStance != NihilityFollower.STANCE_IDLE) {
+            if (state.followerHalberdStance == NihilityFollower.STANCE_SWEEP_WINDUP) {
+                // Coil torso far back-right loading a 160-degree horizontal halberd cleave!
+                this.body.yRot = -0.62f;
+                this.body.xRot = 0.12f;
+                this.rightArm.xRot = -1.45f;
+                this.rightArm.yRot = -0.85f;
+                this.rightArm.zRot = 0.95f;
+                this.leftArm.xRot = -0.95f;
+                this.leftArm.yRot = 0.55f;
+            } else if (state.followerHalberdStance == NihilityFollower.STANCE_SWEEP_ACTIVE) {
+                // Explosive wide horizontal halberd sweep across front!
+                this.body.yRot = 0.78f;
+                this.body.xRot = 0.24f;
+                this.rightArm.xRot = -1.12f;
+                this.rightArm.yRot = 1.25f;
+                this.rightArm.zRot = -0.92f;
+                this.leftArm.xRot = -0.82f;
+                this.leftArm.yRot = -0.65f;
+            } else if (state.followerHalberdStance == NihilityFollower.STANCE_GUARD_PARRY) {
+                // Brace halberd horizontally across chest in armored parry stance!
+                this.body.xRot = -0.06f;
+                this.rightArm.xRot = -1.18f;
+                this.rightArm.yRot = 0.85f;
+                this.rightArm.zRot = -0.82f;
+                this.leftArm.xRot = -1.08f;
+                this.leftArm.yRot = -0.58f;
+                this.leftArm.zRot = 0.35f;
+            } else if (state.followerHalberdStance == NihilityFollower.STANCE_COUNTER_SLAM) {
+                // Crushing overhead vertical halberd counter-cleave!
+                this.body.xRot = 0.38f;
+                this.rightArm.xRot = 0.48f;
+                this.rightArm.yRot = -0.25f;
+                this.rightArm.zRot = 0.12f;
+                this.leftArm.xRot = -1.25f;
+                this.leftArm.zRot = -0.45f;
+            }
+        }
+
+        // Tier 3 Envoy: Spatial Backstab Twin-Monolith Forward Cross-Thrust!
+        if (tier == 3 && state.envoyBackstabTicks > 0) {
+            this.body.xRot = 0.36f;
+            this.rightArm.xRot = -1.48f;
+            this.leftArm.xRot = -1.48f;
+            this.rightArm.zRot = 0.35f;
+            this.leftArm.zRot = -0.35f;
+            if (envoyMonolithsDocked) {
+                this.orbitLeft.x = 3.2f;
+                this.orbitLeft.z = -9.2f;
+                this.orbitLeft.xRot = 1.38f;
+                this.orbitLeft.zRot = 0.55f;
+                this.orbitRight.x = -3.2f;
+                this.orbitRight.z = -9.2f;
+                this.orbitRight.xRot = 1.38f;
+                this.orbitRight.zRot = -0.55f;
+            }
+        }
+
+        // Tier 4 Grand Envoy: Commanding Palm-Thrust when hurling Aegis Shield Pillars!
+        if (tier == 4 && state.grandEnvoyCommandTicks > 0) {
+            this.rightArm.xRot = -1.58f;
+            this.rightArm.yRot = 0.18f;
+            this.rightArm.zRot = 0.28f;
+            this.leftArm.xRot = -0.95f;
+            this.leftArm.zRot = -0.32f;
+            this.haloGroup.zRot = age * 0.22f;
         }
 
         // Saint Live Armament States — each floating piece visibly performs its exact combat role!

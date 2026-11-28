@@ -26,7 +26,7 @@ public class VoidSpellRenderer extends EntityRenderer<VoidSpellEntity, VoidSpell
     public VoidSpellRenderer(EntityRendererProvider.Context context) {
         super(context);
         this.model = new VoidSpellModel(context.bakeLayer(VoidSpellModel.LAYER_LOCATION));
-        this.shadowRadius = 0.0F;
+        this.shadowRadius = 0.0f;
     }
 
     @Override
@@ -38,26 +38,35 @@ public class VoidSpellRenderer extends EntityRenderer<VoidSpellEntity, VoidSpell
     public void extractRenderState(VoidSpellEntity entity, VoidSpellRenderState state, float partialTicks) {
         super.extractRenderState(entity, state, partialTicks);
         state.kind = entity.getSpellKind();
-        state.yRot = Mth.lerp(partialTicks, entity.yRotO, entity.getYRot());
-        state.xRot = Mth.lerp(partialTicks, entity.xRotO, entity.getXRot());
         state.returning = entity.isReturning();
         state.dropping = entity.isDropping();
+        state.yRot = Mth.lerp(partialTicks, entity.yRotO, entity.getYRot());
+        state.xRot = Mth.lerp(partialTicks, entity.xRotO, entity.getXRot());
     }
 
     @Override
     public void submit(VoidSpellRenderState state, PoseStack poseStack,
-                       SubmitNodeCollector submitNodeCollector, CameraRenderState camera) {
+                       SubmitNodeCollector submitNodeCollector, CameraRenderState cameraRenderState) {
+        super.submit(state, poseStack, submitNodeCollector, cameraRenderState);
         poseStack.pushPose();
-        if (state.kind != SpellKind.JUDGMENT_LANCE) {
+        if (state.kind == SpellKind.JUDGMENT_LANCE) {
+            poseStack.scale(1.15f, 1.15f, 1.15f);
+        } else if (state.kind == SpellKind.MONOLITH_PILLAR) {
+            poseStack.mulPose(Axis.YP.rotationDegrees(state.yRot));
+            poseStack.scale(0.95f, 0.95f, 0.95f);
+        } else if (state.kind == SpellKind.AEGIS_SHIELD) {
+            poseStack.mulPose(Axis.YP.rotationDegrees(state.yRot));
+            poseStack.scale(1.05f, 1.05f, 1.05f);
+        } else {
             poseStack.mulPose(Axis.YP.rotationDegrees(state.yRot));
             poseStack.mulPose(Axis.XP.rotationDegrees(-state.xRot));
+            float scale = switch (state.kind) {
+                case FLOATING_SWORD -> 1.18f;
+                case CRYSTAL_BOLT -> 0.92f;
+                default -> 0.88f;
+            };
+            poseStack.scale(scale, scale, scale);
         }
-        float scale = switch (state.kind) {
-            case FLOATING_SWORD -> 1.32f;
-            case WING_FEATHER -> 1.05f;
-            case JUDGMENT_LANCE -> state.dropping ? 1.55f : 1.15f;
-        };
-        poseStack.scale(scale, scale, scale);
 
         model.setupAnim(state);
         submitNodeCollector.submitModel(
@@ -65,14 +74,19 @@ public class VoidSpellRenderer extends EntityRenderer<VoidSpellEntity, VoidSpell
             state,
             poseStack,
             RenderTypes.entityCutout(BASE_TEXTURE),
-            0xF000F0,
+            state.lightCoords,
             OverlayTexture.NO_OVERLAY,
             0xFFFFFFFF,
             null
         );
-        int auraTint = state.kind == SpellKind.JUDGMENT_LANCE
-            ? 0xF0FFE69E
-            : (state.returning ? 0xEEB5F8FF : 0xEE7CEEFF);
+
+        int auraTint = switch (state.kind) {
+            case JUDGMENT_LANCE -> 0xF0FFE69E;
+            case AEGIS_SHIELD -> 0xF0FFE296;
+            case MONOLITH_PILLAR -> state.dropping ? 0xF0A6F4FF : 0xEE68DCFF;
+            case CRYSTAL_BOLT -> 0xEE82F2FF;
+            default -> state.returning ? 0xEEB5F8FF : 0xEE7CEEFF;
+        };
         poseStack.scale(1.06f, 1.06f, 1.06f);
         submitNodeCollector.order(1).submitModel(
             model,

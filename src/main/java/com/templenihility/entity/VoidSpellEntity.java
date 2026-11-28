@@ -26,17 +26,22 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Physical 3D spell armament summoned by Nihility Saint (and future caster guardians):
- *  - FLOATING_SWORD: Detached shoulder greatsword that curves out to slash and recalls back to Saint.
- *  - WING_FEATHER: Homing obsidian blade launched directly from Saint's 6 Seraphic Wings.
- *  - JUDGMENT_LANCE: Sky-falling golden-cyan obsidian spear channeled by the Astrolabe Halo.
+ * Physical 3D spell & detached-armament entity shared across all Temple of Nihility guardians:
+ *  - FLOATING_SWORD  (Saint):       Detached shoulder greatsword curving out & returning to dock.
+ *  - WING_FEATHER    (Saint):       Homing obsidian feather-blade fired from the 6 Seraphic Wings.
+ *  - JUDGMENT_LANCE  (Saint):       Sky-falling Astrolabe spear with 14-tick rune-circle telegraph.
+ *  - CRYSTAL_BOLT    (Believer):    Curved obsidian-cyan crystal bolt cast from the Focus Orb.
+ *  - MONOLITH_PILLAR (Envoy):       Detached runic tablet that flanks target, locks on, then slams inward in a pincer clamp!
+ *  - AEGIS_SHIELD    (Grand Envoy): Detached orbiting Aegis Shield Pillar hurled with shockwave impact & boomerang return!
  */
 public class VoidSpellEntity extends Entity {
-
     public enum SpellKind {
         FLOATING_SWORD,
         WING_FEATHER,
-        JUDGMENT_LANCE;
+        JUDGMENT_LANCE,
+        CRYSTAL_BOLT,
+        MONOLITH_PILLAR,
+        AEGIS_SHIELD;
 
         public static SpellKind byId(int id) {
             SpellKind[] values = values();
@@ -59,6 +64,7 @@ public class VoidSpellEntity extends Entity {
     private double curveSign = 1.0;
     private Vec3 groundTarget = Vec3.ZERO;
     private boolean lanceImpacted;
+    private boolean returnNotified;
     private final Set<Integer> hitEntityIds = new HashSet<>();
 
     public VoidSpellEntity(EntityType<? extends VoidSpellEntity> type, Level level) {
@@ -125,20 +131,99 @@ public class VoidSpellEntity extends Entity {
     public static VoidSpellEntity createJudgmentLance(
         ServerLevel level,
         NihilityCreature owner,
-        Vec3 groundImpactPos,
+        Vec3 impactGroundPos,
         float baseDamage
     ) {
         VoidSpellEntity entity = new VoidSpellEntity(ModEntities.VOID_SPELL.get(), level);
         entity.setSpellKind(SpellKind.JUDGMENT_LANCE);
         entity.ownerUuid = owner.getUUID();
         entity.baseDamage = baseDamage;
-        entity.erosionMultiplier = 1.65F;
+        entity.erosionMultiplier = 1.45F;
         entity.maxLifeTicks = 30;
-        entity.groundTarget = groundImpactPos;
-        entity.setPos(groundImpactPos.x, groundImpactPos.y + 13.5, groundImpactPos.z);
+        entity.groundTarget = impactGroundPos;
+        entity.setPos(impactGroundPos.x, impactGroundPos.y + 13.5, impactGroundPos.z);
         entity.setDeltaMovement(Vec3.ZERO);
-        entity.setXRot(90.0F);
-        entity.setYRot(0.0F);
+        return entity;
+    }
+
+    public static VoidSpellEntity createCrystalBolt(
+        ServerLevel level,
+        NihilityCreature owner,
+        LivingEntity target,
+        Vec3 spawnPos,
+        Vec3 initialVelocity,
+        float baseDamage
+    ) {
+        VoidSpellEntity entity = new VoidSpellEntity(ModEntities.VOID_SPELL.get(), level);
+        entity.setSpellKind(SpellKind.CRYSTAL_BOLT);
+        entity.ownerUuid = owner.getUUID();
+        entity.targetEntityId = target != null ? target.getId() : -1;
+        entity.baseDamage = baseDamage;
+        entity.erosionMultiplier = 0.85F;
+        entity.maxLifeTicks = 44;
+        entity.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
+        entity.setDeltaMovement(initialVelocity);
+        entity.updateRotationFromMotion(initialVelocity);
+        return entity;
+    }
+
+    public static VoidSpellEntity createMonolithPillar(
+        ServerLevel level,
+        NihilityCreature owner,
+        LivingEntity target,
+        Vec3 flankSpawnPos,
+        Vec3 clampCenter,
+        float baseDamage
+    ) {
+        VoidSpellEntity entity = new VoidSpellEntity(ModEntities.VOID_SPELL.get(), level);
+        entity.setSpellKind(SpellKind.MONOLITH_PILLAR);
+        entity.ownerUuid = owner.getUUID();
+        entity.targetEntityId = target != null ? target.getId() : -1;
+        entity.baseDamage = baseDamage;
+        entity.erosionMultiplier = 1.25F;
+        entity.maxLifeTicks = 36;
+        entity.groundTarget = clampCenter;
+        entity.setPos(flankSpawnPos.x, flankSpawnPos.y, flankSpawnPos.z);
+        Vec3 face = clampCenter.subtract(flankSpawnPos);
+        if (face.lengthSqr() > 1.0E-5) {
+            entity.updateRotationFromMotion(face);
+        }
+        entity.setDeltaMovement(Vec3.ZERO);
+        return entity;
+    }
+
+    public static VoidSpellEntity createAegisShield(
+        ServerLevel level,
+        NihilityCreature owner,
+        LivingEntity target,
+        Vec3 spawnPos,
+        double curveSign,
+        float baseDamage
+    ) {
+        VoidSpellEntity entity = new VoidSpellEntity(ModEntities.VOID_SPELL.get(), level);
+        entity.setSpellKind(SpellKind.AEGIS_SHIELD);
+        entity.ownerUuid = owner.getUUID();
+        entity.targetEntityId = target != null ? target.getId() : -1;
+        entity.baseDamage = baseDamage;
+        entity.erosionMultiplier = 1.20F;
+        entity.maxLifeTicks = 42;
+        entity.curveSign = curveSign;
+        entity.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
+
+        Vec3 aim = target != null
+            ? target.position().add(0.0, target.getBbHeight() * 0.5, 0.0).subtract(spawnPos)
+            : owner.getLookAngle();
+        if (aim.lengthSqr() < 1.0E-5) {
+            aim = new Vec3(0.0, 0.0, 1.0);
+        }
+        Vec3 fwd = aim.normalize();
+        Vec3 side = new Vec3(-fwd.z, 0.0, fwd.x);
+        if (side.lengthSqr() > 1.0E-5) {
+            side = side.normalize();
+        }
+        Vec3 velocity = fwd.scale(1.08).add(side.scale(curveSign * 0.28));
+        entity.setDeltaMovement(velocity);
+        entity.updateRotationFromMotion(velocity);
         return entity;
     }
 
@@ -153,7 +238,7 @@ public class VoidSpellEntity extends Entity {
         return SpellKind.byId(entityData.get(DATA_KIND));
     }
 
-    private void setSpellKind(SpellKind kind) {
+    public void setSpellKind(SpellKind kind) {
         entityData.set(DATA_KIND, (byte) kind.ordinal());
     }
 
@@ -166,20 +251,13 @@ public class VoidSpellEntity extends Entity {
     }
 
     @Override
-    public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
-        return false;
-    }
-
-    @Override
-    public boolean isPickable() {
-        return false;
-    }
-
-    @Override
     public void tick() {
         super.tick();
         if (level().isClientSide()) {
-            spawnClientTrail();
+            Vec3 vel = getDeltaMovement();
+            if (vel.lengthSqr() > 1.0E-5) {
+                setPos(getX() + vel.x, getY() + vel.y, getZ() + vel.z);
+            }
             return;
         }
         if (!(level() instanceof ServerLevel serverLevel)) {
@@ -187,13 +265,30 @@ public class VoidSpellEntity extends Entity {
         }
         NihilityCreature owner = resolveOwner(serverLevel);
         if (owner == null || !owner.isAlive() || tickCount > maxLifeTicks) {
+            notifyOwnerReturned(owner);
             discard();
             return;
         }
+
         switch (getSpellKind()) {
             case FLOATING_SWORD -> tickFloatingSword(serverLevel, owner);
             case WING_FEATHER -> tickWingFeather(serverLevel, owner);
             case JUDGMENT_LANCE -> tickJudgmentLance(serverLevel, owner);
+            case CRYSTAL_BOLT -> tickCrystalBolt(serverLevel, owner);
+            case MONOLITH_PILLAR -> tickMonolithPillar(serverLevel, owner);
+            case AEGIS_SHIELD -> tickAegisShield(serverLevel, owner);
+        }
+    }
+
+    private void notifyOwnerReturned(NihilityCreature owner) {
+        if (returnNotified || owner == null) {
+            return;
+        }
+        returnNotified = true;
+        if (getSpellKind() == SpellKind.AEGIS_SHIELD && owner instanceof NihilityGrandEnvoy grand) {
+            grand.onAegisShieldReturned();
+        } else if (getSpellKind() == SpellKind.MONOLITH_PILLAR && owner instanceof NihilityEnvoy envoy) {
+            envoy.onMonolithReturned();
         }
     }
 
@@ -202,12 +297,14 @@ public class VoidSpellEntity extends Entity {
         Vec3 pos = position();
         Vec3 vel = getDeltaMovement();
         if (tickCount < 16) {
-            // Outbound scissor-curve toward target
             if (target != null && target.isAlive()) {
-                Vec3 desired = target.position().add(0.0, target.getBbHeight() * 0.5, 0.0).subtract(pos);
-                if (desired.lengthSqr() > 0.25) {
-                    Vec3 dir = desired.normalize();
+                Vec3 toTarget = target.position().add(0.0, target.getBbHeight() * 0.5, 0.0).subtract(pos);
+                if (toTarget.lengthSqr() > 0.25) {
+                    Vec3 dir = toTarget.normalize();
                     Vec3 side = new Vec3(-dir.z, 0.0, dir.x);
+                    if (side.lengthSqr() > 1.0E-5) {
+                        side = side.normalize();
+                    }
                     double curveFade = Math.max(0.0, 1.0 - tickCount / 11.0);
                     Vec3 steer = dir.scale(1.22).add(side.scale(curveSign * 0.32 * curveFade));
                     vel = vel.scale(0.45).add(steer.scale(0.55));
@@ -216,7 +313,7 @@ public class VoidSpellEntity extends Entity {
         } else {
             if (!isReturning()) {
                 entityData.set(DATA_RETURNING, true);
-                hitEntityIds.clear(); // Allow slashing again on the return sweep!
+                hitEntityIds.clear();
             }
             Vec3 home = owner.position().add(0.0, owner.getBbHeight() * 0.55, 0.0);
             Vec3 toOwner = home.subtract(pos);
@@ -226,13 +323,11 @@ public class VoidSpellEntity extends Entity {
             }
             vel = toOwner.normalize().scale(1.42);
         }
-
         Vec3 next = pos.add(vel);
         setPos(next.x, next.y, next.z);
         setDeltaMovement(vel);
         updateRotationFromMotion(vel);
 
-        // Wide sword-arc hit detection
         AABB sweep = new AABB(pos, next).inflate(1.25, 1.0, 1.25);
         List<LivingEntity> victims = level.getEntitiesOfClass(LivingEntity.class, sweep,
             e -> isValidVictim(owner, e) && !hitEntityIds.contains(e.getId()));
@@ -263,11 +358,9 @@ public class VoidSpellEntity extends Entity {
             if (desired.lengthSqr() > 0.04) {
                 Vec3 dir = desired.normalize();
                 double speed = Math.min(1.55, Math.max(0.95, vel.length() + 0.06));
-                Vec3 blended = vel.normalize().scale(0.72).add(dir.scale(0.28)).normalize().scale(speed);
-                vel = blended;
+                vel = vel.normalize().scale(0.72).add(dir.scale(0.28)).normalize().scale(speed);
             }
         }
-
         Vec3 next = pos.add(vel);
         setPos(next.x, next.y, next.z);
         setDeltaMovement(vel);
@@ -297,9 +390,181 @@ public class VoidSpellEntity extends Entity {
         }
     }
 
+    private void tickCrystalBolt(ServerLevel level, NihilityCreature owner) {
+        LivingEntity target = resolveTarget(level, owner);
+        Vec3 pos = position();
+        Vec3 vel = getDeltaMovement();
+        if (target != null && target.isAlive() && tickCount >= 2 && tickCount <= 18) {
+            Vec3 desired = target.position().add(0.0, target.getBbHeight() * 0.55, 0.0).subtract(pos);
+            if (desired.lengthSqr() > 0.04) {
+                Vec3 dir = desired.normalize();
+                double speed = Math.min(1.18, Math.max(0.78, vel.length() + 0.03));
+                vel = vel.normalize().scale(0.84).add(dir.scale(0.16)).normalize().scale(speed);
+            }
+        }
+        Vec3 next = pos.add(vel);
+        setPos(next.x, next.y, next.z);
+        setDeltaMovement(vel);
+        updateRotationFromMotion(vel);
+
+        AABB hitBox = new AABB(pos, next).inflate(0.65, 0.65, 0.65);
+        List<LivingEntity> victims = level.getEntitiesOfClass(LivingEntity.class, hitBox,
+            e -> isValidVictim(owner, e));
+        if (!victims.isEmpty()) {
+            LivingEntity victim = victims.get(0);
+            if (owner.dealVoidStrike(level, victim, baseDamage, erosionMultiplier, true)) {
+                victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 50, 0, false, false));
+            }
+            level.sendParticles(ModParticles.NIHILITY_SHARD.get(),
+                next.x, next.y, next.z, 10, 0.25, 0.25, 0.25, 0.09);
+            level.playSound(null, next.x, next.y, next.z,
+                SoundEvents.AMETHYST_CLUSTER_BREAK, SoundSource.HOSTILE, 0.7F, 1.25F);
+            discard();
+            return;
+        }
+        if (tickCount % 2 == 0) {
+            level.sendParticles(ModParticles.NIHILITY_MOTE.get(), next.x, next.y, next.z,
+                2, 0.08, 0.08, 0.08, 0.02);
+        }
+    }
+
+    private void tickMonolithPillar(ServerLevel level, NihilityCreature owner) {
+        Vec3 pos = position();
+        if (tickCount < 8) {
+            // Telegraph phase: hovering runic monolith hums & draws cyan lock-on beam to clamp center!
+            if (tickCount % 2 == 0) {
+                Vec3 beam = groundTarget.subtract(pos);
+                for (int i = 1; i <= 4; i++) {
+                    Vec3 p = pos.add(beam.scale(i / 4.0));
+                    level.sendParticles(ModParticles.NIHILITY_MOTE.get(), p.x, p.y, p.z, 1, 0.04, 0.04, 0.04, 0.0);
+                }
+            }
+            return;
+        }
+        if (tickCount == 8) {
+            entityData.set(DATA_DROPPING, true);
+            Vec3 rush = groundTarget.subtract(pos);
+            if (rush.lengthSqr() > 1.0E-5) {
+                Vec3 vel = rush.normalize().scale(1.52);
+                setDeltaMovement(vel);
+                updateRotationFromMotion(vel);
+            }
+            level.playSound(null, pos.x, pos.y, pos.z,
+                SoundEvents.ENDERMAN_TELEPORT, SoundSource.HOSTILE, 0.85F, 1.45F);
+        }
+        if (tickCount < 16) {
+            // High-speed inward pincer clamp!
+            Vec3 vel = getDeltaMovement();
+            Vec3 next = pos.add(vel);
+            setPos(next.x, next.y, next.z);
+            AABB sweep = new AABB(pos, next).inflate(1.15, 1.35, 1.15);
+            for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, sweep,
+                e -> isValidVictim(owner, e) && !hitEntityIds.contains(e.getId()))) {
+                hitEntityIds.add(victim.getId());
+                if (owner.dealVoidStrike(level, victim, baseDamage, erosionMultiplier, true)) {
+                    victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 50, 1, false, false));
+                    level.sendParticles(ModParticles.NIHILITY_SHARD.get(),
+                        victim.getX(), victim.getY() + victim.getBbHeight() * 0.5, victim.getZ(),
+                        12, 0.35, 0.45, 0.35, 0.12);
+                    level.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
+                        SoundEvents.ANVIL_LAND, SoundSource.HOSTILE, 0.55F, 1.55F);
+                }
+            }
+            level.sendParticles(ModParticles.NIHILITY_MOTE.get(), next.x, next.y, next.z,
+                4, 0.15, 0.28, 0.15, 0.03);
+        } else {
+            // Return smoothly back to Envoy's flanks
+            if (!isReturning()) {
+                entityData.set(DATA_RETURNING, true);
+            }
+            Vec3 home = owner.position().add(0.0, owner.getBbHeight() * 0.55, 0.0);
+            Vec3 toOwner = home.subtract(pos);
+            if (toOwner.lengthSqr() <= 2.2 * 2.2) {
+                notifyOwnerReturned(owner);
+                discard();
+                return;
+            }
+            Vec3 vel = toOwner.normalize().scale(1.45);
+            setDeltaMovement(vel);
+            setPos(pos.x + vel.x, pos.y + vel.y, pos.z + vel.z);
+            updateRotationFromMotion(vel);
+        }
+    }
+
+    private void tickAegisShield(ServerLevel level, NihilityCreature owner) {
+        LivingEntity target = resolveTarget(level, owner);
+        Vec3 pos = position();
+        Vec3 vel = getDeltaMovement();
+        if (!isReturning() && tickCount < 18) {
+            if (target != null && target.isAlive()) {
+                Vec3 toTarget = target.position().add(0.0, target.getBbHeight() * 0.55, 0.0).subtract(pos);
+                if (toTarget.lengthSqr() > 0.25) {
+                    Vec3 dir = toTarget.normalize();
+                    Vec3 side = new Vec3(-dir.z, 0.0, dir.x);
+                    if (side.lengthSqr() > 1.0E-5) {
+                        side = side.normalize();
+                    }
+                    double curveFade = Math.max(0.0, 1.0 - tickCount / 14.0);
+                    Vec3 steer = dir.scale(1.12).add(side.scale(curveSign * 0.26 * curveFade));
+                    vel = vel.scale(0.55).add(steer.scale(0.45));
+                }
+            }
+            Vec3 next = pos.add(vel);
+            setPos(next.x, next.y, next.z);
+            setDeltaMovement(vel);
+            updateRotationFromMotion(vel);
+
+            AABB hitBox = new AABB(pos, next).inflate(1.15, 1.25, 1.15);
+            List<LivingEntity> victims = level.getEntitiesOfClass(LivingEntity.class, hitBox,
+                e -> isValidVictim(owner, e) && !hitEntityIds.contains(e.getId()));
+            if (!victims.isEmpty()) {
+                // Shockwave smash on impact, then immediately boomerang back to Grand Envoy!
+                AABB blast = new AABB(next, next).inflate(2.8, 2.2, 2.8);
+                for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, blast,
+                    e -> isValidVictim(owner, e) && !hitEntityIds.contains(e.getId()))) {
+                    hitEntityIds.add(victim.getId());
+                    if (owner.dealVoidStrike(level, victim, baseDamage, erosionMultiplier, true)) {
+                        Vec3 push = victim.position().subtract(next).multiply(1.0, 0.0, 1.0);
+                        if (push.lengthSqr() > 1.0E-5) {
+                            push = push.normalize();
+                            victim.setDeltaMovement(push.x * 0.85, Math.max(0.32, victim.getDeltaMovement().y + 0.18), push.z * 0.85);
+                            victim.hurtMarked = true;
+                        }
+                        victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 50, 1, false, false));
+                    }
+                }
+                level.sendParticles(ModParticles.CHAOS_GLINT.get(), next.x, next.y, next.z, 14, 0.65, 0.45, 0.65, 0.08);
+                level.sendParticles(ModParticles.NIHILITY_SHARD.get(), next.x, next.y, next.z, 12, 0.55, 0.45, 0.55, 0.1);
+                level.playSound(null, next.x, next.y, next.z,
+                    SoundEvents.SHIELD_BLOCK.value(), SoundSource.HOSTILE, 1.1F, 0.72F);
+                entityData.set(DATA_RETURNING, true);
+            }
+            if (tickCount % 2 == 0) {
+                level.sendParticles(ModParticles.CHAOS_GLINT.get(), next.x, next.y, next.z, 2, 0.14, 0.22, 0.14, 0.02);
+            }
+        } else {
+            if (!isReturning()) {
+                entityData.set(DATA_RETURNING, true);
+            }
+            Vec3 home = owner.position().add(0.0, owner.getBbHeight() * 0.55, 0.0);
+            Vec3 toOwner = home.subtract(pos);
+            if (toOwner.lengthSqr() <= 2.3 * 2.3) {
+                notifyOwnerReturned(owner);
+                discard();
+                return;
+            }
+            Vec3 retVel = toOwner.normalize().scale(1.38);
+            setPos(pos.x + retVel.x, pos.y + retVel.y, pos.z + retVel.z);
+            setDeltaMovement(retVel);
+            updateRotationFromMotion(retVel);
+            if (tickCount % 3 == 0) {
+                level.sendParticles(ModParticles.NIHILITY_MOTE.get(), getX(), getY(), getZ(), 2, 0.1, 0.15, 0.1, 0.01);
+            }
+        }
+    }
+
     private void tickJudgmentLance(ServerLevel level, NihilityCreature owner) {
         if (tickCount < 14) {
-            // Telegraph phase: glowing rotating rune circle on ground + vertical targeting beam!
             double radius = 3.1;
             int pts = 14;
             double rot = tickCount * 0.22;
@@ -351,92 +616,75 @@ public class VoidSpellEntity extends Entity {
             }
             victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 55, 1, false, false));
         }
-        // Towering gold-cyan judgment impact pillar!
         for (double y = 0.2; y <= 11.0; y += 0.65) {
             level.sendParticles(ModParticles.CHAOS_GLINT.get(),
                 groundTarget.x, groundTarget.y + y, groundTarget.z, 3, 0.28, 0.12, 0.28, 0.03);
             level.sendParticles(ModParticles.NIHILITY_SHARD.get(),
                 groundTarget.x, groundTarget.y + y, groundTarget.z, 2, 0.35, 0.12, 0.35, 0.05);
         }
-        for (int i = 0; i < 22; i++) {
-            double a = i * Math.PI * 2.0 / 22.0;
-            level.sendParticles(ModParticles.NIHILITY_RIPPLE.get(),
-                groundTarget.x + Math.cos(a) * 2.6, groundTarget.y + 0.25, groundTarget.z + Math.sin(a) * 2.6,
-                1, Math.cos(a) * 0.14, 0.04, Math.sin(a) * 0.14, 0.02);
-        }
         level.playSound(null, groundTarget.x, groundTarget.y, groundTarget.z,
-            SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 0.9F, 1.35F);
+            SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 0.95F, 1.25F);
     }
 
-    private void spawnClientTrail() {
-        if (tickCount % 2 != 0) {
-            return;
+    private boolean isValidVictim(NihilityCreature owner, LivingEntity candidate) {
+        if (!candidate.isAlive() || candidate == owner || candidate instanceof NihilityCreature) {
+            return false;
         }
-        SpellKind kind = getSpellKind();
-        var particle = kind == SpellKind.JUDGMENT_LANCE
-            ? ModParticles.CHAOS_GLINT.get()
-            : ModParticles.NIHILITY_MOTE.get();
-        level().addParticle(particle, getX(), getY(), getZ(), 0.0, 0.01, 0.0);
-    }
-
-    private void updateRotationFromMotion(Vec3 v) {
-        double horiz = Math.sqrt(v.x * v.x + v.z * v.z);
-        if (horiz > 1.0E-5 || Math.abs(v.y) > 1.0E-5) {
-            setYRot((float) (Math.atan2(v.x, v.z) * (180.0 / Math.PI)));
-            setXRot((float) (Math.atan2(v.y, horiz) * (180.0 / Math.PI)));
+        if (candidate instanceof ServerPlayer player && (player.isCreative() || player.isSpectator())) {
+            return false;
         }
+        return owner.canAttack(candidate);
     }
 
     private NihilityCreature resolveOwner(ServerLevel level) {
         if (ownerUuid == null) {
             return null;
         }
-        Entity entity = level.getEntity(ownerUuid);
-        return entity instanceof NihilityCreature creature ? creature : null;
+        Entity e = level.getEntity(ownerUuid);
+        return e instanceof NihilityCreature c ? c : null;
     }
 
     private LivingEntity resolveTarget(ServerLevel level, NihilityCreature owner) {
-        if (targetEntityId >= 0 && level.getEntity(targetEntityId) instanceof LivingEntity living && living.isAlive()) {
-            return living;
+        if (targetEntityId >= 0) {
+            Entity e = level.getEntity(targetEntityId);
+            if (e instanceof LivingEntity living && living.isAlive()) {
+                return living;
+            }
         }
         return owner.getTarget();
     }
 
-    private boolean isValidVictim(NihilityCreature owner, LivingEntity candidate) {
-        if (candidate == null || !candidate.isAlive() || candidate == owner || candidate instanceof NihilityCreature) {
-            return false;
-        }
-        if (candidate instanceof ServerPlayer sp && (sp.isCreative() || sp.isSpectator())) {
-            return false;
-        }
-        if (owner instanceof NihilitySaint saint && saint.isRitualChallengeActive()) {
-            return candidate instanceof ServerPlayer sp && saint.isChallengeParticipant(sp);
-        }
-        return owner.canAttack(candidate) || candidate == owner.getTarget();
+    private void updateRotationFromMotion(Vec3 vel) {
+        double horiz = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
+        float yaw = (float) (Math.atan2(vel.x, vel.z) * (180.0 / Math.PI));
+        float pitch = (float) (Math.atan2(vel.y, horiz) * (180.0 / Math.PI));
+        setYRot(yaw);
+        setXRot(pitch);
+        this.yRotO = yaw;
+        this.xRotO = pitch;
+    }
+
+    @Override
+    public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
+        return false;
+    }
+
+    @Override
+    public boolean isPickable() {
+        return false;
     }
 
     @Override
     protected void readAdditionalSaveData(ValueInput input) {
-        String id = input.getStringOr("OwnerUuid", "");
-        try {
-            ownerUuid = id.isEmpty() ? null : UUID.fromString(id);
-        } catch (IllegalArgumentException ignored) {
-            ownerUuid = null;
-        }
         setSpellKind(SpellKind.byId(input.getIntOr("SpellKind", SpellKind.WING_FEATHER.ordinal())));
+        maxLifeTicks = input.getIntOr("MaxLifeTicks", 40);
         baseDamage = input.getFloatOr("BaseDamage", 18.0F);
-        erosionMultiplier = input.getFloatOr("ErosionMult", 1.0F);
-        maxLifeTicks = input.getIntOr("MaxLife", 40);
     }
 
     @Override
     protected void addAdditionalSaveData(ValueOutput output) {
-        if (ownerUuid != null) {
-            output.putString("OwnerUuid", ownerUuid.toString());
-        }
         output.putInt("SpellKind", getSpellKind().ordinal());
+        output.putInt("MaxLifeTicks", maxLifeTicks);
         output.putFloat("BaseDamage", baseDamage);
-        output.putFloat("ErosionMult", erosionMultiplier);
-        output.putInt("MaxLife", maxLifeTicks);
     }
 }
