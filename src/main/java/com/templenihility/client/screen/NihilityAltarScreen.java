@@ -21,29 +21,32 @@ import net.minecraft.world.item.ItemStack;
 public class NihilityAltarScreen extends AbstractContainerScreen<NihilityAltarMenu> {
     private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(
         TempleNihilityMod.MOD_ID, "textures/gui/container/nihility_altar.png");
+
     private int animationTicks;
     private Button ritualButton;
     private Button challengeButton;
 
     public NihilityAltarScreen(NihilityAltarMenu menu, Inventory inventory, Component title) {
-        super(menu, inventory, title, 176, 166);
-        this.titleLabelX = 8;
-        this.titleLabelY = 6;
-        this.inventoryLabelY = 75;
+        super(menu, inventory, title, 192, 212);
+        this.titleLabelX = 10;
+        this.titleLabelY = 7;
+        this.inventoryLabelX = 15;
+        this.inventoryLabelY = 122;
     }
 
     @Override
     protected void init() {
         super.init();
-        ritualButton = addRenderableWidget(Button.builder(Component.translatable("screen.templenihility.altar_button"),
-                button -> sendButton(NihilityAltarMenu.BUTTON_PERFORM_RITUAL))
-            .bounds(leftPos + 126, topPos + 16, 42, 16)
-            .tooltip(Tooltip.create(Component.translatable("screen.templenihility.altar_button_tip")))
-            .build());
         challengeButton = addRenderableWidget(Button.builder(
                 Component.translatable("screen.templenihility.altar_challenge"),
                 button -> sendButton(NihilityAltarMenu.BUTTON_TOGGLE_SAINT_CHALLENGE))
-            .bounds(leftPos + 8, topPos + 34, 42, 16)
+            .bounds(leftPos + 14, topPos + 66, 76, 16)
+            .build());
+        ritualButton = addRenderableWidget(Button.builder(
+                Component.translatable("screen.templenihility.altar_button"),
+                button -> sendButton(NihilityAltarMenu.BUTTON_PERFORM_RITUAL))
+            .bounds(leftPos + 102, topPos + 66, 76, 16)
+            .tooltip(Tooltip.create(Component.translatable("screen.templenihility.altar_button_tip")))
             .build());
     }
 
@@ -74,16 +77,26 @@ public class NihilityAltarScreen extends AbstractContainerScreen<NihilityAltarMe
 
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        graphics.text(font, title, titleLabelX, titleLabelY, 0xFF404040, false);
-        graphics.text(font, Component.translatable("screen.templenihility.altar_tier",
-            Component.translatable(menu.getTierNameKey())), 8, 18, 0xFF566064, false);
-        graphics.text(font, Component.translatable("screen.templenihility.altar_input"), 50, 26, 0xFF6B7476, false);
-        graphics.text(font, Component.translatable("screen.templenihility.altar_output"), 110, 26, 0xFF6B7476, false);
-        drawErasureGlyph(graphics);
+        graphics.text(font, title, titleLabelX, titleLabelY, 0xFFEAF8FB, false);
+
+        // Tier pill text centered inside (96..184, y=8)
+        Component tierComp = compact(Component.translatable(menu.getTierNameKey()), 82);
+        int tierX = 96 + Math.max(2, (88 - font.width(tierComp)) / 2);
+        int tierColor = menu.getTier() >= 3 ? 0xFF5EEAD4 : (menu.getTier() >= 1 ? 0xFF66D9E8 : 0xFF94A3B8);
+        graphics.text(font, tierComp, tierX, 8, tierColor, false);
+
+        // Centered slot labels above Input (46..62 -> center 54) and Output (130..146 -> center 138)
+        Component inLabel = Component.translatable("screen.templenihility.altar_input");
+        Component outLabel = Component.translatable("screen.templenihility.altar_output");
+        graphics.text(font, inLabel, 54 - font.width(inLabel) / 2, 28, 0xFF8CB4C2, false);
+        graphics.text(font, outLabel, 138 - font.width(outLabel) / 2, 28, 0xFF8CB4C2, false);
+
+        drawVoidConduit(graphics);
         drawRitualPreview(graphics, mouseX, mouseY);
-        graphics.text(font, Component.translatable("screen.templenihility.altar_parts",
-            menu.getRuneCount(), menu.getCrystalCount(), menu.getPillarCount(), menu.getChiseledCount()),
-            8, 65, 0xFF68777A, false);
+
+        Component parts = compact(Component.translatable("screen.templenihility.altar_parts",
+            menu.getRuneCount(), menu.getCrystalCount(), menu.getPillarCount(), menu.getChiseledCount()), 168);
+        graphics.text(font, parts, 12, 105, 0xFF8CB4C2, false);
         if (isStructureHovered(mouseX, mouseY)) {
             graphics.setComponentTooltipForNextFrame(font, List.of(
                 Component.translatable("screen.templenihility.altar_structure_tip_1"),
@@ -91,16 +104,21 @@ public class NihilityAltarScreen extends AbstractContainerScreen<NihilityAltarMe
                 Component.translatable("screen.templenihility.altar_structure_tip_3")
             ), mouseX, mouseY);
         }
-        graphics.text(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0xFF404040, false);
+
+        graphics.text(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0xFF8CB4C2, false);
     }
 
-    private void drawErasureGlyph(GuiGraphicsExtractor graphics) {
-        int pulse = (int) ((Math.sin(animationTicks * 0.16) + 1.0) * 32.0);
-        int bright = (0x90 + pulse) << 24 | 0xC5C9CC;
-        graphics.fill(78, 43, 85, 44, bright);
-        graphics.fill(91, 43, 98, 44, bright);
-        graphics.fill(87, 41, 89, 43, 0x668C9196);
-        graphics.fill(87, 45, 89, 47, 0x668C9196);
+    private void drawVoidConduit(GuiGraphicsExtractor graphics) {
+        boolean ready = menu.getRitualStatus() == Status.READY;
+        double wave = (Math.sin(animationTicks * 0.20) + 1.0) * 0.5;
+        int alpha = ready ? (int) (185 + wave * 70) : (int) (95 + wave * 45);
+        int barColor = (alpha << 24) | (ready ? 0x5EEAD4 : 0x528896);
+        int coreColor = (alpha << 24) | (ready ? 0xCCFBF1 : 0x8CB4C2);
+
+        graphics.fill(73, 50, 115, 51, barColor);
+        int pulseX = 74 + (animationTicks * (ready ? 2 : 1)) % 38;
+        graphics.fill(pulseX, 49, Math.min(115, pulseX + 6), 52, coreColor);
+        graphics.fill(95, 49, 98, 52, ready ? 0xFF5EEAD4 : 0xFF476978);
     }
 
     private void drawRitualPreview(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
@@ -111,31 +129,30 @@ public class NihilityAltarScreen extends AbstractContainerScreen<NihilityAltarMe
         Status ritualStatus = menu.getRitualStatus();
         if (ritualStatus == Status.NO_INPUT) {
             status = Component.translatable("screen.templenihility.altar_preview_empty");
-            color = 0xFF7B8587;
+            color = 0xFF94A3B8;
         } else if (ritualStatus == Status.NO_RECIPE || preview == null) {
             status = Component.translatable("screen.templenihility.altar_preview_unknown");
-            color = 0xFF9A6666;
+            color = 0xFFF87171;
         } else if (ritualStatus == Status.NOT_ENOUGH_INPUT) {
             status = Component.translatable("screen.templenihility.altar_preview_missing",
                 input.getCount(), preview.inputCount());
-            color = 0xFF9A7657;
+            color = 0xFFFBBF24;
         } else if (ritualStatus == Status.TIER_TOO_LOW) {
             status = Component.translatable("screen.templenihility.altar_preview_tier",
                 Component.translatable(NihilityAltarBlockEntity.tierNameKey(preview.minTier())));
-            color = 0xFF9A7657;
+            color = 0xFFFBBF24;
         } else if (ritualStatus == Status.OUTPUT_BLOCKED) {
             status = Component.translatable("screen.templenihility.altar_preview_output");
-            color = 0xFF9A6666;
+            color = 0xFFF87171;
         } else if (ritualStatus == Status.NOT_ENOUGH_ENERGY) {
             status = Component.translatable("screen.templenihility.altar_preview_energy", preview.energyCost());
-            color = 0xFF9A7657;
+            color = 0xFFFBBF24;
         } else {
             status = Component.translatable("screen.templenihility.altar_preview_ready",
                 preview.result().getCount(), preview.result().getHoverName(), preview.energyCost());
-            color = 0xFF52777A;
+            color = 0xFF5EEAD4;
         }
-
-        graphics.text(font, compact(status, 160), 8, 55, color, false);
+        graphics.text(font, compact(status, 168), 12, 95, color, false);
         if (preview != null && isPreviewHovered(mouseX, mouseY)) {
             graphics.setComponentTooltipForNextFrame(font, List.of(
                 Component.translatable("screen.templenihility.altar_preview_input",
@@ -161,13 +178,13 @@ public class NihilityAltarScreen extends AbstractContainerScreen<NihilityAltarMe
     private boolean isPreviewHovered(int mouseX, int mouseY) {
         int localX = mouseX - leftPos;
         int localY = mouseY - topPos;
-        return localX >= 6 && localX < 170 && localY >= 52 && localY < 65;
+        return localX >= 8 && localX < 184 && localY >= 92 && localY < 104;
     }
 
     private boolean isStructureHovered(int mouseX, int mouseY) {
         int localX = mouseX - leftPos;
         int localY = mouseY - topPos;
-        return localX >= 6 && localX < 170 && localY >= 64 && localY < 75;
+        return localX >= 8 && localX < 184 && localY >= 104 && localY < 116;
     }
 
     private void sendButton(int id) {

@@ -5,8 +5,9 @@
     "#": "templenihility:nihility_dust"
   },
   "pattern": [
-    "##",
-    "##"
+    "###",
+    "###",
+    "###"
   ],
   "result": {
     "id": "templenihility:nihility_shard",

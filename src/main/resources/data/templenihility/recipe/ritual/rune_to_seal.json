@@ -1,11 +1,11 @@
 {
   "type": "templenihility:nihility_ritual",
   "input": "templenihility:nihility_rune",
-  "input_count": 4,
+  "input_count": 3,
   "result": {
     "id": "templenihility:temple_seal",
     "count": 1
   },
   "min_tier": 2,
-  "energy_cost": 10
+  "energy_cost": 8
 }
